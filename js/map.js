@@ -4,13 +4,7 @@
 
    MAP.JS
 
-   Responsible for:
-   - Leaflet map
-   - OpenStreetMap
-   - Land parcels
-   - Parcel interaction
-   - Map clicks
-   - GIS visualization
+   Map is now loaded from the backend API.
    ========================================================= */
 
 
@@ -23,180 +17,55 @@ const map = L.map("map").setView(
     13
 );
 
+
+/* Make map available globally */
+
 window.map = map;
 
 
 /* =========================================================
-   2. OPENSTREETMAP BASE LAYER
+   2. OPENSTREETMAP
    ========================================================= */
 
 const openStreetMapLayer = L.tileLayer(
+
     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+
     {
         maxZoom: 19,
 
         attribution:
             '&copy; OpenStreetMap contributors'
     }
-);
 
-
-openStreetMapLayer.addTo(map);
+).addTo(map);
 
 
 /* =========================================================
-   3. DEMO LAND PARCEL DATA
-   ========================================================= */
-
-const landParcels = [
-
-    {
-        id: "LND-001",
-
-        owner: "Demo Land Owner",
-
-        surveyNumber: "SUR-101",
-
-        landType: "Residential",
-
-        area: "2,400 sq.ft",
-
-        district: "Coimbatore",
-
-        village: "Demo Village",
-
-        status: "Active",
-
-        landUse: "Residential",
-
-        taxStatus: "Paid",
-
-        restrictions: "No major restrictions",
-
-        buildingPermission: "Eligible",
-
-        coordinates: [
-
-            [11.0200, 76.9500],
-
-            [11.0200, 76.9530],
-
-            [11.0175, 76.9530],
-
-            [11.0175, 76.9500]
-
-        ]
-    },
-
-
-    {
-        id: "LND-002",
-
-        owner: "Demo Property Owner",
-
-        surveyNumber: "SUR-102",
-
-        landType: "Commercial",
-
-        area: "4,800 sq.ft",
-
-        district: "Coimbatore",
-
-        village: "Demo Village",
-
-        status: "Active",
-
-        landUse: "Commercial",
-
-        taxStatus: "Pending",
-
-        restrictions: "Road setback applicable",
-
-        buildingPermission: "Requires approval",
-
-        coordinates: [
-
-            [11.0200, 76.9540],
-
-            [11.0200, 76.9570],
-
-            [11.0175, 76.9570],
-
-            [11.0175, 76.9540]
-
-        ]
-    },
-
-
-    {
-        id: "LND-003",
-
-        owner: "Demo Agricultural Owner",
-
-        surveyNumber: "SUR-103",
-
-        landType: "Agricultural",
-
-        area: "1.2 Acres",
-
-        district: "Coimbatore",
-
-        village: "Demo Village",
-
-        status: "Active",
-
-        landUse: "Agricultural",
-
-        taxStatus: "Paid",
-
-        restrictions:
-            "Agricultural land restrictions",
-
-        buildingPermission: "Restricted",
-
-        coordinates: [
-
-            [11.0155, 76.9500],
-
-            [11.0155, 76.9530],
-
-            [11.0130, 76.9530],
-
-            [11.0130, 76.9500]
-
-        ]
-    }
-
-];
-
-
-/*
-    Make parcel data available to app.js.
-*/
-
-window.landParcels = landParcels;
-
-
-/* =========================================================
-   4. PARCEL LAYER
+   3. PARCEL LAYER
    ========================================================= */
 
 const parcelLayer =
     L.layerGroup().addTo(map);
 
 
+/* Make available globally */
+
+window.parcelLayer = parcelLayer;
+
+
 /* =========================================================
-   5. ADD PARCELS
+   4. DRAW PARCEL
    ========================================================= */
 
-landParcels.forEach(
-    function (parcel) {
+function drawParcel(parcel) {
 
+    const polygon =
+        L.polygon(
 
-        const polygon = L.polygon(
             parcel.coordinates,
-            {
 
+            {
                 color: "#2563eb",
 
                 weight: 2,
@@ -204,126 +73,179 @@ landParcels.forEach(
                 fillColor: "#60a5fa",
 
                 fillOpacity: 0.35
+            }
+
+        );
+
+
+    polygon.addTo(parcelLayer);
+
+
+    /* Popup */
+
+    polygon.bindPopup(`
+
+        <strong>
+            ${parcel.id}
+        </strong>
+
+        <br><br>
+
+        Survey Number:
+        ${parcel.surveyNumber}
+
+        <br>
+
+        Land Use:
+        ${parcel.landUse}
+
+        <br>
+
+        Area:
+        ${parcel.area}
+
+        <br><br>
+
+        <button
+            onclick="selectParcel('${parcel.id}')"
+            style="
+                padding: 7px 12px;
+                border: none;
+                border-radius: 6px;
+                background: #2563eb;
+                color: white;
+                cursor: pointer;
+            "
+        >
+            View Details
+        </button>
+
+    `);
+
+
+    /* Click */
+
+    polygon.on(
+        "click",
+        function () {
+
+            showLandInformation(parcel);
+
+        }
+    );
+
+
+    /* Hover */
+
+    polygon.on(
+        "mouseover",
+        function () {
+
+            polygon.setStyle({
+
+                fillOpacity: 0.65,
+
+                weight: 3
+
+            });
+
+        }
+    );
+
+
+    polygon.on(
+        "mouseout",
+        function () {
+
+            polygon.setStyle({
+
+                fillOpacity: 0.35,
+
+                weight: 2
+
+            });
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   5. LOAD PARCELS FROM BACKEND
+   ========================================================= */
+
+async function loadParcels() {
+
+    try {
+
+        console.log(
+            "Loading land parcels from backend..."
+        );
+
+
+        const response =
+            await getParcels();
+
+
+        if (!response.success) {
+
+            throw new Error(
+                "Backend returned an unsuccessful response."
+            );
+
+        }
+
+
+        const parcels =
+            response.data;
+
+
+        /*
+            Store the API data globally.
+
+            search.js and app.js can use this.
+        */
+
+        window.landParcels =
+            parcels;
+
+
+        /* Clear old parcels */
+
+        parcelLayer.clearLayers();
+
+
+        /* Draw parcels */
+
+        parcels.forEach(
+            function (parcel) {
+
+                drawParcel(parcel);
 
             }
         );
 
 
-        polygon.addTo(parcelLayer);
-
-
-        /* -----------------------------------------
-           Popup
-           ----------------------------------------- */
-
-        polygon.bindPopup(`
-
-            <div>
-
-                <strong>
-                    ${parcel.id}
-                </strong>
-
-                <br><br>
-
-                <strong>
-                    Survey Number:
-                </strong>
-
-                ${parcel.surveyNumber}
-
-                <br>
-
-                <strong>
-                    Land Use:
-                </strong>
-
-                ${parcel.landUse}
-
-                <br>
-
-                <strong>
-                    Area:
-                </strong>
-
-                ${parcel.area}
-
-                <br><br>
-
-                <button
-                    onclick="selectParcel('${parcel.id}')"
-                    style="
-                        padding: 7px 12px;
-                        border: none;
-                        border-radius: 6px;
-                        background: #2563eb;
-                        color: white;
-                        cursor: pointer;
-                    "
-                >
-                    View Details
-                </button>
-
-            </div>
-
-        `);
-
-
-        /* -----------------------------------------
-           Parcel click
-           ----------------------------------------- */
-
-        polygon.on(
-            "click",
-            function () {
-
-                showLandInformation(parcel);
-
-            }
+        console.log(
+            `Loaded ${parcels.length} parcels from API.`
         );
 
-
-        /* -----------------------------------------
-           Mouse over
-           ----------------------------------------- */
-
-        polygon.on(
-            "mouseover",
-            function () {
-
-                polygon.setStyle({
-
-                    fillOpacity: 0.65,
-
-                    weight: 3
-
-                });
-
-            }
-        );
-
-
-        /* -----------------------------------------
-           Mouse out
-           ----------------------------------------- */
-
-        polygon.on(
-            "mouseout",
-            function () {
-
-                polygon.setStyle({
-
-                    fillOpacity: 0.35,
-
-                    weight: 2
-
-                });
-
-            }
-        );
 
     }
-);
+
+    catch (error) {
+
+        console.error(
+            "Unable to load parcels:",
+            error
+        );
+
+        window.landParcels = [];
+
+    }
+
+}
 
 
 /* =========================================================
@@ -333,7 +255,6 @@ landParcels.forEach(
 map.on(
     "click",
     function (event) {
-
 
         const latitude =
             event.latlng.lat.toFixed(6);
@@ -378,22 +299,8 @@ map.on(
 
 
 /* =========================================================
-   7. MAP LAYER CONTROL
+   7. BASE MAP
    ========================================================= */
-
-/*
-    This is the beginning of our
-    multi-layer GIS architecture.
-
-    Later we can add:
-
-    - Cadastral layer
-    - Road layer
-    - Building layer
-    - Utility layer
-    - Zoning layer
-    - Flood-risk layer
-*/
 
 const baseMaps = {
 
@@ -403,6 +310,10 @@ const baseMaps = {
 };
 
 
+/* =========================================================
+   8. LAYER CONTROL
+   ========================================================= */
+
 const overlayMaps = {
 
     "Land Parcels":
@@ -411,32 +322,37 @@ const overlayMaps = {
 };
 
 
-const layerControl = L.control.layers(
-    baseMaps,
-    overlayMaps
-).addTo(map);
+const layerControl =
+    L.control.layers(
+        baseMaps,
+        overlayMaps
+    ).addTo(map);
 
-window.layerControl = layerControl;
+
+/* Make available globally */
+
+window.layerControl =
+    layerControl;
 
 
 /* =========================================================
-   8. MAP SCALE
+   9. SCALE
    ========================================================= */
 
 L.control.scale({
+
     imperial: false
+
 }).addTo(map);
 
 
 /* =========================================================
-   9. MAP READY
+   10. START
    ========================================================= */
 
-console.log(
-    "GIS map initialized successfully."
-);
+loadParcels();
+
 
 console.log(
-    "Land parcels loaded:",
-    landParcels.length
+    "GIS map initialized."
 );
