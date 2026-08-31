@@ -1,15 +1,9 @@
+
 /* =========================================================
    LANDGOV GIS
    SIH26014 - Digital Land Governance
 
-   BACKEND SERVER
-
-   Technology:
-   Node.js
-   Express
-   CORS
-
-   This is our first API server.
+   MAIN BACKEND SERVER
    ========================================================= */
 
 
@@ -21,18 +15,34 @@ const express = require("express");
 
 const cors = require("cors");
 
-const parcels = require("./data/parcels");
+/* =========================================================
+   2. IMPORT ROUTES
+   ========================================================= */
 
+const parcelRoutes =
+    require("./routes/parcelRoutes");
+
+const cadastralRoutes =
+    require("./routes/cadastralRoutes");
+
+const rorRoutes =
+    require("./routes/rorRoutes");
+
+const landProfileRoutes =
+    require("./routes/landProfileRoutes");
+
+const landUseRoutes =
+    require("./routes/landUseRoutes");
 
 /* =========================================================
-   2. CREATE EXPRESS APPLICATION
+   3. CREATE EXPRESS APP
    ========================================================= */
 
 const app = express();
 
 
 /* =========================================================
-   3. MIDDLEWARE
+   4. MIDDLEWARE
    ========================================================= */
 
 app.use(cors());
@@ -41,14 +51,14 @@ app.use(express.json());
 
 
 /* =========================================================
-   4. SERVER PORT
+   5. PORT
    ========================================================= */
 
 const PORT = 5000;
 
 
 /* =========================================================
-   5. HOME ROUTE
+   6. HOME API
    ========================================================= */
 
 app.get("/", (req, res) => {
@@ -70,95 +80,60 @@ app.get("/", (req, res) => {
 
 
 /* =========================================================
-   6. HEALTH CHECK API
+   7. HEALTH CHECK
    ========================================================= */
 
-app.get("/api/health", (req, res) => {
+app.get(
+    "/api/health",
+    (req, res) => {
 
-    res.json({
+        res.json({
 
-        status: "healthy",
+            status: "healthy",
 
-        service:
-            "LandGov GIS Backend",
+            service:
+                "LandGov GIS Backend",
 
-        timestamp:
-            new Date().toISOString()
-
-    });
-
-});
-
-
-/* =========================================================
-   PARCEL APIs
-   ========================================================= */
-
-
-/* ---------------------------------------------------------
-   GET ALL PARCELS
-   --------------------------------------------------------- */
-
-app.get("/api/parcels", (req, res) => {
-
-    res.json({
-
-        success: true,
-
-        count: parcels.length,
-
-        data: parcels
-
-    });
-
-});
-
-
-/* ---------------------------------------------------------
-   GET SINGLE PARCEL
-   --------------------------------------------------------- */
-
-app.get("/api/parcels/:id", (req, res) => {
-
-    const parcelId =
-        req.params.id;
-
-
-    const parcel =
-        parcels.find(
-            item =>
-                item.id.toLowerCase() ===
-                parcelId.toLowerCase()
-        );
-
-
-    if (!parcel) {
-
-        return res.status(404).json({
-
-            success: false,
-
-            message:
-                "Parcel not found"
+            timestamp:
+                new Date().toISOString()
 
         });
 
     }
-
-
-    res.json({
-
-        success: true,
-
-        data: parcel
-
-    });
-
-});
+);
 
 
 /* =========================================================
-   7. START SERVER
+   8. PARCEL ROUTES
+   ========================================================= */
+
+app.use(
+    "/api/parcels",
+    parcelRoutes
+);
+
+app.use(
+    "/api/cadastral",
+    cadastralRoutes
+);
+
+app.use(
+    "/api/ror",
+    rorRoutes
+);
+
+app.use(
+    "/api/land-profile",
+    landProfileRoutes
+);
+
+app.use(
+    "/api/land-use",
+    landUseRoutes
+);
+
+/* =========================================================
+   9. START SERVER
    ========================================================= */
 
 app.listen(
@@ -184,6 +159,27 @@ app.listen(
         console.log(
             `Health API: http://localhost:${PORT}/api/health`
         );
+
+        console.log(
+            `Parcel API: http://localhost:${PORT}/api/parcels`
+        );
+
+        console.log(
+            `Cadastral API: http://localhost:${PORT}/api/cadastral`
+        );
+
+        console.log(
+            `RoR API: http://localhost:${PORT}/api/ror`
+        );
+
+        console.log(
+            `Land Profile API: http://localhost:${PORT}/api/land-profile`
+        );
+
+        console.log(
+            `Land Use API: http://localhost:${PORT}/api/land-use`
+        );
+
 
     }
 );
