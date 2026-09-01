@@ -95,7 +95,46 @@ async function getParcelById(
 
 
 /* =========================================================
-   5. CHECK BACKEND HEALTH
+   5. GET UTILITIES
+   ========================================================= */
+
+async function getUtilities() {
+
+    return await apiRequest(
+        "/api/utilities"
+    );
+
+}
+
+
+async function getUtilitiesByParcelId(
+    parcelId
+) {
+
+    return await apiRequest(
+        `/api/utilities/${parcelId}`
+    );
+
+}
+
+
+/* =========================================================
+   6. GET LAND PROFILE
+   ========================================================= */
+
+async function getLandProfile(
+    parcelId
+) {
+
+    return await apiRequest(
+        `/api/land-profile/${parcelId}`
+    );
+
+}
+
+
+/* =========================================================
+   7. CHECK BACKEND HEALTH
    ========================================================= */
 
 async function checkBackendHealth() {
@@ -108,9 +147,10 @@ async function checkBackendHealth() {
 
 
 /* =========================================================
-   6. API READY
+   8. API READY
    ========================================================= */
 
 console.log(
     "LandGov API client initialized."
 );
+

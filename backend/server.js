@@ -34,6 +34,21 @@ const landProfileRoutes =
 const landUseRoutes =
     require("./routes/landUseRoutes");
 
+const registrationRoutes =
+    require("./routes/registrationRoutes");
+
+const PropertyTaxRoutes =
+    require("./routes/PropertyTaxRoutes");
+
+const BuildingPermissionRoutes =
+    require("./routes/BuildingPermissionRoutes");
+
+const restrictionsRoutes =
+    require("./routes/restrictionsRoutes");
+
+const utilitiesRoutes =
+    require("./routes/utilitiesRoutes");
+
 /* =========================================================
    3. CREATE EXPRESS APP
    ========================================================= */
@@ -132,11 +147,36 @@ app.use(
     landUseRoutes
 );
 
+app.use(
+    "/api/registration",
+    registrationRoutes
+);
+
+app.use(
+    "/api/property-tax",
+    PropertyTaxRoutes
+);
+
+app.use(
+    "/api/building-permission",
+    BuildingPermissionRoutes
+);
+
+app.use(
+    "/api/restrictions",
+    restrictionsRoutes
+);
+
+app.use(
+    "/api/utilities",
+    utilitiesRoutes
+);
+
 /* =========================================================
    9. START SERVER
    ========================================================= */
 
-app.listen(
+const server = app.listen(
     PORT,
     () => {
 
@@ -180,6 +220,47 @@ app.listen(
             `Land Use API: http://localhost:${PORT}/api/land-use`
         );
 
+        console.log(
+            `Registration API: http://localhost:${PORT}/api/registration`
+        );
 
+        console.log(
+            `Property Tax API: http://localhost:${PORT}/api/property-tax`
+        );
+
+        console.log(
+            `Building Permission API: http://localhost:${PORT}/api/building-permission`
+        );
+
+        console.log(
+            `Restrictions API: http://localhost:${PORT}/api/restrictions`
+        );
+
+        console.log(
+            `Utilities API: http://localhost:${PORT}/api/utilities`
+        );
     }
 );
+
+/* ========================================================= 
+SERVER ERROR HANDLER 
+========================================================= */
+
+server.on("error", (error) => {
+    if (error.code === "EADDRINUSE") {
+        console.error(`Port ${PORT} is already in use. Please stop the existing process or use a different port.`);
+    } else {
+        console.error("SERVER ERROR:", error);
+    }
+});
+
+
+/* ========================================================= 
+KEEP SERVER RUNNING
+========================================================= */
+
+process.on("exit", (code) => {
+    console.log(
+        `Node process exiting with code: ${code}`
+    );
+});

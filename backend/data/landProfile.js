@@ -30,6 +30,21 @@ const rorData =
 const landUseData =
     require("./landuse");
 
+const registrationData =
+    require("./registration");
+
+const propertyTaxData =
+    require("./PropertyTax");
+
+const buildingPermissionData =
+    require("./BuildingPermission");
+
+const restrictionsData =
+    require("./restrictions");
+
+const utilitiesData =
+    require("./utilities");
+
 
 /* =========================================================
    GET LAND PROFILE
@@ -79,6 +94,17 @@ function getLandProfile(parcelId) {
                 parcelId.toLowerCase()
         );
 
+    /* -----------------------------------------------------
+       Find registration record
+       ----------------------------------------------------- */
+
+    const registration =
+        registrationData.find(
+            item =>
+                item.parcelId.toLowerCase() ===
+                parcelId.toLowerCase()
+        );
+
 
     /* -----------------------------------------------------
        Find Land Use record
@@ -91,6 +117,48 @@ function getLandProfile(parcelId) {
                 parcelId.toLowerCase()
         );
 
+    /* -----------------------------------------------------
+       Find Property Tax record
+       ----------------------------------------------------- */
+
+    const propertyTax =
+        propertyTaxData.find(
+            item =>
+                item.parcelId.toLowerCase() ===
+                parcelId.toLowerCase()
+        );
+
+    /* -----------------------------------------------------
+       Find Building Permission record
+       ----------------------------------------------------- */
+
+    const buildingPermission = buildingPermissionData.find(
+        item =>
+            item.parcelId.toLowerCase() ===
+            parcelId.toLowerCase()
+    );
+
+    /* -----------------------------------------------------
+       Find restrictions record
+       ----------------------------------------------------- */
+
+    const restrictions =
+        restrictionsData.find(
+            item =>
+                item.parcelId.toLowerCase() ===
+                parcelId.toLowerCase()
+        );
+
+    /* -----------------------------------------------------
+       Find utilities record
+       ----------------------------------------------------- */
+
+    const utilities =
+        utilitiesData.find(
+            item =>
+                item.parcelId.toLowerCase() ===
+                parcelId.toLowerCase()
+        );
 
     /* -----------------------------------------------------
        Create unified profile
@@ -109,7 +177,22 @@ function getLandProfile(parcelId) {
             ror || null,
 
         landUse:
-            landUse || null
+            landUse || null,
+
+        registration:
+            registration || null,
+
+        propertyTax:
+            propertyTax || null,
+
+        buildingPermission:
+            buildingPermission || null,
+
+        restrictions:
+            restrictions || null,
+
+        utilities:
+            utilities || null
 
     };
 

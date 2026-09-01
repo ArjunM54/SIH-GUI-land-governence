@@ -95,17 +95,7 @@ router.get("/:parcelId", (req, res) => {
 
         parcelId: profile.parcelId,
 
-        data: {
-
-            parcel: profile.parcel,
-
-            cadastral: profile.cadastral,
-
-            ror: profile.ror,
-
-            landUse: profile.landUse
-
-        }
+        data: profile
 
     });
 
