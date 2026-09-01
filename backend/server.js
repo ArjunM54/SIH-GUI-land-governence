@@ -49,6 +49,17 @@ const restrictionsRoutes =
 const utilitiesRoutes =
     require("./routes/utilitiesRoutes");
 
+const governanceRoutes =
+    require("./routes/governanceRoutes");
+
+const conflictRoutes =
+    require("./routes/conflictRoutes");
+
+const proposalRoutes =
+    require("./routes/proposalRoutes");
+
+
+
 /* =========================================================
    3. CREATE EXPRESS APP
    ========================================================= */
@@ -172,6 +183,23 @@ app.use(
     utilitiesRoutes
 );
 
+app.use(
+    "/api/governance",
+    governanceRoutes
+);
+
+app.use(
+    "/api/conflicts",
+    conflictRoutes
+);
+
+app.use(
+    "/api/proposals",
+    proposalRoutes
+);
+
+
+
 /* =========================================================
    9. START SERVER
    ========================================================= */
@@ -239,6 +267,20 @@ const server = app.listen(
         console.log(
             `Utilities API: http://localhost:${PORT}/api/utilities`
         );
+
+        console.log(
+            `Governance API: http://localhost:${PORT}/api/governance`
+        );
+
+        console.log(
+            `Conflict API: http://localhost:${PORT}/api/conflicts`
+        );
+
+        console.log(
+            `Proposal Validation API: http://localhost:${PORT}/api/proposals/validate`
+        );
+
+
     }
 );
 

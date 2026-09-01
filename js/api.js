@@ -20,14 +20,16 @@ const API_BASE_URL =
    2. GENERIC API REQUEST
    ========================================================= */
 
-async function apiRequest(endpoint) {
+async function apiRequest(endpoint, options = {}) {
 
     try {
 
         const response =
             await fetch(
-                `${API_BASE_URL}${endpoint}`
+                `${API_BASE_URL}${endpoint}`,
+                options
             );
+
 
 
         /* Check HTTP status */
@@ -186,6 +188,54 @@ async function getUtilitiesByParcelId(
 
 
 /* =========================================================
+   6. GOVERNANCE & CONFLICT API
+   ========================================================= */
+
+async function getGovernanceByParcelId(parcelId) {
+    return await apiRequest(`/api/governance/${parcelId}`);
+}
+
+async function getAllGovernance() {
+    return await apiRequest("/api/governance");
+}
+
+async function getConflictsByParcelId(parcelId) {
+    return await apiRequest(`/api/conflicts/${parcelId}`);
+}
+
+async function getAllConflicts() {
+    return await apiRequest("/api/conflicts");
+}
+
+/* Proposal Validation API */
+async function validateProposal(parcelId, proposal) {
+    return await apiRequest("/api/proposals/validate", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            parcelId,
+            proposal
+        })
+    });
+}
+
+async function validateProposalForAll(proposal) {
+    return await apiRequest("/api/proposals/all", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            proposal
+        })
+    });
+}
+
+
+
+/* =========================================================
    7. CHECK BACKEND HEALTH
    ========================================================= */
 
@@ -205,4 +255,5 @@ async function checkBackendHealth() {
 console.log(
     "LandGov API client initialized."
 );
+
 

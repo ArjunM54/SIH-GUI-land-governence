@@ -516,3 +516,666 @@
     font-size: 12px;
 
 }
+
+/* =========================================================
+   GOVERNANCE STATUS SECTION STYLES
+   ========================================================= */
+
+.governance-section {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+}
+
+.governance-main-title {
+    color: #0f172a;
+    font-size: 16px;
+    margin-bottom: 14px;
+}
+
+.governance-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.governance-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px;
+    text-align: center;
+}
+
+.governance-card-label {
+    font-size: 11px;
+    color: #64748b;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.governance-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+}
+
+/* Status Classes */
+.governance-status-valid {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.governance-status-review {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+.governance-status-conflict {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+}
+
+/* Risk Levels */
+.governance-risk-low {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.governance-risk-medium {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+.governance-risk-high {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+}
+
+.governance-score-val {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.governance-summary-box {
+    background: #f1f5f9;
+    border-left: 4px solid #3b82f6;
+    padding: 10px 12px;
+    border-radius: 0 6px 6px 0;
+    font-size: 12px;
+    color: #334155;
+    margin-bottom: 14px;
+    line-height: 1.4;
+}
+
+.governance-subsection {
+    margin-top: 14px;
+}
+
+.governance-subsection-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 4px;
+}
+
+.governance-checks-list, .governance-issues-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.governance-check-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px 10px;
+}
+
+.governance-check-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.governance-check-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.governance-check-icon {
+    font-size: 14px;
+}
+
+.governance-check-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.governance-check-badges {
+    display: flex;
+    gap: 4px;
+}
+
+.governance-badge-sm {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.governance-sev-low {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.governance-sev-medium {
+    background: #ffedd5;
+    color: #c2410c;
+}
+
+.governance-sev-high {
+    background: #fce7f3;
+    color: #be185d;
+}
+
+.governance-check-msg {
+    font-size: 12px;
+    color: #475569;
+    line-height: 1.3;
+}
+
+.governance-issue-item {
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+    border-radius: 6px;
+    padding: 8px 10px;
+}
+
+.governance-issue-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.governance-issue-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #9f1239;
+}
+
+.governance-issue-msg {
+    font-size: 12px;
+    color: #4c0519;
+    margin-bottom: 6px;
+}
+
+.governance-issue-rec {
+    font-size: 11px;
+    background: #ffffff;
+    border: 1px solid #ffe4e6;
+    padding: 6px 8px;
+    border-radius: 4px;
+    color: #881337;
+}
+
+.governance-no-issues {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.governance-recs-list {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 12px;
+    color: #334155;
+}
+
+.governance-recs-list li {
+    margin-bottom: 4px;
+    line-height: 1.3;
+}
+
+.governance-loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.loading-spinner-small {
+    width: 18px;
+    height: 18px;
+    border: 3px solid #e2e8f0;
+    border-top: 3px solid #2563eb;
+    border-radius: 50%;
+    animation: landProfileSpin 0.8s linear infinite;
+}
+
+.governance-error {
+    background: #fff7ed;
+    border: 1px solid #ffedd5;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+.governance-error-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #c2410c;
+    margin-bottom: 4px;
+}
+
+.governance-error-msg {
+    font-size: 12px;
+    color: #7c2d12;
+}
+
+/* =========================================================
+   DEVELOPMENT PROPOSAL VALIDATION SECTION STYLES
+   ========================================================= */
+
+.proposal-section {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+}
+
+.proposal-main-title {
+    color: #0f172a;
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.proposal-parcel-context {
+    font-size: 12px;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 6px 10px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    border-left: 3px solid #2563eb;
+}
+
+.proposal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.proposal-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.proposal-form-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.proposal-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #0f172a;
+    background-color: #ffffff;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.proposal-input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.proposal-inline-error {
+    font-size: 12px;
+    color: #dc2626;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    padding: 6px 10px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+}
+
+.proposal-buttons-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.proposal-btn {
+    flex: 1;
+    padding: 9px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, opacity 0.2s ease;
+}
+
+.proposal-btn-primary {
+    background: #1e3a8a;
+    color: #ffffff;
+}
+
+.proposal-btn-primary:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
+.proposal-btn-secondary {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.proposal-btn-secondary:hover:not(:disabled) {
+    background: #cbd5e1;
+}
+
+.proposal-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.proposal-disclaimer {
+    font-size: 11px;
+    color: #64748b;
+    font-style: italic;
+    line-height: 1.3;
+    padding: 6px 0;
+    border-top: 1px dashed #e2e8f0;
+}
+
+/* Proposal Result Styling */
+.proposal-result-wrapper {
+    margin-top: 12px;
+}
+
+.proposal-result-section {
+    border-top: 2px solid #e2e8f0;
+    padding-top: 12px;
+    margin-top: 8px;
+}
+
+.main-result-title {
+    color: #0f172a;
+    font-size: 15px;
+    margin-bottom: 10px;
+}
+
+.proposal-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.proposal-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px;
+    text-align: center;
+}
+
+.proposal-card-label {
+    font-size: 11px;
+    color: #64748b;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.proposal-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+}
+
+/* Decision classes */
+.proposal-result-proceed {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.proposal-result-review {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+.proposal-result-conflict {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+}
+
+/* Risk classes */
+.proposal-risk-low {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.proposal-risk-medium {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+.proposal-risk-high {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+}
+
+.proposal-score-val {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.proposal-summary-box {
+    background: #f1f5f9;
+    border-left: 4px solid #3b82f6;
+    padding: 10px 12px;
+    border-radius: 0 6px 6px 0;
+    font-size: 12px;
+    color: #334155;
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.proposal-subsection {
+    margin-top: 12px;
+}
+
+.proposal-subsection-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 4px;
+}
+
+.proposal-checks-list, .proposal-issues-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.proposal-check-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px 10px;
+}
+
+.proposal-check-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.proposal-check-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.proposal-check-icon {
+    font-size: 14px;
+}
+
+.proposal-check-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.proposal-check-badges {
+    display: flex;
+    gap: 4px;
+}
+
+.proposal-badge-sm {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.proposal-sev-low {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.proposal-sev-medium {
+    background: #ffedd5;
+    color: #c2410c;
+}
+
+.proposal-sev-high {
+    background: #fce7f3;
+    color: #be185d;
+}
+
+.proposal-check-msg {
+    font-size: 12px;
+    color: #475569;
+    line-height: 1.3;
+}
+
+.proposal-issue-item {
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+    border-radius: 6px;
+    padding: 8px 10px;
+}
+
+.proposal-issue-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.proposal-issue-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #9f1239;
+}
+
+.proposal-issue-msg {
+    font-size: 12px;
+    color: #4c0519;
+    margin-bottom: 6px;
+}
+
+.proposal-issue-rec {
+    font-size: 11px;
+    background: #ffffff;
+    border: 1px solid #ffe4e6;
+    padding: 6px 8px;
+    border-radius: 4px;
+    color: #881337;
+}
+
+.proposal-no-issues {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.proposal-recs-list {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 12px;
+    color: #334155;
+}
+
+.proposal-recs-list li {
+    margin-bottom: 4px;
+    line-height: 1.3;
+}
+
+.proposal-error-box {
+    background: #fff7ed;
+    border: 1px solid #ffedd5;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+.proposal-error-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #c2410c;
+    margin-bottom: 4px;
+}
+
+.proposal-error-msg {
+    font-size: 12px;
+    color: #7c2d12;
+}

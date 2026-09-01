@@ -20,6 +20,8 @@ async function openCompleteLandProfile(parcelId) {
         parcelId
     );
 
+    /* Track active parcel for stale-request protection */
+    window.activeLandProfileParcelId = parcelId;
 
     createLandProfilePanel();
 
@@ -113,13 +115,24 @@ async function openCompleteLandProfile(parcelId) {
         );
 
 
+        /* Check for stale request before rendering */
+        if (window.activeLandProfileParcelId !== parcelId) {
+            console.log("Ignored stale land profile response for parcel:", parcelId);
+            return;
+        }
+
         renderLandProfile(
             landProfile
         );
 
+        /* Fetch governance validation asynchronously */
+        fetchGovernanceStatus(parcelId);
+
     }
 
     catch (error) {
+
+        if (window.activeLandProfileParcelId !== parcelId) return;
 
         console.error(
             "Land profile error:",
@@ -282,6 +295,77 @@ function renderLandProfile(
 
 
     content.innerHTML = `
+
+        <!-- =================================================
+             0. GOVERNANCE STATUS CONTAINER
+             ================================================= -->
+        <div id="governance-status-container" class="profile-section governance-section">
+            <div class="governance-loading">
+                <div class="loading-spinner-small"></div>
+                <span>Analyzing land governance...</span>
+            </div>
+        </div>
+
+        <!-- =================================================
+             0.1 DEVELOPMENT PROPOSAL VALIDATION SECTION
+             ================================================= -->
+        <div id="proposal-validation-container" class="profile-section proposal-section">
+            <div class="profile-section-title proposal-main-title">
+                🏗️ Development Proposal Validation
+            </div>
+
+            <div class="proposal-parcel-context">
+                Current Parcel: <strong>${parcel.id || profile.parcelId}</strong>
+            </div>
+
+            <form id="proposal-form" onsubmit="handleValidateProposal(event, '${parcel.id || profile.parcelId}')" class="proposal-form">
+                <div class="proposal-form-group">
+                    <label for="proposal-activity-type">Activity Type</label>
+                    <select id="proposal-activity-type" class="proposal-input">
+                        <option value="">-- Select Activity Type --</option>
+                        <option value="RESIDENTIAL">RESIDENTIAL</option>
+                        <option value="COMMERCIAL">COMMERCIAL</option>
+                        <option value="INDUSTRIAL">INDUSTRIAL</option>
+                        <option value="AGRICULTURAL">AGRICULTURAL</option>
+                        <option value="PUBLIC">PUBLIC</option>
+                        <option value="OTHER">OTHER</option>
+                    </select>
+                </div>
+
+                <div class="proposal-form-group">
+                    <label for="proposal-development-type">Development Type</label>
+                    <select id="proposal-development-type" class="proposal-input">
+                        <option value="">-- Select Development Type --</option>
+                        <option value="NEW_BUILDING">NEW_BUILDING</option>
+                        <option value="EXTENSION">EXTENSION</option>
+                        <option value="CHANGE_OF_USE">CHANGE_OF_USE</option>
+                        <option value="OTHER">OTHER</option>
+                    </select>
+                </div>
+
+                <div class="proposal-form-group">
+                    <label for="proposal-area">Proposed Area (sq.ft)</label>
+                    <input type="number" id="proposal-area" class="proposal-input" placeholder="e.g. 1500" min="1" step="any">
+                </div>
+
+                <div id="proposal-inline-error" class="proposal-inline-error" style="display: none;"></div>
+
+                <div class="proposal-buttons-row">
+                    <button type="submit" id="proposal-validate-btn" class="proposal-btn proposal-btn-primary">
+                        VALIDATE PROPOSAL
+                    </button>
+                    <button type="button" id="proposal-clear-btn" onclick="clearProposalForm('${parcel.id || profile.parcelId}')" class="proposal-btn proposal-btn-secondary">
+                        CLEAR
+                    </button>
+                </div>
+            </form>
+
+            <div class="proposal-disclaimer">
+                Results are based on available land-governance records and are intended for administrative review.
+            </div>
+
+            <div id="proposal-result-container" class="proposal-result-wrapper"></div>
+        </div>
 
         <!-- =================================================
              1. PARCEL
@@ -1276,3 +1360,467 @@ window.openCompleteLandProfile =
 
 window.closeLandProfile =
     closeLandProfile;
+
+
+/* =========================================================
+   12. GOVERNANCE VALIDATION INTEGRATION
+   ========================================================= */
+
+async function fetchGovernanceStatus(parcelId) {
+    try {
+        console.log("Fetching governance status for:", parcelId);
+        const response = await fetch(`http://localhost:5000/api/governance/${parcelId}`);
+
+        if (window.activeLandProfileParcelId !== parcelId) {
+            console.log("Ignored stale governance response for:", parcelId);
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error(`Governance API returned HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (window.activeLandProfileParcelId !== parcelId) return;
+
+        if (!result.success || !result.data) {
+            throw new Error(result.message || "Invalid governance response");
+        }
+
+        const container = document.getElementById("governance-status-container");
+        if (container) {
+            container.innerHTML = renderGovernanceHTML(result.data);
+        }
+    } catch (error) {
+        console.error("Governance API Error:", error);
+
+        if (window.activeLandProfileParcelId !== parcelId) return;
+
+        const container = document.getElementById("governance-status-container");
+        if (container) {
+            container.innerHTML = `
+                <div class="governance-error">
+                    <div class="governance-error-title">⚠️ Governance validation unavailable</div>
+                    <div class="governance-error-msg">Land records are available, but governance validation could not be completed.</div>
+                </div>
+            `;
+        }
+    }
+}
+
+function renderGovernanceHTML(data) {
+    const overallStatus = data.overallStatus || "VALID";
+    const riskLevel = data.riskLevel || "LOW";
+    const score = data.score !== undefined ? data.score : 0;
+    const summary = data.summary || "";
+    const checks = data.checks || [];
+    const issues = data.issues || [];
+    const recommendations = data.recommendations || [];
+
+    let statusLabel = overallStatus;
+    if (overallStatus === "REVIEW_REQUIRED") statusLabel = "REVIEW REQUIRED";
+
+    let statusClass = "governance-status-valid";
+    if (overallStatus === "REVIEW_REQUIRED") statusClass = "governance-status-review";
+    if (overallStatus === "CONFLICT") statusClass = "governance-status-conflict";
+
+    let riskClass = "governance-risk-low";
+    if (riskLevel === "MEDIUM") riskClass = "governance-risk-medium";
+    if (riskLevel === "HIGH") riskClass = "governance-risk-high";
+
+    /* Render Governance Checks */
+    let checksHTML = "";
+    if (checks.length > 0) {
+        checksHTML = checks.map(check => {
+            let icon = "✓";
+            let checkStatusClass = "governance-status-valid";
+            if (check.status === "WARNING") {
+                icon = "⚠️";
+                checkStatusClass = "governance-status-review";
+            } else if (check.status === "CONFLICT") {
+                icon = "🔴";
+                checkStatusClass = "governance-status-conflict";
+            }
+
+            let sevClass = "governance-sev-low";
+            if (check.severity === "MEDIUM") sevClass = "governance-sev-medium";
+            if (check.severity === "HIGH") sevClass = "governance-sev-high";
+
+            return `
+                <div class="governance-check-item">
+                    <div class="governance-check-header">
+                        <div class="governance-check-title-wrap">
+                            <span class="governance-check-icon">${icon}</span>
+                            <span class="governance-check-title">${check.title}</span>
+                        </div>
+                        <div class="governance-check-badges">
+                            <span class="governance-badge-sm ${checkStatusClass}">${check.status}</span>
+                            <span class="governance-badge-sm ${sevClass}">${check.severity}</span>
+                        </div>
+                    </div>
+                    <div class="governance-check-msg">${check.message}</div>
+                </div>
+            `;
+        }).join("");
+    }
+
+    /* Render Detected Issues */
+    let issuesHTML = "";
+    if (issues.length > 0) {
+        issuesHTML = issues.map(issue => {
+            let sevClass = "governance-sev-low";
+            if (issue.severity === "MEDIUM") sevClass = "governance-sev-medium";
+            if (issue.severity === "HIGH") sevClass = "governance-sev-high";
+
+            return `
+                <div class="governance-issue-item">
+                    <div class="governance-issue-header">
+                        <span class="governance-issue-title">⚠️ ${issue.title}</span>
+                        <span class="governance-badge-sm ${sevClass}">Severity: ${issue.severity}</span>
+                    </div>
+                    <div class="governance-issue-msg">${issue.message}</div>
+                    ${issue.recommendation ? `<div class="governance-issue-rec">💡 <strong>Recommendation:</strong> ${issue.recommendation}</div>` : ""}
+                </div>
+            `;
+        }).join("");
+    } else {
+        issuesHTML = `
+            <div class="governance-no-issues">
+                ✓ No governance issues detected.
+            </div>
+        `;
+    }
+
+    /* Render Recommendations */
+    let recsHTML = "";
+    if (recommendations.length > 0) {
+        recsHTML = `
+            <div class="governance-subsection">
+                <div class="governance-subsection-title">📋 Recommended Actions</div>
+                <ul class="governance-recs-list">
+                    ${recommendations.map(rec => `<li>${rec}</li>`).join("")}
+                </ul>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="profile-section-title governance-main-title">
+            🛡️ Land Governance Status
+        </div>
+
+        <div class="governance-cards-grid">
+            <div class="governance-card">
+                <div class="governance-card-label">Overall Status</div>
+                <div class="governance-badge ${statusClass}">${statusLabel}</div>
+            </div>
+            <div class="governance-card">
+                <div class="governance-card-label">Risk Level</div>
+                <div class="governance-badge ${riskClass}">${riskLevel}</div>
+            </div>
+            <div class="governance-card">
+                <div class="governance-card-label">Risk Score</div>
+                <div class="governance-score-val">${score} / 100</div>
+            </div>
+        </div>
+
+        ${summary ? `
+            <div class="governance-summary-box">
+                <strong>Summary:</strong> ${summary}
+            </div>
+        ` : ""}
+
+        <div class="governance-subsection">
+            <div class="governance-subsection-title">🔍 Governance Checks</div>
+            <div class="governance-checks-list">
+                ${checksHTML}
+            </div>
+        </div>
+
+        <div class="governance-subsection">
+            <div class="governance-subsection-title">⚠️ Detected Issues</div>
+            <div class="governance-issues-list">
+                ${issuesHTML}
+            </div>
+        </div>
+
+        ${recsHTML}
+    `;
+}
+
+/* =========================================================
+   13. DEVELOPMENT PROPOSAL VALIDATION INTEGRATION
+   ========================================================= */
+
+async function handleValidateProposal(event, parcelId) {
+    if (event) {
+        event.preventDefault();
+    }
+
+    const targetParcelId = parcelId || window.activeLandProfileParcelId;
+    const activitySelect = document.getElementById("proposal-activity-type");
+    const developmentSelect = document.getElementById("proposal-development-type");
+    const areaInput = document.getElementById("proposal-area");
+    const errorDiv = document.getElementById("proposal-inline-error");
+    const validateBtn = document.getElementById("proposal-validate-btn");
+    const resultContainer = document.getElementById("proposal-result-container");
+
+    if (errorDiv) {
+        errorDiv.style.display = "none";
+        errorDiv.textContent = "";
+    }
+
+    const activityType = activitySelect ? activitySelect.value : "";
+    const developmentType = developmentSelect ? developmentSelect.value : "";
+    const rawArea = areaInput ? areaInput.value.trim() : "";
+
+    // 15. Frontend Input Validation
+    if (!activityType) {
+        showProposalInlineError("Please select an Activity Type.");
+        return;
+    }
+
+    if (!developmentType) {
+        showProposalInlineError("Please select a Development Type.");
+        return;
+    }
+
+    let proposedArea = null;
+    if (rawArea !== "") {
+        proposedArea = Number(rawArea);
+        if (isNaN(proposedArea) || proposedArea <= 0) {
+            showProposalInlineError("Proposed Area must be a valid numeric value greater than zero.");
+            return;
+        }
+    }
+
+    // 5. Validation Loading State
+    if (validateBtn) {
+        validateBtn.disabled = true;
+        validateBtn.textContent = "VALIDATING...";
+    }
+
+    try {
+        if (window.activeLandProfileParcelId !== targetParcelId) {
+            console.log("Stale parcel switch detected before proposal API call for:", targetParcelId);
+            return;
+        }
+
+        const proposalData = {
+            activityType,
+            developmentType,
+            proposedArea
+        };
+
+        const result = await validateProposal(targetParcelId, proposalData);
+
+        // 13. Stale Request Protection
+        if (window.activeLandProfileParcelId !== targetParcelId) {
+            console.log("Ignored stale proposal response for parcel:", targetParcelId);
+            return;
+        }
+
+        if (!result || !result.success || !result.data) {
+            throw new Error(result ? result.message : "Unable to complete proposal validation.");
+        }
+
+        if (resultContainer) {
+            resultContainer.innerHTML = renderProposalResultHTML(result.data);
+        }
+    } catch (error) {
+        console.error("Proposal Validation API Error:", error);
+
+        if (window.activeLandProfileParcelId !== targetParcelId) return;
+
+        if (resultContainer) {
+            resultContainer.innerHTML = `
+                <div class="proposal-error-box">
+                    <div class="proposal-error-title">⚠️ Proposal validation unavailable</div>
+                    <div class="proposal-error-msg">Unable to complete proposal validation. Please try again.</div>
+                </div>
+            `;
+        }
+    } finally {
+        if (validateBtn && window.activeLandProfileParcelId === targetParcelId) {
+            validateBtn.disabled = false;
+            validateBtn.textContent = "VALIDATE PROPOSAL";
+        }
+    }
+}
+
+function showProposalInlineError(msg) {
+    const errorDiv = document.getElementById("proposal-inline-error");
+    if (errorDiv) {
+        errorDiv.textContent = msg;
+        errorDiv.style.display = "block";
+    }
+}
+
+function clearProposalForm(parcelId) {
+    const activitySelect = document.getElementById("proposal-activity-type");
+    const developmentSelect = document.getElementById("proposal-development-type");
+    const areaInput = document.getElementById("proposal-area");
+    const errorDiv = document.getElementById("proposal-inline-error");
+    const resultContainer = document.getElementById("proposal-result-container");
+
+    if (activitySelect) activitySelect.value = "";
+    if (developmentSelect) developmentSelect.value = "";
+    if (areaInput) areaInput.value = "";
+    if (errorDiv) {
+        errorDiv.style.display = "none";
+        errorDiv.textContent = "";
+    }
+    if (resultContainer) {
+        resultContainer.innerHTML = "";
+    }
+}
+
+function renderProposalResultHTML(data) {
+    const decision = data.decision || "PROCEED";
+    const riskLevel = data.riskLevel || "LOW";
+    const score = data.score !== undefined ? data.score : 0;
+    const summary = data.summary || "";
+    const checks = data.checks || [];
+    const issues = data.issues || [];
+    const recommendations = data.recommendations || [];
+
+    let decisionLabel = decision;
+    if (decision === "REVIEW_REQUIRED") decisionLabel = "REVIEW REQUIRED";
+
+    let decisionClass = "proposal-result-proceed";
+    if (decision === "REVIEW_REQUIRED") decisionClass = "proposal-result-review";
+    if (decision === "CONFLICT") decisionClass = "proposal-result-conflict";
+
+    let riskClass = "proposal-risk-low";
+    if (riskLevel === "MEDIUM") riskClass = "proposal-risk-medium";
+    if (riskLevel === "HIGH") riskClass = "proposal-risk-high";
+
+    /* Render Checks */
+    let checksHTML = "";
+    if (checks.length > 0) {
+        checksHTML = checks.map(check => {
+            let icon = "✓";
+            let checkStatusClass = "proposal-result-proceed";
+            if (check.status === "WARNING") {
+                icon = "⚠️";
+                checkStatusClass = "proposal-result-review";
+            } else if (check.status === "CONFLICT") {
+                icon = "🔴";
+                checkStatusClass = "proposal-result-conflict";
+            }
+
+            let sevClass = "proposal-sev-low";
+            if (check.severity === "MEDIUM") sevClass = "proposal-sev-medium";
+            if (check.severity === "HIGH") sevClass = "proposal-sev-high";
+
+            return `
+                <div class="proposal-check-item">
+                    <div class="proposal-check-header">
+                        <div class="proposal-check-title-wrap">
+                            <span class="proposal-check-icon">${icon}</span>
+                            <span class="proposal-check-title">${check.title}</span>
+                        </div>
+                        <div class="proposal-check-badges">
+                            <span class="proposal-badge-sm ${checkStatusClass}">${check.status}</span>
+                            <span class="proposal-badge-sm ${sevClass}">${check.severity}</span>
+                        </div>
+                    </div>
+                    <div class="proposal-check-msg">${check.message}</div>
+                </div>
+            `;
+        }).join("");
+    }
+
+    /* Render Detected Issues */
+    let issuesHTML = "";
+    if (issues.length > 0) {
+        issuesHTML = issues.map(issue => {
+            let sevClass = "proposal-sev-low";
+            if (issue.severity === "MEDIUM") sevClass = "proposal-sev-medium";
+            if (issue.severity === "HIGH") sevClass = "proposal-sev-high";
+
+            return `
+                <div class="proposal-issue-item">
+                    <div class="proposal-issue-header">
+                        <span class="proposal-issue-title">⚠️ ${issue.title}</span>
+                        <span class="proposal-badge-sm ${sevClass}">Severity: ${issue.severity}</span>
+                    </div>
+                    <div class="proposal-issue-msg">${issue.message}</div>
+                    ${issue.recommendation ? `<div class="proposal-issue-rec">💡 <strong>Recommendation:</strong> ${issue.recommendation}</div>` : ""}
+                </div>
+            `;
+        }).join("");
+    } else {
+        issuesHTML = `
+            <div class="proposal-no-issues">
+                ✓ No proposal conflicts detected.
+            </div>
+        `;
+    }
+
+    /* Render Recommendations */
+    let recsHTML = "";
+    const uniqueRecs = Array.from(new Set(recommendations));
+    if (uniqueRecs.length > 0) {
+        recsHTML = `
+            <div class="proposal-subsection">
+                <div class="proposal-subsection-title">📋 Recommended Actions</div>
+                <ul class="proposal-recs-list">
+                    ${uniqueRecs.map(rec => `<li>${rec}</li>`).join("")}
+                </ul>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="proposal-result-section">
+            <div class="proposal-subsection-title main-result-title">
+                🔍 Proposal Validation Result
+            </div>
+
+            <div class="proposal-cards-grid">
+                <div class="proposal-card">
+                    <div class="proposal-card-label">Decision</div>
+                    <div class="proposal-badge ${decisionClass}">${decisionLabel}</div>
+                </div>
+                <div class="proposal-card">
+                    <div class="proposal-card-label">Risk Level</div>
+                    <div class="proposal-badge ${riskClass}">${riskLevel}</div>
+                </div>
+                <div class="proposal-card">
+                    <div class="proposal-card-label">Risk Score</div>
+                    <div class="proposal-score-val">${score} / 100</div>
+                </div>
+            </div>
+
+            ${summary ? `
+                <div class="proposal-summary-box">
+                    <strong>Summary:</strong> ${summary}
+                </div>
+            ` : ""}
+
+            ${checks.length > 0 ? `
+                <div class="proposal-subsection">
+                    <div class="proposal-subsection-title">Proposal Checks</div>
+                    <div class="proposal-checks-list">
+                        ${checksHTML}
+                    </div>
+                </div>
+            ` : ""}
+
+            <div class="proposal-subsection">
+                <div class="proposal-subsection-title">⚠️ Issues Requiring Attention</div>
+                <div class="proposal-issues-list">
+                    ${issuesHTML}
+                </div>
+            </div>
+
+            ${recsHTML}
+        </div>
+    `;
+}
+
+// Expose globally for inline event handlers
+window.handleValidateProposal = handleValidateProposal;
+window.clearProposalForm = clearProposalForm;
