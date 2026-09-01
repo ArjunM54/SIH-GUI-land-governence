@@ -107,7 +107,7 @@ function drawParcel(parcel) {
         <br><br>
 
         <button
-            onclick="selectParcel('${parcel.id}')"
+            onclick="openCompleteLandProfile('${parcel.id}')"
             style="
                 padding: 7px 12px;
                 border: none;

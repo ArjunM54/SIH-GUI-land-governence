@@ -297,9 +297,7 @@ button {
 
     margin: 0 auto;
 
-    display: grid;
-
-    grid-template-columns: 1fr 350px;
+    display: block;
 
     background: white;
 
@@ -320,159 +318,6 @@ button {
     width: 100%;
     height: 100%;
     min-height: 500px;
-}
-
-
-/* =========================================================
-   6. LAND INFORMATION PANEL
-   ========================================================= */
-
-.land-info {
-    background: #ffffff;
-
-    border-left: 1px solid #e2e8f0;
-
-    overflow-y: auto;
-}
-
-
-/* Panel header */
-
-.info-header {
-    display: flex;
-
-    align-items: center;
-    justify-content: space-between;
-
-    padding: 20px;
-
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.info-header h3 {
-    font-size: 18px;
-}
-
-
-/* Close */
-
-.close-btn {
-    width: 32px;
-    height: 32px;
-
-    border: none;
-
-    border-radius: 7px;
-
-    background: #f1f5f9;
-
-    font-size: 22px;
-
-    color: #64748b;
-
-    transition: 0.2s ease;
-}
-
-.close-btn:hover {
-    background: #e2e8f0;
-}
-
-
-/* Empty state */
-
-.empty-state {
-    padding: 60px 25px;
-
-    text-align: center;
-
-    color: #64748b;
-}
-
-.empty-icon {
-    width: 65px;
-    height: 65px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    margin: 0 auto 20px;
-
-    border-radius: 50%;
-
-    background: #eff6ff;
-
-    font-size: 28px;
-}
-
-.empty-state h4 {
-    margin-bottom: 8px;
-
-    color: #334155;
-
-    font-size: 16px;
-}
-
-.empty-state p {
-    font-size: 13px;
-}
-
-
-/* =========================================================
-   7. LAND DETAILS
-   ========================================================= */
-
-.land-details-content {
-    padding: 20px;
-}
-
-.land-title {
-    margin-bottom: 20px;
-}
-
-.land-title h4 {
-    font-size: 20px;
-    margin-bottom: 4px;
-}
-
-.land-title p {
-    font-size: 13px;
-    color: #64748b;
-}
-
-
-/* Information cards */
-
-.info-card {
-    padding: 14px;
-
-    margin-bottom: 10px;
-
-    border-radius: 10px;
-
-    background: #f8fafc;
-
-    border: 1px solid #e2e8f0;
-}
-
-.info-card-label {
-    font-size: 11px;
-
-    text-transform: uppercase;
-
-    letter-spacing: 0.8px;
-
-    color: #64748b;
-
-    margin-bottom: 3px;
-}
-
-.info-card-value {
-    font-size: 14px;
-
-    font-weight: 600;
-
-    color: #1e293b;
 }
 
 
@@ -633,25 +478,6 @@ footer {
    12. SCROLLBAR
    ========================================================= */
 
-.land-info::-webkit-scrollbar {
-    width: 6px;
-}
-
-.land-info::-webkit-scrollbar-track {
-    background: #f8fafc;
-}
-
-.land-info::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 10px;
-}
-
-
-/* =========================================================
-   13. RESPONSIVE DESIGN
-   ========================================================= */
-
-
 /* Tablet */
 
 @media (max-width: 900px) {
@@ -661,20 +487,11 @@ footer {
     }
 
     .map-container {
-        grid-template-columns: 1fr;
         height: auto;
     }
 
     .map {
         height: 500px;
-    }
-
-    .land-info {
-        height: 400px;
-
-        border-left: none;
-
-        border-top: 1px solid #e2e8f0;
     }
 
     .services-grid {

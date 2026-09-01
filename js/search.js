@@ -216,7 +216,7 @@ window.selectSearchParcel =
 
         /* Show information */
 
-        showLandInformation(parcel);
+        openCompleteLandProfile(parcelId);
 
 
         /* Clear search results */
