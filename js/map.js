@@ -123,13 +123,17 @@ function drawParcel(parcel) {
     `);
 
 
-    /* Click */
+    /* =========================================================
+       PARCEL CLICK
+       ========================================================= */
 
     polygon.on(
         "click",
         function () {
 
-            showLandInformation(parcel);
+            openCompleteLandProfile(
+                parcel.id
+            );
 
         }
     );

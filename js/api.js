@@ -80,6 +80,73 @@ async function getParcels() {
 
 
 /* =========================================================
+   GET COMPLETE LAND PROFILE
+   ========================================================= */
+
+async function getLandProfile(parcelId) {
+
+    try {
+
+        console.log(
+            "Fetching land profile:",
+            parcelId
+        );
+
+
+        const response =
+            await fetch(
+                `http://localhost:5000/api/land-profile/${parcelId}`
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                `HTTP error: ${response.status}`
+            );
+
+        }
+
+
+        const result =
+            await response.json();
+
+
+        if (!result.success) {
+
+            throw new Error(
+                result.message ||
+                "Unable to load land profile"
+            );
+
+        }
+
+
+        console.log(
+            "Land profile received:",
+            result.data
+        );
+
+
+        return result.data;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Land profile API error:",
+            error
+        );
+
+        throw error;
+
+    }
+
+}
+
+
+/* =========================================================
    4. GET SINGLE PARCEL
    ========================================================= */
 
@@ -113,21 +180,6 @@ async function getUtilitiesByParcelId(
 
     return await apiRequest(
         `/api/utilities/${parcelId}`
-    );
-
-}
-
-
-/* =========================================================
-   6. GET LAND PROFILE
-   ========================================================= */
-
-async function getLandProfile(
-    parcelId
-) {
-
-    return await apiRequest(
-        `/api/land-profile/${parcelId}`
     );
 
 }
