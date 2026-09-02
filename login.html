@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LandGov Login | Digital Land Governance</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/login.css">
+</head>
+<body class="auth-body">
+
+    <header class="auth-header">
+        <a href="index.html" class="auth-brand">
+            <span>🌐</span>
+            <span>LandGov GIS</span>
+        </a>
+        <a href="index.html" style="color: #94a3b8; text-decoration: none; font-size: 0.9rem;">← Back to GIS Map</a>
+    </header>
+
+    <main class="auth-container">
+        <div class="auth-card">
+
+            <!-- TABS -->
+            <div class="auth-tabs">
+                <button id="tab-login" class="tab-btn active" onclick="switchAuthTab('login')">Login</button>
+                <button id="tab-register" class="tab-btn" onclick="switchAuthTab('register')">Citizen Registration</button>
+            </div>
+
+            <!-- ALERT MSG -->
+            <div id="alert-box" class="alert-message"></div>
+
+            <!-- LOGIN FORM -->
+            <form id="login-form" autocomplete="off" onsubmit="handleLoginSubmit(event)">
+                <h2 class="auth-title">Welcome to LandGov</h2>
+                <p class="auth-subtitle">Log in as Citizen, Government Officer, or Administrator</p>
+
+                <div class="form-group">
+                    <label for="login-identifier">Email or Officer ID</label>
+                    <input type="text" id="login-identifier" class="form-input" placeholder="e.g. OFF-CAD-001 or citizen@landgov.gov" autocomplete="off" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" class="form-input" placeholder="Enter password" autocomplete="new-password" required>
+                </div>
+
+                <button type="submit" class="auth-submit-btn">Log In to LandGov</button>
+            </form>
+
+            <!-- REGISTER FORM -->
+            <form id="register-form" style="display: none;" autocomplete="off" onsubmit="handleRegisterSubmit(event)">
+                <h2 class="auth-title">Citizen Registration</h2>
+                <p class="auth-subtitle">Create a public citizen account for land services</p>
+
+                <div class="form-group">
+                    <label for="reg-name">Full Name</label>
+                    <input type="text" id="reg-name" class="form-input" placeholder="Enter full name" autocomplete="off" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="reg-email">Email Address</label>
+                    <input type="email" id="reg-email" class="form-input" placeholder="name@example.com" autocomplete="off" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="reg-mobile">Mobile Number</label>
+                    <input type="tel" id="reg-mobile" class="form-input" placeholder="+91 9876543210" autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="reg-password">Password</label>
+                    <input type="password" id="reg-password" class="form-input" placeholder="Create password" autocomplete="new-password" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="reg-confirm-password">Confirm Password</label>
+                    <input type="password" id="reg-confirm-password" class="form-input" placeholder="Confirm password" autocomplete="new-password" required>
+                </div>
+
+                <button type="submit" class="auth-submit-btn">Register Citizen Account</button>
+            </form>
+
+
+        </div>
+    </main>
+
+    <!-- SCRIPTS -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/permissions.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/login.js"></script>
+</body>
+</html>

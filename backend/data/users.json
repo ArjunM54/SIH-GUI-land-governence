@@ -1,0 +1,212 @@
+[
+  {
+    "uid": "uid-citizen-001",
+    "officerId": null,
+    "name": "Ramesh Sharma",
+    "email": "citizen@landgov.gov",
+    "password": "Pass123!Dem",
+    "role": "citizen",
+    "officerType": null,
+    "department": null,
+    "permissions": [
+      "citizen.view",
+      "citizen.request",
+      "parcel.view"
+    ],
+    "status": "active",
+    "createdAt": "2026-01-01T10:00:00Z"
+  },
+  {
+    "uid": "uid-off-cad-001",
+    "officerId": "OFF-CAD-001",
+    "name": "Arun Survey",
+    "email": "cadastral@landgov.gov",
+    "password": "NewPass123!Demo",
+    "role": "officer",
+    "officerType": "cadastral_officer",
+    "department": "Cadastral & Survey Department",
+    "permissions": [
+      "cadastral.view",
+      "cadastral.verify",
+      "cadastral.update",
+      "parcel.view",
+      "parcel.verify",
+      "gis.view",
+      "gis.update",
+      "survey.view",
+      "survey.verify"
+    ],
+    "status": "active",
+    "createdAt": "2026-01-01T10:00:00Z"
+  },
+  {
+    "uid": "uid-off-ror-001",
+    "officerId": "OFF-ROR-001",
+    "name": "Kumar LandRecords",
+    "email": "ror@landgov.gov",
+    "password": "Pass123!Demo",
+    "role": "officer",
+    "officerType": "land_records_officer",
+    "department": "Land Records Department",
+    "permissions": [
+      "ror.view",
+      "ror.verify",
+      "ror.update",
+      "ownership.view",
+      "ownership.verify",
+      "ownership.update",
+      "mutation.view",
+      "mutation.verify",
+      "mutation.approve"
+    ],
+    "status": "active",
+    "createdAt": "2026-01-01T10:00:00Z"
+  },
+  {
+    "uid": "uid-off-reg-001",
+    "officerId": "OFF-REG-001",
+    "name": "Priya Registrar",
+    "email": "registration@landgov.gov",
+    "password": "Pass123!Demo",
+    "role": "officer",
+    "officerType": "registration_officer",
+    "department": "Registration Department",
+    "permissions": [
+      "registration.view",
+      "registration.verify",
+      "registration.update",
+      "registration.approve",
+      "transfer.view",
+      "transfer.verify",
+      "transfer.approve"
+    ],
+    "status": "active",
+    "createdAt": "2026-01-01T10:00:00Z"
+  },
+  {
+    "uid": "uid-off-lu-001",
+    "officerId": "OFF-LU-001",
+    "name": "Ravi Planner",
+    "email": "landuse@landgov.gov",
+    "password": "Pass123!Demo",
+    "role": "officer",
+    "officerType": "land_use_officer",
+    "department": "Land Use & Planning Department",
+    "permissions": [
+      "landuse.view",
+      "landuse.verify",
+      "landuse.update",
+      "landuse.approve",
+      "zoning.view",
+      "zoning.verify",
+      "zoning.update",
+      "restrictions.view",
+      "restrictions.verify",
+      "restrictions.update"
+    ],
+    "status": "active",
+    "createdAt": "2026-01-01T10:00:00Z"
+  },
+  {
+    "uid": "uid-off-tax-001",
+    "officerId": "OFF-TAX-001",
+    "name": "Meena Municipal",
+    "email": "tax@landgov.gov",
+    "password": "Pass123!Demo",
+    "role": "officer",
+    "officerType": "property_tax_officer",
+    "department": "Property Tax & Municipal Department",
+    "permissions": [
+      "tax.view",
+      "tax.verify",
+      "tax.update",
+      "tax.approve",
+      "municipal.view",
+      "municipal.verify",
+      "building.view",
+      "building.verify",
+      "building.approve"
+    ],
+    "status": "active",
+    "createdAt": "2026-01-01T10:00:00Z"
+  },
+  {
+    "uid": "uid-admin-001",
+    "officerId": "OFF-ADM-001",
+    "name": "System Administrator",
+    "email": "admin@landgov.gov",
+    "password": "Pass123!Demo",
+    "role": "admin",
+    "officerType": null,
+    "department": "Governance Administration",
+    "permissions": [
+      "admin.all",
+      "users.manage",
+      "officers.manage",
+      "permissions.manage",
+      "audit.view",
+      "system.manage"
+    ],
+    "status": "active",
+    "createdAt": "2026-01-01T10:00:00Z"
+  },
+  {
+    "uid": "uid-off-1788364037443",
+    "officerId": "OFF-CAD-002",
+    "name": "Suresh Survey",
+    "email": "suresh.survey@landgov.gov",
+    "password": "Pass123!Demo",
+    "role": "officer",
+    "officerType": "cadastral_officer",
+    "department": "Cadastral & Survey Department",
+    "permissions": [
+      "cadastral.view",
+      "cadastral.verify",
+      "cadastral.update",
+      "parcel.view",
+      "parcel.verify",
+      "gis.view",
+      "gis.update",
+      "survey.view",
+      "survey.verify"
+    ],
+    "status": "active",
+    "createdAt": "2026-09-02T15:47:17.443Z"
+  },
+  {
+    "uid": "uid-citizen-1788364815130",
+    "officerId": null,
+    "name": "hariprem",
+    "email": "hariprem1706@gmail.com",
+    "password": "haree@2007",
+    "mobile": "6383120790",
+    "role": "citizen",
+    "officerType": null,
+    "department": null,
+    "permissions": [
+      "citizen.view",
+      "citizen.request",
+      "parcel.view"
+    ],
+    "status": "active",
+    "createdAt": "2026-09-02T16:00:15.130Z"
+  },
+  {
+    "uid": "uid-citizen-1788365266732",
+    "officerId": null,
+    "name": "arjun",
+    "email": "arjun@gmail.com",
+    "password": "arjun",
+    "mobile": "8837373833",
+    "role": "citizen",
+    "officerType": null,
+    "department": null,
+    "permissions": [
+      "citizen.view",
+      "citizen.request",
+      "parcel.view"
+    ],
+    "status": "active",
+    "createdAt": "2026-09-02T16:07:46.732Z"
+  }
+]

@@ -1,0 +1,161 @@
+/* =========================================================
+   LANDGOV GIS
+   OFFICER DASHBOARD STYLESHEET
+   ========================================================= */
+
+.officer-body {
+    background: #090d16;
+    color: #f1f5f9;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    margin: 0;
+    min-height: 100vh;
+}
+
+.officer-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.officer-sidebar {
+    width: 260px;
+    background: #0f172a;
+    border-right: 1px solid #1e293b;
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 1rem;
+}
+
+.sidebar-header {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #38bdf8;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.officer-profile-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.officer-id-tag {
+    display: inline-block;
+    background: #0284c7;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    margin-bottom: 0.4rem;
+}
+
+.officer-name {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.officer-dept {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-top: 0.2rem;
+}
+
+.nav-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex: 1;
+}
+
+.nav-item {
+    margin-bottom: 0.35rem;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 0.9rem;
+    color: #94a3b8;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.nav-link:hover, .nav-link.active {
+    background: #1e293b;
+    color: #38bdf8;
+}
+
+.officer-content {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+}
+
+.dept-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #1e293b;
+}
+
+.dept-badge {
+    padding: 0.4rem 0.9rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.badge-cadastral { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+.badge-ror { background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); }
+.badge-registration { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+.badge-landuse { background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
+.badge-tax { background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); }
+
+.metrics-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+}
+
+.metric-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 1.25rem;
+}
+
+.metric-val {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #f8fafc;
+    margin-top: 0.4rem;
+}
+
+.action-btn {
+    padding: 0.45rem 0.8rem;
+    background: #0284c7;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.82rem;
+    transition: background 0.15s;
+}
+
+.action-btn:hover {
+    background: #0369a1;
+}

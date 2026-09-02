@@ -174,10 +174,37 @@ function clearAuditStore() {
     auditCounter = 0;
 }
 
+/**
+ * Logs a generic audit event (e.g. LOGIN_SUCCESS, OFFICER_CREATED, PERMISSION_CHANGED, etc.)
+ *
+ * @param {Object} eventData - { actor, target, action, timestamp, result, details }
+ * @returns {Object} Created audit record
+ */
+function logEvent(eventData = {}) {
+    const auditId = generateAuditId();
+    const createdAt = eventData.timestamp || new Date().toISOString();
+
+    const auditRecord = {
+        auditId,
+        actor: eventData.actor || "SYSTEM",
+        target: eventData.target || "SYSTEM",
+        action: eventData.action || "GENERAL_EVENT",
+        result: eventData.result || "SUCCESS",
+        details: eventData.details || {},
+        createdAt
+    };
+
+    auditStore.push(auditRecord);
+    console.log(`[Audit Service] ${auditRecord.action} logged by ${auditRecord.actor} -> Target: ${auditRecord.target}`);
+    return auditRecord;
+}
+
 module.exports = {
     createAuditRecord,
+    logEvent,
     getAuditRecord,
     getAuditsByParcel,
     listAudits,
     clearAuditStore
 };
+

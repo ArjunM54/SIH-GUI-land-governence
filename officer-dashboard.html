@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Officer Dashboard | LandGov GIS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/officer.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="officer-body">
+
+    <div class="officer-layout">
+        <!-- SIDEBAR -->
+        <aside class="officer-sidebar">
+            <div class="sidebar-header">
+                <span>🌐</span>
+                <span>LandGov Officer</span>
+            </div>
+
+            <div class="officer-profile-card">
+                <span id="officer-id-tag" class="officer-id-tag">OFF-CAD-001</span>
+                <div id="officer-name" class="officer-name">Officer Name</div>
+                <div id="officer-dept" class="officer-dept">Department</div>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link active" onclick="switchOfficerTab('overview')">
+                        <span>📊</span> Department Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="switchOfficerTab('records')">
+                        <span>📂</span> Department Records
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="index.html#map-section">
+                        <span>🗺️</span> GIS Land Map
+                    </a>
+                </li>
+            </ul>
+
+            <button class="logout-btn" onclick="handleLogout()" style="margin-top: auto; width: 100%;">Log Out</button>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="officer-content">
+
+            <!-- HEADER -->
+            <div class="dept-header">
+                <div>
+                    <h1 id="dept-title" style="margin: 0 0 0.4rem 0;">Department Dashboard</h1>
+                    <p style="color: #94a3b8; margin: 0;">Authorized Government Officer Portal — Role-Based Execution Layer</p>
+                </div>
+                <span id="dept-badge" class="dept-badge badge-cadastral">Cadastral & Survey</span>
+            </div>
+
+            <!-- DYNAMIC METRICS -->
+            <div id="metrics-container" class="metrics-row">
+                <!-- Populated dynamically -->
+            </div>
+
+            <!-- DYNAMIC MODULE TABLE -->
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h3 id="module-table-title" style="margin: 0;">Department Action Queue</h3>
+                </div>
+                <div id="module-table-container">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ACTION / VERIFICATION MODAL -->
+    <div id="action-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modal-title" style="margin: 0;">Officer Verification Action</h3>
+                <button class="close-modal-btn" onclick="closeActionModal()">×</button>
+            </div>
+            <form id="action-form" onsubmit="handleActionSubmit(event)">
+                <input type="hidden" id="action-target-id">
+                <div class="form-group">
+                    <label id="target-id-label">Target Item ID</label>
+                    <input type="text" id="action-display-id" class="form-input" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Action / Decision</label>
+                    <select id="action-decision" class="form-input">
+                        <option value="APPROVED">APPROVE & VERIFY</option>
+                        <option value="REJECTED">REJECT</option>
+                        <option value="UNDER_REVIEW">MARK FOR RE-AUDIT</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Officer Inspection Remarks</label>
+                    <textarea id="action-remarks" class="form-input" rows="3" placeholder="Enter officer verification notes..."></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+                    <button type="button" class="btn-secondary" onclick="closeActionModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Confirm & Log Audit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/permissions.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/officer.js"></script>
+</body>
+</html>
