@@ -58,6 +58,9 @@ const conflictRoutes =
 const proposalRoutes =
     require("./routes/proposalRoutes");
 
+const auditRoutes =
+    require("./routes/auditRoutes");
+
 
 
 /* =========================================================
@@ -198,6 +201,12 @@ app.use(
     proposalRoutes
 );
 
+app.use(
+    "/api/audits",
+    auditRoutes
+);
+
+
 
 
 /* =========================================================
@@ -279,6 +288,11 @@ const server = app.listen(
         console.log(
             `Proposal Validation API: http://localhost:${PORT}/api/proposals/validate`
         );
+
+        console.log(
+            `Audit Trail API: http://localhost:${PORT}/api/audits`
+        );
+
 
 
     }

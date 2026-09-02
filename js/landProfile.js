@@ -22,8 +22,12 @@ async function openCompleteLandProfile(parcelId) {
 
     /* Track active parcel for stale-request protection */
     window.activeLandProfileParcelId = parcelId;
+    if (typeof closeAuditModal === "function") {
+        closeAuditModal();
+    }
 
     createLandProfilePanel();
+
 
 
     const panel =
@@ -357,7 +361,11 @@ function renderLandProfile(
                     <button type="button" id="proposal-clear-btn" onclick="clearProposalForm('${parcel.id || profile.parcelId}')" class="proposal-btn proposal-btn-secondary">
                         CLEAR
                     </button>
+                    <button type="button" id="proposal-history-btn" onclick="showValidationHistoryModal('${parcel.id || profile.parcelId}')" class="proposal-btn proposal-btn-secondary">
+                        HISTORY
+                    </button>
                 </div>
+
             </form>
 
             <div class="proposal-disclaimer">
@@ -1626,7 +1634,7 @@ async function handleValidateProposal(event, parcelId) {
         }
 
         if (resultContainer) {
-            resultContainer.innerHTML = renderProposalResultHTML(result.data);
+            resultContainer.innerHTML = renderProposalResultHTML(result.data, result.auditId, result.parcelId, result.createdAt);
         }
     } catch (error) {
         console.error("Proposal Validation API Error:", error);
@@ -1676,7 +1684,7 @@ function clearProposalForm(parcelId) {
     }
 }
 
-function renderProposalResultHTML(data) {
+function renderProposalResultHTML(data, auditId = null, parcelId = null, createdAt = null) {
     const decision = data.decision || "PROCEED";
     const riskLevel = data.riskLevel || "LOW";
     const score = data.score !== undefined ? data.score : 0;
@@ -1695,6 +1703,11 @@ function renderProposalResultHTML(data) {
     let riskClass = "proposal-risk-low";
     if (riskLevel === "MEDIUM") riskClass = "proposal-risk-medium";
     if (riskLevel === "HIGH") riskClass = "proposal-risk-high";
+
+    const formattedTime = createdAt ? new Date(createdAt).toLocaleString("en-US", {
+        dateStyle: "medium",
+        timeStyle: "short"
+    }) : "";
 
     /* Render Checks */
     let checksHTML = "";
@@ -1773,10 +1786,28 @@ function renderProposalResultHTML(data) {
         `;
     }
 
+    const currentParcelId = parcelId || window.activeLandProfileParcelId;
+
     return `
         <div class="proposal-result-section">
-            <div class="proposal-subsection-title main-result-title">
-                🔍 Proposal Validation Result
+            <div class="proposal-result-header-box">
+                <div class="proposal-subsection-title main-result-title">
+                    🔍 Proposal Validation Result
+                </div>
+                ${auditId ? `
+                    <div class="proposal-audit-badge-block">
+                        <div class="proposal-audit-ref-line">
+                            <span class="audit-ref-label">Audit Reference:</span>
+                            <span class="audit-ref-code">${auditId}</span>
+                        </div>
+                        ${formattedTime ? `
+                            <div class="proposal-audit-time-line">
+                                <span class="audit-time-label">Validated:</span>
+                                <span class="audit-time-val">${formattedTime}</span>
+                            </div>
+                        ` : ""}
+                    </div>
+                ` : ""}
             </div>
 
             <div class="proposal-cards-grid">
@@ -1793,6 +1824,17 @@ function renderProposalResultHTML(data) {
                     <div class="proposal-score-val">${score} / 100</div>
                 </div>
             </div>
+
+            ${auditId ? `
+                <div class="proposal-audit-actions-row">
+                    <button type="button" class="proposal-btn proposal-btn-audit-detail" onclick="showAuditDetailsModal('${auditId}')">
+                        📜 VIEW AUDIT DETAILS
+                    </button>
+                    <button type="button" class="proposal-btn proposal-btn-audit-history" onclick="showValidationHistoryModal('${currentParcelId}')">
+                        📜 VIEW VALIDATION HISTORY
+                    </button>
+                </div>
+            ` : ""}
 
             ${summary ? `
                 <div class="proposal-summary-box">
@@ -1821,6 +1863,323 @@ function renderProposalResultHTML(data) {
     `;
 }
 
+/* =========================================================
+   14. AUDIT MODALS (DETAILS & HISTORY)
+   ========================================================= */
+
+function createAuditModalContainer() {
+    let overlay = document.getElementById("audit-modal-overlay");
+    if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.id = "audit-modal-overlay";
+        overlay.className = "audit-modal-overlay";
+        overlay.innerHTML = `
+            <div class="audit-modal-panel">
+                <div class="audit-modal-header">
+                    <h3 id="audit-modal-title" class="audit-modal-title">Audit Record</h3>
+                    <button type="button" class="audit-modal-close" onclick="closeAuditModal()">&times;</button>
+                </div>
+                <div id="audit-modal-body" class="audit-modal-body"></div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        overlay.addEventListener("click", (e) => {
+            if (e.target === overlay) {
+                closeAuditModal();
+            }
+        });
+    }
+}
+
+function closeAuditModal() {
+    const overlay = document.getElementById("audit-modal-overlay");
+    if (overlay) {
+        overlay.classList.remove("active");
+    }
+}
+
+async function showAuditDetailsModal(auditId) {
+    if (!auditId) return;
+
+    createAuditModalContainer();
+    const modalOverlay = document.getElementById("audit-modal-overlay");
+    const modalBody = document.getElementById("audit-modal-body");
+    const modalTitle = document.getElementById("audit-modal-title");
+
+    if (!modalOverlay || !modalBody) return;
+
+    modalTitle.textContent = `Audit Record: ${auditId}`;
+    modalBody.innerHTML = `
+        <div class="audit-modal-loading">
+            <div class="loading-spinner"></div>
+            <p>Loading audit details...</p>
+        </div>
+    `;
+    modalOverlay.classList.add("active");
+
+    try {
+        const response = await getAuditRecord(auditId);
+        if (!response || !response.success || !response.data) {
+            throw new Error(response ? response.message : "Audit details unavailable.");
+        }
+
+        const audit = response.data;
+        const proposal = audit.proposal || {};
+        const result = audit.result || {};
+        const evidence = audit.evidence || {};
+        const categories = evidence.categories || [];
+        const checks = result.checks || [];
+        const issues = result.issues || [];
+        const recommendations = result.recommendations || [];
+
+        const formattedDate = audit.createdAt ? new Date(audit.createdAt).toLocaleString("en-US", {
+            dateStyle: "medium",
+            timeStyle: "medium"
+        }) : "N/A";
+
+        let decisionLabel = result.decision || "PROCEED";
+        if (result.decision === "REVIEW_REQUIRED") decisionLabel = "REVIEW REQUIRED";
+
+        let decisionClass = "proposal-result-proceed";
+        if (result.decision === "REVIEW_REQUIRED") decisionClass = "proposal-result-review";
+        if (result.decision === "CONFLICT") decisionClass = "proposal-result-conflict";
+
+        let riskClass = "proposal-risk-low";
+        if (result.riskLevel === "MEDIUM") riskClass = "proposal-risk-medium";
+        if (result.riskLevel === "HIGH") riskClass = "proposal-risk-high";
+
+        /* Evidence categories */
+        const categoriesHTML = categories.length > 0 ? categories.map(cat => `
+            <span class="audit-category-tag">${cat}</span>
+        `).join("") : `<span class="audit-category-tag empty">NONE</span>`;
+
+        /* Checks HTML */
+        const checksHTML = checks.length > 0 ? checks.map(c => {
+            let icon = "✓";
+            let statusClass = "proposal-result-proceed";
+            if (c.status === "WARNING") {
+                icon = "⚠️";
+                statusClass = "proposal-result-review";
+            } else if (c.status === "CONFLICT") {
+                icon = "🔴";
+                statusClass = "proposal-result-conflict";
+            }
+
+            return `
+                <div class="audit-check-item">
+                    <div class="audit-check-header">
+                        <span>${icon} <strong>${c.title || c.category}</strong></span>
+                        <span class="proposal-badge-sm ${statusClass}">${c.status}</span>
+                    </div>
+                    <div class="audit-check-msg">${c.message}</div>
+                </div>
+            `;
+        }).join("") : `<div class="audit-empty-msg">No check logs.</div>`;
+
+        /* Issues HTML */
+        const issuesHTML = issues.length > 0 ? issues.map(iss => {
+            let sevClass = "proposal-sev-low";
+            if (iss.severity === "MEDIUM") sevClass = "proposal-sev-medium";
+            if (iss.severity === "HIGH") sevClass = "proposal-sev-high";
+
+            return `
+                <div class="audit-issue-item">
+                    <div class="audit-issue-header">
+                        <span>⚠️ <strong>${iss.title}</strong></span>
+                        <span class="proposal-badge-sm ${sevClass}">${iss.severity}</span>
+                    </div>
+                    <div class="audit-issue-msg">${iss.message}</div>
+                    ${iss.recommendation ? `<div class="audit-issue-rec">💡 <strong>Rec:</strong> ${iss.recommendation}</div>` : ""}
+                </div>
+            `;
+        }).join("") : `<div class="audit-empty-msg">✓ No issues recorded.</div>`;
+
+        /* Recs HTML */
+        const recsHTML = recommendations.length > 0 ? `
+            <ul class="audit-recs-list">
+                ${recommendations.map(r => `<li>${r}</li>`).join("")}
+            </ul>
+        ` : `<div class="audit-empty-msg">No recommendations.</div>`;
+
+        modalBody.innerHTML = `
+            <div class="audit-detail-container">
+                <div class="audit-meta-header-card">
+                    <div class="audit-meta-item">
+                        <div class="audit-meta-label">Audit Reference</div>
+                        <div class="audit-meta-val-highlight">${audit.auditId}</div>
+                    </div>
+                    <div class="audit-meta-item">
+                        <div class="audit-meta-label">Parcel ID</div>
+                        <div class="audit-meta-val-bold">${audit.parcelId}</div>
+                    </div>
+                    <div class="audit-meta-item">
+                        <div class="audit-meta-label">Timestamp</div>
+                        <div class="audit-meta-val">${formattedDate}</div>
+                    </div>
+                </div>
+
+                <div class="audit-section-card">
+                    <div class="audit-card-heading">🏗️ Proposal Specifications</div>
+                    <div class="audit-grid-3">
+                        <div><span class="audit-prop-label">Activity:</span> <strong>${proposal.activityType || "OTHER"}</strong></div>
+                        <div><span class="audit-prop-label">Development:</span> <strong>${proposal.developmentType || "OTHER"}</strong></div>
+                        <div><span class="audit-prop-label">Proposed Area:</span> <strong>${proposal.proposedArea ? proposal.proposedArea + " sq.ft" : "N/A"}</strong></div>
+                    </div>
+                </div>
+
+                <div class="audit-section-card">
+                    <div class="audit-card-heading">📊 Validation Decision & Risk</div>
+                    <div class="audit-grid-3">
+                        <div><span class="audit-prop-label">Decision:</span> <span class="proposal-badge ${decisionClass}">${decisionLabel}</span></div>
+                        <div><span class="audit-prop-label">Risk Level:</span> <span class="proposal-badge ${riskClass}">${result.riskLevel || "LOW"}</span></div>
+                        <div><span class="audit-prop-label">Risk Score:</span> <strong class="audit-score-highlight">${result.score !== undefined ? result.score : 0} / 100</strong></div>
+                    </div>
+                    ${result.summary ? `<div class="audit-summary-box"><strong>Summary:</strong> ${result.summary}</div>` : ""}
+                </div>
+
+                <div class="audit-section-card">
+                    <div class="audit-card-heading">📂 Datasets / Evidence Used</div>
+                    <div class="audit-categories-flex">${categoriesHTML}</div>
+                </div>
+
+                <div class="audit-section-card">
+                    <div class="audit-card-heading">🔍 Validation Checks</div>
+                    <div class="audit-checks-list-box">${checksHTML}</div>
+                </div>
+
+                <div class="audit-section-card">
+                    <div class="audit-card-heading">⚠️ Identified Issues</div>
+                    <div class="audit-issues-list-box">${issuesHTML}</div>
+                </div>
+
+                <div class="audit-section-card">
+                    <div class="audit-card-heading">📋 Recommendations</div>
+                    ${recsHTML}
+                </div>
+
+                <div class="audit-disclaimer-notice">
+                    🛡️ <strong>Notice:</strong> This audit trail record is generated for administrative explainability and decision-support traceability. It does not constitute an official government document or legal title.
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error("Error loading audit details:", error);
+        modalBody.innerHTML = `
+            <div class="audit-error-box">
+                <div class="audit-error-title">⚠️ Audit details unavailable</div>
+                <div class="audit-error-msg">Unable to load audit record details. Please try again later.</div>
+            </div>
+        `;
+    }
+}
+
+async function showValidationHistoryModal(parcelId) {
+    const targetParcelId = parcelId || window.activeLandProfileParcelId;
+    if (!targetParcelId) return;
+
+    createAuditModalContainer();
+    const modalOverlay = document.getElementById("audit-modal-overlay");
+    const modalBody = document.getElementById("audit-modal-body");
+    const modalTitle = document.getElementById("audit-modal-title");
+
+    if (!modalOverlay || !modalBody) return;
+
+    modalTitle.textContent = `Validation History: ${targetParcelId}`;
+    modalBody.innerHTML = `
+        <div class="audit-modal-loading">
+            <div class="loading-spinner"></div>
+            <p>Loading validation history for ${targetParcelId}...</p>
+        </div>
+    `;
+    modalOverlay.classList.add("active");
+
+    try {
+        const response = await getAuditHistoryByParcel(targetParcelId);
+
+        /* Stale Request Protection */
+        if (window.activeLandProfileParcelId !== targetParcelId) {
+            console.log("Ignored stale audit history for parcel:", targetParcelId);
+            return;
+        }
+
+        if (!response || !response.success || !Array.isArray(response.data)) {
+            throw new Error("Validation history unavailable.");
+        }
+
+        const history = response.data;
+        if (history.length === 0) {
+            modalBody.innerHTML = `
+                <div class="audit-empty-history">
+                    <p>No validation audit records found for parcel <strong>${targetParcelId}</strong>.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const historyHTML = history.map(item => {
+            const proposal = item.proposal || {};
+            const result = item.result || {};
+            const dateStr = item.createdAt ? new Date(item.createdAt).toLocaleString("en-US", {
+                dateStyle: "medium",
+                timeStyle: "short"
+            }) : "N/A";
+
+            let decisionLabel = result.decision || "PROCEED";
+            if (result.decision === "REVIEW_REQUIRED") decisionLabel = "REVIEW REQUIRED";
+
+            let decisionClass = "proposal-result-proceed";
+            if (result.decision === "REVIEW_REQUIRED") decisionClass = "proposal-result-review";
+            if (result.decision === "CONFLICT") decisionClass = "proposal-result-conflict";
+
+            let riskClass = "proposal-risk-low";
+            if (result.riskLevel === "MEDIUM") riskClass = "proposal-risk-medium";
+            if (result.riskLevel === "HIGH") riskClass = "proposal-risk-high";
+
+            return `
+                <div class="audit-history-card" onclick="showAuditDetailsModal('${item.auditId}')" title="Click to view complete audit details">
+                    <div class="history-card-top">
+                        <div class="history-audit-id">${item.auditId}</div>
+                        <div class="history-date">${dateStr}</div>
+                    </div>
+                    <div class="history-proposal-summary">
+                        <strong>${proposal.activityType || "OTHER"}</strong> / <strong>${proposal.developmentType || "OTHER"}</strong>
+                        ${proposal.proposedArea ? `<span class="history-area-tag">${proposal.proposedArea} sq.ft</span>` : ""}
+                    </div>
+                    <div class="history-badges-row">
+                        <span class="proposal-badge ${decisionClass}">${decisionLabel}</span>
+                        <span class="proposal-badge ${riskClass}">Risk: ${result.riskLevel || "LOW"}</span>
+                        <span class="history-score-badge">Score: ${result.score !== undefined ? result.score : 0}</span>
+                    </div>
+                </div>
+            `;
+        }).join("");
+
+        modalBody.innerHTML = `
+            <div class="audit-history-wrapper">
+                <div class="history-count-header">
+                    Found <strong>${history.length}</strong> validation audit record(s) for parcel <strong>${targetParcelId}</strong> (newest first):
+                </div>
+                <div class="audit-history-cards-list">
+                    ${historyHTML}
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error("Error loading audit history:", error);
+        if (window.activeLandProfileParcelId !== targetParcelId) return;
+        modalBody.innerHTML = `
+            <div class="audit-error-box">
+                <div class="audit-error-title">⚠️ Validation history unavailable</div>
+                <div class="audit-error-msg">Unable to load validation history for parcel ${targetParcelId}.</div>
+            </div>
+        `;
+    }
+}
+
 // Expose globally for inline event handlers
 window.handleValidateProposal = handleValidateProposal;
 window.clearProposalForm = clearProposalForm;
+window.showAuditDetailsModal = showAuditDetailsModal;
+window.showValidationHistoryModal = showValidationHistoryModal;
+window.closeAuditModal = closeAuditModal;

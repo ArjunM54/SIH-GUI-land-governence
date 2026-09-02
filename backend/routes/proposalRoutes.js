@@ -12,6 +12,8 @@ const router = express.Router();
 
 const { getLandProfile, getAllLandProfiles } = require("../data/landProfile");
 const { validateDevelopmentProposal, VALID_ACTIVITY_TYPES, VALID_DEVELOPMENT_TYPES } = require("../services/proposalValidator");
+const { createAuditRecord } = require("../services/auditService");
+
 
 /**
  * Helper to sanitize and format proposal input.
@@ -152,13 +154,20 @@ router.get("/validate", (req, res) => {
             };
 
             const assessmentResult = validateDevelopmentProposal(profile, sanitizedProposal);
+            const auditRecord = createAuditRecord({
+                parcelId: profile.parcelId,
+                proposal: sanitizedProposal,
+                profile
+            }, assessmentResult);
 
             return res.json({
                 success: true,
                 parcelId: profile.parcelId,
+                auditId: auditRecord.auditId,
                 proposal: sanitizedProposal,
                 data: assessmentResult
             });
+
         }
 
         return res.json({
@@ -267,13 +276,20 @@ router.post("/validate", (req, res) => {
         };
 
         const assessmentResult = validateDevelopmentProposal(profile, sanitizedProposal);
+        const auditRecord = createAuditRecord({
+            parcelId: profile.parcelId,
+            proposal: sanitizedProposal,
+            profile
+        }, assessmentResult);
 
         return res.json({
             success: true,
             parcelId: profile.parcelId,
+            auditId: auditRecord.auditId,
             proposal: sanitizedProposal,
             data: assessmentResult
         });
+
 
     } catch (error) {
         console.error("[Proposal API] Error executing proposal validation:", error);
@@ -308,13 +324,20 @@ router.get("/:parcelId", (req, res) => {
 
         const sanitizedProposal = sanitizeProposal({ activityType, developmentType, proposedArea });
         const assessmentResult = validateDevelopmentProposal(profile, sanitizedProposal);
+        const auditRecord = createAuditRecord({
+            parcelId: profile.parcelId,
+            proposal: sanitizedProposal,
+            profile
+        }, assessmentResult);
 
         return res.json({
             success: true,
             parcelId: profile.parcelId,
+            auditId: auditRecord.auditId,
             proposal: sanitizedProposal,
             data: assessmentResult
         });
+
     } catch (error) {
         console.error("[Proposal API] Error in GET /api/proposals/:parcelId:", error);
         return res.status(500).json({

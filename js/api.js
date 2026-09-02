@@ -233,6 +233,20 @@ async function validateProposalForAll(proposal) {
     });
 }
 
+/* Audit Trail API */
+async function getAuditRecord(auditId) {
+    return await apiRequest(`/api/audits/${auditId}`);
+}
+
+async function getAuditHistoryByParcel(parcelId) {
+    return await apiRequest(`/api/audits/parcel/${parcelId}`);
+}
+
+async function getAllAudits(limit = 20) {
+    return await apiRequest(`/api/audits?limit=${limit}`);
+}
+
+
 
 
 /* =========================================================
