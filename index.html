@@ -36,11 +36,12 @@
             <a href="#about">About</a>
         </nav>
 
-        <button class="login-btn">
-            Login
+        <button id="header-auth-btn" class="login-btn" onclick="handleHeaderAuthClick()">
+            Login / Portal
         </button>
 
     </header>
+
 
 
     <!-- ================= HERO ================= -->
@@ -315,15 +316,33 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 
-    <!-- Our JavaScript -->
-
+    <!-- Auth & Permissions JavaScript -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/permissions.js"></script>
+    <script src="js/auth.js"></script>
     <script src="js/api.js"></script>
     <script src="js/landProfile.js"></script>
     <script src="js/app.js"></script>
     <script src="js/map.js"></script>
     <script src="js/layers.js"></script>
     <script src="js/search.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const btn = document.getElementById("header-auth-btn");
+            if (window.AuthManager && window.AuthManager.isLoggedIn()) {
+                const user = window.AuthManager.getUser();
+                btn.textContent = `${user.name || 'Dashboard'} (${user.role.toUpperCase()})`;
+            }
+        });
 
+        function handleHeaderAuthClick() {
+            if (window.AuthManager && window.AuthManager.isLoggedIn()) {
+                window.AuthManager.redirectToDashboard();
+            } else {
+                window.location.href = "login.html";
+            }
+        }
+    </script>
 </body>
 
 </html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | LandGov Governance</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="css/citizen.css">
+</head>
+<body class="admin-body">
+
+    <header class="admin-nav">
+        <div class="admin-brand">
+            <span>👑</span>
+            <span>LandGov Administrator</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <span style="font-size: 0.88rem; color: #94a3b8;">System Administrator</span>
+            <button class="btn-danger" onclick="handleLogout()">Log Out</button>
+        </div>
+    </header>
+
+    <main class="admin-container">
+
+        <!-- SYSTEM METRICS -->
+        <div class="metrics-row" id="admin-metrics-row">
+            <!-- Populated dynamically -->
+        </div>
+
+        <!-- OFFICER MANAGEMENT SECTION -->
+        <div class="admin-card">
+            <div class="admin-card-header">
+                <div>
+                    <h2 style="margin: 0; font-size: 1.3rem;">👥 Government Officer Management</h2>
+                    <p style="color: #94a3b8; margin: 0.2rem 0 0 0; font-size: 0.88rem;">Manage officer accounts across all 5 land governance departments</p>
+                </div>
+                <button class="btn-primary" onclick="openCreateOfficerModal()">➕ Create Government Officer</button>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Officer ID</th>
+                            <th>Full Name</th>
+                            <th>Email</th>
+                            <th>Department</th>
+                            <th>Officer Type</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="officers-tbody">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- REGISTERED CITIZENS -->
+        <div class="admin-card">
+            <div class="admin-card-header">
+                <h3 style="margin: 0;">👤 Registered Citizens</h3>
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Registered On</th>
+                        </tr>
+                    </thead>
+                    <tbody id="citizens-tbody">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- AUDIT LOGS -->
+        <div class="admin-card">
+            <div class="admin-card-header">
+                <h3 style="margin: 0;">🧾 System Security Audit Trail</h3>
+            </div>
+            <div style="overflow-x: auto; max-height: 400px;">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Audit ID</th>
+                            <th>Timestamp</th>
+                            <th>Actor</th>
+                            <th>Target</th>
+                            <th>Action</th>
+                            <th>Result</th>
+                        </tr>
+                    </thead>
+                    <tbody id="audit-tbody">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL: CREATE OFFICER -->
+    <div id="create-officer-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 style="margin: 0;">Create Government Officer</h3>
+                <button class="close-modal-btn" onclick="closeModal('create-officer-modal')">×</button>
+            </div>
+            <form id="create-officer-form" onsubmit="handleCreateOfficer(event)">
+                <div class="form-group">
+                    <label>Officer ID (Unique)</label>
+                    <input type="text" id="new-off-id" class="form-input" placeholder="e.g. OFF-CAD-002" required>
+                </div>
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="new-off-name" class="form-input" placeholder="e.g. Sunita Rao" required>
+                </div>
+                <div class="form-group">
+                    <label>Official Email</label>
+                    <input type="email" id="new-off-email" class="form-input" placeholder="officer@landgov.gov" required>
+                </div>
+                <div class="form-group">
+                    <label>Officer Department Type (Select from 5 Major Officer Types)</label>
+                    <select id="new-off-type" class="form-input" required>
+                        <option value="cadastral_officer">Cadastral & Survey Officer (OFF-CAD)</option>
+                        <option value="land_records_officer">Land Records / RoR Officer (OFF-ROR)</option>
+                        <option value="registration_officer">Registration Officer (OFF-REG)</option>
+                        <option value="land_use_officer">Land Use & Planning Officer (OFF-LU)</option>
+                        <option value="property_tax_officer">Property Tax & Municipal Officer (OFF-TAX)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Account Status</label>
+                    <select id="new-off-status" class="form-input">
+                        <option value="active">Active</option>
+                        <option value="disabled">Disabled</option>
+                    </select>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+                    <button type="button" class="btn-secondary" onclick="closeModal('create-officer-modal')">Cancel</button>
+                    <button type="submit" class="btn-primary">Create Officer Account</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: PERMISSIONS MATRIX -->
+    <div id="permissions-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 style="margin: 0;">Manage Officer Permissions</h3>
+                <button class="close-modal-btn" onclick="closeModal('permissions-modal')">×</button>
+            </div>
+            <form id="permissions-form" onsubmit="handleSavePermissions(event)">
+                <input type="hidden" id="perm-officer-uid">
+                <p id="perm-officer-info" style="color: #38bdf8; font-weight: 600; margin-bottom: 1rem;"></p>
+                
+                <div class="permissions-grid" id="perm-checkboxes-container">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+                    <button type="button" class="btn-secondary" onclick="closeModal('permissions-modal')">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Permissions & Audit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/permissions.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

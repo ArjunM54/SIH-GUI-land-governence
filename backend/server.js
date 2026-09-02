@@ -64,7 +64,11 @@ const auditRoutes =
 const documentRoutes =
     require("./routes/documentRoutes");
 
-
+const { verifyAuth } = require("./middleware/authMiddleware");
+const authRoutes = require("./routes/authRoutes");
+const citizenRoutes = require("./routes/citizenRoutes");
+const officerRoutes = require("./routes/officerRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 
 
 /* =========================================================
@@ -81,6 +85,9 @@ const app = express();
 app.use(cors());
 
 app.use(express.json());
+
+app.use(verifyAuth);
+
 
 
 /* =========================================================
@@ -214,6 +221,13 @@ app.use(
     "/api/documents",
     documentRoutes
 );
+
+/* Authentication & Governance Routes */
+app.use("/api/auth", authRoutes);
+app.use("/api/citizen", citizenRoutes);
+app.use("/api/officer", officerRoutes);
+app.use("/api/admin", adminRoutes);
+
 
 
 

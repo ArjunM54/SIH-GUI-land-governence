@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Citizen Land Portal | LandGov GIS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/landProfile.css">
+    <link rel="stylesheet" href="css/citizen.css">
+</head>
+<body class="dashboard-layout">
+
+    <header class="dashboard-nav">
+        <div class="logo">
+            <span class="logo-icon">🌐</span>
+            <span>LandGov Citizen Portal</span>
+        </div>
+        <div style="display: flex; align-items: center;">
+            <div id="user-badge" class="user-profile-badge">
+                <span id="user-name">Citizen</span>
+                <span style="font-size: 0.75rem; background: #0284c7; padding: 0.15rem 0.5rem; border-radius: 4px; color: #fff;">Citizen</span>
+            </div>
+            <button class="logout-btn" onclick="handleLogout()">Logout</button>
+        </div>
+    </header>
+
+    <main class="citizen-main">
+
+        <div class="dashboard-header-panel">
+            <h1>Welcome, <span id="welcome-name">Citizen</span></h1>
+            <p style="color: #94a3b8; margin: 0;">Access your land parcels, track department applications, view property tax clearance, and explore the GIS land map.</p>
+        </div>
+
+        <div class="grid-2col">
+            <!-- MY LAND PARCELS -->
+            <div class="card-panel">
+                <div class="card-title">🗺️ My Registered Parcels</div>
+                <div id="my-parcels-container">
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th>Parcel ID</th>
+                                <th>Village / District</th>
+                                <th>Area (sq.m)</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>P-101</strong></td>
+                                <td>Ramgarh / Central</td>
+                                <td>4,500</td>
+                                <td><button class="action-btn" onclick="viewParcelProfile('P-101')">View Land Profile</button></td>
+                            </tr>
+                            <tr>
+                                <td><strong>P-103</strong></td>
+                                <td>Ramgarh / North</td>
+                                <td>3,200</td>
+                                <td><button class="action-btn" onclick="viewParcelProfile('P-103')">View Land Profile</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- MY REQUESTS & TRACKING -->
+            <div class="card-panel">
+                <div class="card-title">📋 Application & Mutation Tracking</div>
+                <div id="citizen-requests-container">
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th>Request ID</th>
+                                <th>Parcel</th>
+                                <th>Department</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="requests-tbody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW REQUEST SUBMISSION -->
+        <div class="card-panel">
+            <div class="card-title">➕ Submit New Land Service Request</div>
+            <form id="new-request-form" onsubmit="submitNewRequest(event)" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 1rem; align-items: end;">
+                <div>
+                    <label style="font-size: 0.82rem; color: #94a3b8; display: block; margin-bottom: 0.3rem;">Parcel ID</label>
+                    <input type="text" id="req-parcel-id" class="form-input" placeholder="e.g. P-101" required>
+                </div>
+                <div>
+                    <label style="font-size: 0.82rem; color: #94a3b8; display: block; margin-bottom: 0.3rem;">Request Type</label>
+                    <select id="req-type" class="form-input">
+                        <option value="Mutation Request">RoR Ownership Mutation</option>
+                        <option value="Land Use Conversion">Land Use Conversion</option>
+                        <option value="Property Tax Verification">Property Tax Verification</option>
+                        <option value="Building Permission">Building Permission Request</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 0.82rem; color: #94a3b8; display: block; margin-bottom: 0.3rem;">Target Department</label>
+                    <select id="req-dept" class="form-input">
+                        <option value="Land Records Department">Land Records Department</option>
+                        <option value="Cadastral & Survey Department">Cadastral & Survey Department</option>
+                        <option value="Registration Department">Registration Department</option>
+                        <option value="Land Use & Planning Department">Land Use & Planning Department</option>
+                        <option value="Property Tax & Municipal Department">Property Tax & Municipal Department</option>
+                    </select>
+                </div>
+                <button type="submit" class="action-btn" style="padding: 0.75rem 1.25rem;">Submit Request</button>
+            </form>
+        </div>
+
+        <!-- GIS MAP LINK -->
+        <div class="card-panel" style="text-align: center; padding: 2rem;">
+            <h3 style="margin-top: 0;">Interactive GIS Land Map</h3>
+            <p style="color: #94a3b8;">Explore full GIS spatial boundaries, satellite layers, and conflict resolution across all 5 departments.</p>
+            <a href="index.html#map-section" class="primary-btn" style="display: inline-block; text-decoration: none; padding: 0.75rem 1.5rem;">Launch Interactive GIS Map</a>
+        </div>
+
+    </main>
+
+    <!-- SCRIPTS -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/permissions.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/landProfile.js"></script>
+    <script src="js/citizen.js"></script>
+</body>
+</html>
