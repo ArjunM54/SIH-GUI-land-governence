@@ -61,6 +61,10 @@ const proposalRoutes =
 const auditRoutes =
     require("./routes/auditRoutes");
 
+const documentRoutes =
+    require("./routes/documentRoutes");
+
+
 
 
 /* =========================================================
@@ -206,6 +210,11 @@ app.use(
     auditRoutes
 );
 
+app.use(
+    "/api/documents",
+    documentRoutes
+);
+
 
 
 
@@ -292,6 +301,11 @@ const server = app.listen(
         console.log(
             `Audit Trail API: http://localhost:${PORT}/api/audits`
         );
+
+        console.log(
+            `Document API: http://localhost:${PORT}/api/documents`
+        );
+
 
 
 

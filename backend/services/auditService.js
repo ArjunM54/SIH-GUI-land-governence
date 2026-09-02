@@ -8,6 +8,8 @@
    parcel history tracking for development proposal validations.
    ========================================================= */
 
+const { getDocumentsByParcelId } = require("./documentService");
+
 // In-memory store for audit records during server lifetime
 const auditStore = [];
 let auditCounter = 0;
@@ -80,13 +82,18 @@ function extractEvidenceCategories(profile = {}, proposal = {}) {
 function createAuditRecord(validationInput = {}, validationResult = {}) {
     const { parcelId, proposal = {}, profile = {} } = validationInput;
 
+    const targetParcelId = parcelId || profile.parcelId || "UNKNOWN";
     const auditId = generateAuditId();
     const createdAt = new Date().toISOString();
     const categories = extractEvidenceCategories(profile, proposal);
+    
+    // Retrieve associated document evidence IDs for the parcel
+    const parcelDocs = getDocumentsByParcelId(targetParcelId);
+    const documentIds = parcelDocs.map(doc => doc.documentId);
 
     const auditRecord = {
         auditId,
-        parcelId: parcelId || profile.parcelId || "UNKNOWN",
+        parcelId: targetParcelId,
         proposal: {
             activityType: (proposal.activityType || "OTHER").toUpperCase(),
             developmentType: (proposal.developmentType || "OTHER").toUpperCase(),
@@ -102,7 +109,8 @@ function createAuditRecord(validationInput = {}, validationResult = {}) {
             recommendations: validationResult.recommendations || []
         },
         evidence: {
-            categories
+            categories,
+            documentIds
         },
         createdAt
     };
