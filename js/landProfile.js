@@ -132,6 +132,10 @@ async function openCompleteLandProfile(parcelId) {
         /* Fetch governance validation asynchronously */
         fetchGovernanceStatus(parcelId);
 
+        /* Fetch parcel documents asynchronously */
+        fetchParcelDocuments(parcelId);
+
+
     }
 
     catch (error) {
@@ -374,6 +378,28 @@ function renderLandProfile(
 
             <div id="proposal-result-container" class="proposal-result-wrapper"></div>
         </div>
+
+        <!-- =================================================
+             0.2 SUPPORTING DOCUMENTS & EVIDENCE SECTION
+             ================================================= -->
+        <div id="supporting-documents-container" class="profile-section documents-section">
+            <div class="doc-section-header-row">
+                <div class="profile-section-title" style="margin: 0;">
+                    📁 Supporting Documents & Evidence
+                </div>
+                <button type="button" class="doc-btn-upload-trigger" onclick="showUploadDocumentModal('${parcel.id || profile.parcelId}')">
+                    + Upload Evidence
+                </button>
+            </div>
+            <div id="documents-list-content">
+                <div class="governance-loading">
+                    <div class="loading-spinner-small"></div>
+                    <span>Loading supporting documents...</span>
+                </div>
+            </div>
+        </div>
+
+
 
         <!-- =================================================
              1. PARCEL
@@ -1417,6 +1443,124 @@ async function fetchGovernanceStatus(parcelId) {
     }
 }
 
+/* =========================================================
+   12.1 DOCUMENT & EVIDENCE INTELLIGENCE INTEGRATION
+   ========================================================= */
+
+async function fetchParcelDocuments(parcelId) {
+    try {
+        console.log("Fetching documents for parcel:", parcelId);
+        const response = await fetch(`http://localhost:5000/api/documents/parcel/${parcelId}`);
+
+        if (window.activeLandProfileParcelId !== parcelId) {
+            console.log("Ignored stale document response for:", parcelId);
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error(`Document API returned HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (window.activeLandProfileParcelId !== parcelId) return;
+
+        const docContainer = document.getElementById("documents-list-content");
+        if (!docContainer) return;
+
+        const docs = (result && result.success && Array.isArray(result.documents)) ? result.documents : [];
+
+        if (docs.length === 0) {
+            docContainer.innerHTML = `
+                <div class="governance-no-issues" style="background: #f8fafc; border-color: #e2e8f0; color: #64748b;">
+                    ℹ️ No supporting documents currently registered for this parcel.
+                </div>
+            `;
+            return;
+        }
+
+        docContainer.innerHTML = `
+            <div class="documents-grid">
+                ${docs.map(doc => renderDocumentCardHTML(doc)).join("")}
+            </div>
+        `;
+
+    } catch (error) {
+        console.error("Document API Error:", error);
+        if (window.activeLandProfileParcelId !== parcelId) return;
+
+        const docContainer = document.getElementById("documents-list-content");
+        if (docContainer) {
+            docContainer.innerHTML = `
+                <div class="governance-error">
+                    <div class="governance-error-title">⚠️ Document Intelligence service unavailable</div>
+                    <div class="governance-error-msg">${error.message}</div>
+                </div>
+            `;
+        }
+    }
+}
+
+function renderDocumentCardHTML(doc) {
+    let statusClass = "doc-status-available";
+    if (doc.status === "PENDING") statusClass = "doc-status-pending";
+    if (doc.status === "EXPIRED") statusClass = "doc-status-expired";
+    if (doc.status === "UNAVAILABLE") statusClass = "doc-status-unavailable";
+
+    const ext = doc.textExtraction || {};
+    let extClass = "extraction-unavailable";
+    let extLabel = "UNAVAILABLE";
+    if (ext.status === "SUCCESS") {
+        extClass = "extraction-success";
+        extLabel = "SUCCESS";
+    } else if (ext.status === "FAILED") {
+        extClass = "extraction-failed";
+        extLabel = "FAILED";
+    }
+
+    const hasFile = Boolean(doc.fileName);
+
+    return `
+        <div class="document-card">
+            <div class="document-card-header">
+                <div class="document-card-title">
+                    📄 ${doc.title}
+                </div>
+                <span class="doc-status-badge ${statusClass}">${doc.status}</span>
+            </div>
+            <div class="document-card-body">
+                <div class="doc-meta-item">
+                    <span class="doc-meta-label">Type</span>
+                    <span class="doc-meta-val">${doc.documentType}</span>
+                </div>
+                <div class="doc-meta-item">
+                    <span class="doc-meta-label">Document No.</span>
+                    <span class="doc-meta-val">${doc.documentNumber}</span>
+                </div>
+                <div class="doc-meta-item">
+                    <span class="doc-meta-label">Department</span>
+                    <span class="doc-meta-val">${doc.issuingDepartment}</span>
+                </div>
+                <div class="doc-meta-item">
+                    <span class="doc-meta-label">Extraction</span>
+                    <span class="doc-meta-val"><span class="extraction-tag ${extClass}">${extLabel}</span></span>
+                </div>
+            </div>
+            <div class="document-card-footer">
+                <button type="button" class="doc-btn-view" onclick="showDocumentDetailsModal('${doc.documentId}')">
+                    🔍 View Details
+                </button>
+                ${hasFile ? `
+                    <button type="button" class="doc-btn-open" onclick="window.open(getDocumentFileUrl('${doc.documentId}'), '_blank')">
+                        📂 Open Document
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+
 function renderGovernanceHTML(data) {
     const overallStatus = data.overallStatus || "VALID";
     const riskLevel = data.riskLevel || "LOW";
@@ -1949,10 +2093,27 @@ async function showAuditDetailsModal(auditId) {
         if (result.riskLevel === "MEDIUM") riskClass = "proposal-risk-medium";
         if (result.riskLevel === "HIGH") riskClass = "proposal-risk-high";
 
+        const documentIds = evidence.documentIds || [];
+
         /* Evidence categories */
         const categoriesHTML = categories.length > 0 ? categories.map(cat => `
             <span class="audit-category-tag">${cat}</span>
         `).join("") : `<span class="audit-category-tag empty">NONE</span>`;
+
+        /* Document Evidence IDs HTML */
+        const documentIdsHTML = documentIds.length > 0 ? `
+            <div class="audit-document-list">
+                <div class="audit-doc-heading">Associated Evidence Documents:</div>
+                <div class="audit-doc-tags">
+                    ${documentIds.map(docId => `
+                        <button type="button" class="audit-doc-btn" onclick="showDocumentDetailsModal('${docId}')">
+                            📄 ${docId} (View Evidence)
+                        </button>
+                    `).join("")}
+                </div>
+            </div>
+        ` : `<div class="audit-document-list"><div class="audit-doc-heading">Associated Evidence Documents:</div><div style="font-size: 11px; color: #94a3b8;">None recorded</div></div>`;
+
 
         /* Checks HTML */
         const checksHTML = checks.length > 0 ? checks.map(c => {
@@ -2039,8 +2200,9 @@ async function showAuditDetailsModal(auditId) {
                 </div>
 
                 <div class="audit-section-card">
-                    <div class="audit-card-heading">📂 Datasets / Evidence Used</div>
+                    <div class="audit-card-heading">📂 Datasets & Evidence Used</div>
                     <div class="audit-categories-flex">${categoriesHTML}</div>
+                    ${documentIdsHTML}
                 </div>
 
                 <div class="audit-section-card">
@@ -2182,4 +2344,359 @@ window.handleValidateProposal = handleValidateProposal;
 window.clearProposalForm = clearProposalForm;
 window.showAuditDetailsModal = showAuditDetailsModal;
 window.showValidationHistoryModal = showValidationHistoryModal;
-window.closeAuditModal = closeAuditModal;
+window.closeAuditModal = closeAuditModal;
+
+/* =========================================================
+   15. DOCUMENT MODAL (DETAILS & EVIDENCE)
+   ========================================================= */
+
+function createDocumentModalContainer() {
+    let overlay = document.getElementById("document-modal-overlay");
+    if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.id = "document-modal-overlay";
+        overlay.className = "audit-modal-overlay";
+        overlay.innerHTML = `
+            <div class="audit-modal-panel">
+                <div class="audit-modal-header">
+                    <h3 id="document-modal-title" class="audit-modal-title">Document & Evidence Details</h3>
+                    <button type="button" class="audit-modal-close" onclick="closeDocumentModal()">&times;</button>
+                </div>
+                <div id="document-modal-body" class="audit-modal-body"></div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        overlay.addEventListener("click", (e) => {
+            if (e.target === overlay) {
+                closeDocumentModal();
+            }
+        });
+    }
+}
+
+function closeDocumentModal() {
+    const overlay = document.getElementById("document-modal-overlay");
+    if (overlay) {
+        overlay.classList.remove("active");
+    }
+}
+
+async function showDocumentDetailsModal(documentId) {
+    if (!documentId) return;
+
+    createDocumentModalContainer();
+    const modalOverlay = document.getElementById("document-modal-overlay");
+    const modalBody = document.getElementById("document-modal-body");
+    const modalTitle = document.getElementById("document-modal-title");
+
+    if (!modalOverlay || !modalBody) return;
+
+    modalTitle.textContent = `Document Details: ${documentId}`;
+    modalBody.innerHTML = `
+        <div class="audit-modal-loading">
+            <div class="loading-spinner"></div>
+            <p>Loading document metadata...</p>
+        </div>
+    `;
+    modalOverlay.classList.add("active");
+
+    try {
+        const response = await getDocumentById(documentId);
+        if (!response || !response.success || !response.document) {
+            throw new Error(response ? response.message : "Document details unavailable.");
+        }
+
+        const doc = response.document;
+        let statusClass = "proposal-result-proceed";
+        if (doc.status === "PENDING") statusClass = "proposal-result-review";
+        if (doc.status === "EXPIRED" || doc.status === "UNAVAILABLE") statusClass = "proposal-result-conflict";
+
+        const ext = doc.textExtraction || {};
+        let extClass = "extraction-unavailable";
+        let extStatusText = "UNAVAILABLE";
+        if (ext.status === "SUCCESS") {
+            extClass = "extraction-success";
+            extStatusText = "SUCCESSFUL";
+        } else if (ext.status === "FAILED") {
+            extClass = "extraction-failed";
+            extStatusText = "FAILED";
+        }
+
+        modalBody.innerHTML = `
+            <div class="audit-detail-container">
+                <div class="audit-meta-header-card">
+                    <div class="audit-meta-item">
+                        <div class="audit-meta-label">Document ID</div>
+                        <div class="audit-meta-val-highlight">${doc.documentId}</div>
+                    </div>
+                    <div class="audit-meta-item">
+                        <div class="audit-meta-label">Parcel ID</div>
+                        <div class="audit-meta-val-bold">${doc.parcelId}</div>
+                    </div>
+                    <div class="audit-meta-item">
+                        <div class="audit-meta-label">Document Status</div>
+                        <div><span class="proposal-badge ${statusClass}">${doc.status}</span></div>
+                    </div>
+                </div>
+
+                <div class="audit-section-card">
+                    <div class="audit-card-heading">📄 Metadata & Rights Verification</div>
+                    <div class="audit-grid-3" style="grid-template-columns: 1fr 1fr;">
+                        <div><span class="audit-prop-label">Title:</span> <strong>${doc.title}</strong></div>
+                        <div><span class="audit-prop-label">Type:</span> <strong>${doc.documentType}</strong></div>
+                        <div><span class="audit-prop-label">Document Number:</span> <strong>${doc.documentNumber}</strong></div>
+                        <div><span class="audit-prop-label">Issuing Department:</span> <strong>${doc.issuingDepartment}</strong></div>
+                        <div><span class="audit-prop-label">Issue Date:</span> <span>${doc.issueDate || 'N/A'}</span></div>
+                        <div><span class="audit-prop-label">Created At:</span> <span>${doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : 'N/A'}</span></div>
+                    </div>
+                </div>
+
+                <div class="audit-section-card">
+                    <div class="audit-card-heading">🔍 Text Extraction (PDF Evidence)</div>
+                    <div class="audit-grid-3" style="grid-template-columns: 1fr 1fr; margin-bottom: 8px;">
+                        <div><span class="audit-prop-label">Extraction Status:</span> <span class="extraction-tag ${extClass}">${extStatusText}</span></div>
+                        <div><span class="audit-prop-label">Character Count:</span> <strong>${ext.characterCount ? ext.characterCount.toLocaleString() + " chars" : "N/A"}</strong></div>
+                    </div>
+                    <div class="audit-prop-label" style="margin-bottom: 4px;">Extracted Preview:</div>
+                    ${ext.preview ? `<div class="extraction-preview-box">${ext.preview}</div>` : `<div class="audit-empty-msg">No extracted text preview available.</div>`}
+                </div>
+
+                <div class="audit-section-card">
+                    <div class="audit-card-heading">📝 Description & Evidence File Record</div>
+                    <div class="audit-summary-box" style="margin-bottom: 12px;">
+                        <strong>Description:</strong> ${doc.description || "No description provided."}
+                    </div>
+                    <div class="audit-grid-3">
+                        <div>
+                            <span class="audit-prop-label">File Name:</span>
+                            <strong style="color: #2563eb;">${doc.fileName ? doc.fileName : "Demo Evidence Record"}</strong>
+                        </div>
+                        <div>
+                            <span class="audit-prop-label">Storage Status:</span>
+                            <strong>${doc.storageStatus || "STORED"}</strong>
+                        </div>
+                    </div>
+                    ${doc.fileName ? `
+                        <div style="margin-top: 12px;">
+                            <button type="button" class="doc-btn-open" onclick="window.open(getDocumentFileUrl('${doc.documentId}'), '_blank')">
+                                📂 Open Document File
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error("Error displaying document details:", error);
+        modalBody.innerHTML = `
+            <div class="audit-error-box">
+                <div class="audit-error-title">⚠️ Unable to load document details</div>
+                <div class="audit-error-msg">${error.message}</div>
+            </div>
+        `;
+    }
+}
+
+window.showDocumentDetailsModal = showDocumentDetailsModal;
+window.closeDocumentModal = closeDocumentModal;
+
+/* =========================================================
+   16. UPLOAD DOCUMENT MODAL (PHASE 9)
+   ========================================================= */
+
+function createUploadModalContainer() {
+    let overlay = document.getElementById("upload-modal-overlay");
+    if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.id = "upload-modal-overlay";
+        overlay.className = "audit-modal-overlay";
+        overlay.innerHTML = `
+            <div class="audit-modal-panel">
+                <div class="audit-modal-header">
+                    <h3 id="upload-modal-title" class="audit-modal-title">Upload Supporting Document</h3>
+                    <button type="button" class="audit-modal-close" onclick="closeUploadDocumentModal()">&times;</button>
+                </div>
+                <div id="upload-modal-body" class="audit-modal-body"></div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        overlay.addEventListener("click", (e) => {
+            if (e.target === overlay) {
+                closeUploadDocumentModal();
+            }
+        });
+    }
+}
+
+function closeUploadDocumentModal() {
+    const overlay = document.getElementById("upload-modal-overlay");
+    if (overlay) {
+        overlay.classList.remove("active");
+    }
+}
+
+function showUploadDocumentModal(parcelId) {
+    const targetParcelId = parcelId || window.activeLandProfileParcelId;
+    if (!targetParcelId) return;
+
+    createUploadModalContainer();
+    const modalOverlay = document.getElementById("upload-modal-overlay");
+    const modalBody = document.getElementById("upload-modal-body");
+    const modalTitle = document.getElementById("upload-modal-title");
+
+    if (!modalOverlay || !modalBody) return;
+
+    modalTitle.textContent = `Upload Supporting Document (${targetParcelId})`;
+    modalBody.innerHTML = `
+        <form id="upload-doc-form" onsubmit="handleUploadDocumentSubmit(event, '${targetParcelId}')">
+            <div id="upload-feedback-box"></div>
+
+            <div class="upload-form-group">
+                <label class="upload-form-label">Parcel ID</label>
+                <input type="text" id="upload-parcel-id" class="upload-form-input" value="${targetParcelId}" readonly>
+            </div>
+
+            <div class="upload-form-group">
+                <label class="upload-form-label" for="upload-doc-type">Document Type *</label>
+                <select id="upload-doc-type" class="upload-form-select" required>
+                    <option value="OWNERSHIP">OWNERSHIP (Record of Rights / Patta)</option>
+                    <option value="REGISTRATION">REGISTRATION (Deed / Clearance)</option>
+                    <option value="LAND_USE">LAND_USE (Zoning Certificate)</option>
+                    <option value="PROPERTY_TAX">PROPERTY_TAX (Tax Receipt)</option>
+                    <option value="BUILDING_PERMISSION">BUILDING_PERMISSION (Plan Approval)</option>
+                    <option value="RESTRICTIONS">RESTRICTIONS (Regulatory Compliance)</option>
+                    <option value="UTILITIES">UTILITIES (Utility Connection)</option>
+                    <option value="OTHER">OTHER (General Evidence)</option>
+                </select>
+            </div>
+
+            <div class="upload-form-group">
+                <label class="upload-form-label" for="upload-doc-number">Document Number *</label>
+                <input type="text" id="upload-doc-number" class="upload-form-input" placeholder="e.g. ROR-2026-003" required>
+            </div>
+
+            <div class="upload-form-group">
+                <label class="upload-form-label" for="upload-doc-title">Title *</label>
+                <input type="text" id="upload-doc-title" class="upload-form-input" placeholder="e.g. Record of Rights (Patta)" required>
+            </div>
+
+            <div class="upload-form-group">
+                <label class="upload-form-label" for="upload-doc-dept">Issuing Department</label>
+                <input type="text" id="upload-doc-dept" class="upload-form-input" placeholder="e.g. Revenue Department">
+            </div>
+
+            <div class="upload-form-group">
+                <label class="upload-form-label" for="upload-doc-date">Issue Date</label>
+                <input type="date" id="upload-doc-date" class="upload-form-input">
+            </div>
+
+            <div class="upload-form-group">
+                <label class="upload-form-label" for="upload-doc-desc">Description</label>
+                <textarea id="upload-doc-desc" class="upload-form-textarea" rows="2" placeholder="Brief details about this evidence document..."></textarea>
+            </div>
+
+            <div class="upload-form-group">
+                <label class="upload-form-label" for="upload-doc-file">Select PDF or Image File (Max 10MB) *</label>
+                <input type="file" id="upload-doc-file" class="upload-form-input" accept=".pdf,image/jpeg,image/png" required>
+            </div>
+
+            <div class="proposal-buttons-row" style="margin-top: 16px;">
+                <button type="submit" id="upload-submit-btn" class="proposal-btn proposal-btn-primary">
+                    📤 Upload Document
+                </button>
+                <button type="button" class="proposal-btn proposal-btn-secondary" onclick="closeUploadDocumentModal()">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    `;
+
+    modalOverlay.classList.add("active");
+}
+
+async function handleUploadDocumentSubmit(event, parcelId) {
+    event.preventDefault();
+
+    const feedbackBox = document.getElementById("upload-feedback-box");
+    const submitBtn = document.getElementById("upload-submit-btn");
+    const fileInput = document.getElementById("upload-doc-file");
+
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        if (feedbackBox) {
+            feedbackBox.innerHTML = `<div class="upload-error-box">⚠️ Please select a file to upload.</div>`;
+        }
+        return;
+    }
+
+    const file = fileInput.files[0];
+    if (file.size > 10 * 1024 * 1024) {
+        if (feedbackBox) {
+            feedbackBox.innerHTML = `<div class="upload-error-box">⚠️ File size exceeds the 10 MB limit.</div>`;
+        }
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("parcelId", parcelId);
+    formData.append("documentType", document.getElementById("upload-doc-type").value);
+    formData.append("documentNumber", document.getElementById("upload-doc-number").value);
+    formData.append("title", document.getElementById("upload-doc-title").value);
+    formData.append("issuingDepartment", document.getElementById("upload-doc-dept").value || "");
+    formData.append("issueDate", document.getElementById("upload-doc-date").value || "");
+    formData.append("description", document.getElementById("upload-doc-desc").value || "");
+    formData.append("file", file);
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Uploading & Processing...";
+    }
+
+    try {
+        const result = await uploadDocument(formData);
+
+        if (!result.success || !result.document) {
+            throw new Error(result.message || "Upload failed");
+        }
+
+        const doc = result.document;
+        const ext = doc.textExtraction || {};
+
+        if (feedbackBox) {
+            feedbackBox.innerHTML = `
+                <div class="upload-success-box">
+                    <div style="font-weight: 700; margin-bottom: 4px;">✓ Document uploaded successfully!</div>
+                    <div><strong>Document ID:</strong> ${doc.documentId}</div>
+                    <div><strong>Text Extraction:</strong> ${ext.status || 'SUCCESS'} (${ext.characterCount ? ext.characterCount.toLocaleString() + ' chars' : '0 chars'})</div>
+                    <div><strong>Evidence linked to:</strong> ${doc.parcelId}</div>
+                </div>
+            `;
+        }
+
+        // Refresh documents list asynchronously for current parcel
+        fetchParcelDocuments(parcelId);
+
+        setTimeout(() => {
+            closeUploadDocumentModal();
+        }, 2200);
+
+    } catch (error) {
+        console.error("Upload Submit Error:", error);
+        if (feedbackBox) {
+            feedbackBox.innerHTML = `<div class="upload-error-box">⚠️ Upload Failed: ${error.message}</div>`;
+        }
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "📤 Upload Document";
+        }
+    }
+}
+
+window.showDocumentDetailsModal = showDocumentDetailsModal;
+window.closeDocumentModal = closeDocumentModal;
+window.showUploadDocumentModal = showUploadDocumentModal;
+window.closeUploadDocumentModal = closeUploadDocumentModal;
+window.handleUploadDocumentSubmit = handleUploadDocumentSubmit;
+
+

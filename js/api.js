@@ -246,6 +246,41 @@ async function getAllAudits(limit = 20) {
     return await apiRequest(`/api/audits?limit=${limit}`);
 }
 
+/* Document & Evidence API */
+async function getAllDocuments() {
+    return await apiRequest("/api/documents");
+}
+
+async function getDocumentById(documentId) {
+    return await apiRequest(`/api/documents/${documentId}`);
+}
+
+async function getDocumentsByParcelId(parcelId) {
+    return await apiRequest(`/api/documents/parcel/${parcelId}`);
+}
+
+async function getDocumentsByType(parcelId, documentType) {
+    return await apiRequest(`/api/documents/parcel/${parcelId}/type/${documentType}`);
+}
+
+async function uploadDocument(formData) {
+    const response = await fetch(`${API_BASE_URL}/api/documents/upload`, {
+        method: "POST",
+        body: formData
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message || `Upload failed with status ${response.status}`);
+    }
+    return data;
+}
+
+function getDocumentFileUrl(documentId) {
+    return `${API_BASE_URL}/api/documents/${documentId}/file`;
+}
+
+
 
 
 
