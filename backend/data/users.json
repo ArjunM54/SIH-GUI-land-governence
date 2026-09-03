@@ -4,7 +4,7 @@
     "officerId": null,
     "name": "Ramesh Sharma",
     "email": "citizen@landgov.gov",
-    "password": "Pass123!Dem",
+    "password": "Pass123!Demo",
     "role": "citizen",
     "officerType": null,
     "department": null,
@@ -19,7 +19,7 @@
       "LND-001",
       "LND-003"
     ],
-    "passwordHash": "$2b$10$qLUwuajaYxgyOG4iPUyn6..ZwHuZ0F4klS861SJY.TJlot4A6bhuW"
+    "passwordHash": "$2b$10$SiK98RRRNt/mie4zJIedE.JrE9Pzw20P4eTYkatvjIxovWS7MG1Im"
   },
   {
     "uid": "uid-off-cad-001",
@@ -263,5 +263,28 @@
       "LND-003"
     ],
     "passwordHash": "$2b$10$mXfYE601woUH1SaN4dMlLusgenVCdFBGDgaiE54/Na75myHh7WX9m"
+  },
+  {
+    "uid": "uid-citizen-1788446907667",
+    "officerId": null,
+    "name": "abinesh",
+    "email": "abinesh@gmail.com",
+    "password": "abinesh",
+    "passwordHash": "$2b$10$mlgkbV1rrSKJdcNbrA0bpOGgE/r4UXTUFEMYhLjWdZYqfM7.3N94y",
+    "mobile": "8745671209",
+    "role": "citizen",
+    "officerType": null,
+    "department": null,
+    "permissions": [
+      "citizen.view",
+      "citizen.request",
+      "parcel.view"
+    ],
+    "assignedParcels": [
+      "LND-001",
+      "LND-003"
+    ],
+    "status": "active",
+    "createdAt": "2026-09-03T14:48:27.667Z"
   }
 ]
