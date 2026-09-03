@@ -1,9 +1,6 @@
 /* =========================================================
    LANDGOV GIS
-   SIH26014 - Digital Land Governance
-
-   DOCUMENT ROUTES
-   Express routes for document & evidence retrieval, upload, and file access.
+   DOCUMENT ROUTES (PROTECTED BY JWT & PARCEL ACCESS)
    ========================================================= */
 
 const express = require("express");
@@ -24,6 +21,10 @@ const {
 } = require("../services/documentUploadService");
 
 const { getLandProfile } = require("../data/landProfile");
+const { requireAuth } = require("../middleware/authMiddleware");
+const { canAccessParcel } = require("../services/parcelAccessService");
+const { filterDocumentData } = require("../services/accessControlService");
+const auditService = require("../services/auditService");
 
 // Configure Multer for in-memory buffer handling (Max 10 MB)
 const storage = multer.memoryStorage();
@@ -34,17 +35,18 @@ const upload = multer({
     }
 });
 
-/* =========================================================
-   GET /api/documents
-   Get all available document metadata records.
-   ========================================================= */
-router.get("/", (req, res) => {
+/**
+ * GET /api/documents
+ * Returns authorized documents for the user
+ */
+router.get("/", requireAuth, (req, res) => {
     try {
-        const docs = getAllDocuments();
+        const rawDocs = getAllDocuments();
+        const authorizedDocs = filterDocumentData(req.user, rawDocs);
         return res.json({
             success: true,
-            count: docs.length,
-            documents: docs
+            count: authorizedDocs.length,
+            documents: authorizedDocs
         });
     } catch (error) {
         console.error("[Document API] Error in GET /api/documents:", error);
@@ -55,11 +57,11 @@ router.get("/", (req, res) => {
     }
 });
 
-/* =========================================================
-   POST /api/documents/upload
-   Upload a supporting land document for a parcel.
-   ========================================================= */
-router.post("/upload", (req, res, next) => {
+/**
+ * POST /api/documents/upload
+ * Upload a supporting document for an authorized parcel
+ */
+router.post("/upload", requireAuth, (req, res, next) => {
     upload.single("file")(req, res, (err) => {
         if (err) {
             if (err instanceof multer.MulterError) {
@@ -86,6 +88,16 @@ router.post("/upload", (req, res, next) => {
         const metadata = req.body || {};
         const fileObject = req.file;
 
+        if (metadata.parcelId && !canAccessParcel(req.user, metadata.parcelId)) {
+            return res.status(403).json({
+                success: false,
+                error: "FORBIDDEN",
+                message: "You do not have permission to upload documents for this parcel."
+            });
+        }
+
+        metadata.uploadedBy = req.user.email || req.user.uid;
+
         const result = await processDocumentUpload(metadata, fileObject);
 
         if (!result.success) {
@@ -94,6 +106,13 @@ router.post("/upload", (req, res, next) => {
                 message: result.error || "Document upload failed."
             });
         }
+
+        auditService.logEvent({
+            actor: req.user.email || req.user.officerId,
+            target: metadata.parcelId || "DOCUMENT_UPLOAD",
+            action: "UPLOAD_DOCUMENT",
+            result: "SUCCESS"
+        });
 
         return res.status(201).json(result);
     } catch (error) {
@@ -105,23 +124,23 @@ router.post("/upload", (req, res, next) => {
     }
 });
 
-/* =========================================================
-   GET /api/documents/parcel/:parcelId
-   Get all documents for a specific parcel.
-   ========================================================= */
-router.get("/parcel/:parcelId", (req, res) => {
+/**
+ * GET /api/documents/parcel/:parcelId
+ * Get all authorized documents for a specific parcel.
+ */
+router.get("/parcel/:parcelId", requireAuth, (req, res) => {
     try {
         const { parcelId } = req.params;
 
-        if (!parcelId || typeof parcelId !== "string" || parcelId.trim() === "") {
-            return res.status(400).json({
+        if (!canAccessParcel(req.user, parcelId)) {
+            return res.status(403).json({
                 success: false,
-                message: "Invalid parcel ID provided."
+                error: "FORBIDDEN",
+                message: "You do not have permission to view documents for this parcel."
             });
         }
 
         const normalizedParcelId = parcelId.trim().toUpperCase();
-
         const profile = getLandProfile(normalizedParcelId);
         if (!profile) {
             return res.status(404).json({
@@ -133,7 +152,15 @@ router.get("/parcel/:parcelId", (req, res) => {
             });
         }
 
-        const docs = getDocumentsByParcelId(normalizedParcelId);
+        const rawDocs = getDocumentsByParcelId(normalizedParcelId);
+        const docs = filterDocumentData(req.user, rawDocs);
+
+        auditService.logEvent({
+            actor: req.user.email || req.user.officerId,
+            target: normalizedParcelId,
+            action: "VIEW_PARCEL_DOCUMENTS",
+            result: "SUCCESS"
+        });
 
         return res.json({
             success: true,
@@ -150,18 +177,18 @@ router.get("/parcel/:parcelId", (req, res) => {
     }
 });
 
-/* =========================================================
-   GET /api/documents/parcel/:parcelId/type/:documentType
-   Get documents for a specific parcel filtered by document type.
-   ========================================================= */
-router.get("/parcel/:parcelId/type/:documentType", (req, res) => {
+/**
+ * GET /api/documents/parcel/:parcelId/type/:documentType
+ */
+router.get("/parcel/:parcelId/type/:documentType", requireAuth, (req, res) => {
     try {
         const { parcelId, documentType } = req.params;
 
-        if (!parcelId || typeof parcelId !== "string" || parcelId.trim() === "") {
-            return res.status(400).json({
+        if (!canAccessParcel(req.user, parcelId)) {
+            return res.status(403).json({
                 success: false,
-                message: "Invalid parcel ID provided."
+                error: "FORBIDDEN",
+                message: "You do not have permission to view documents for this parcel."
             });
         }
 
@@ -175,19 +202,8 @@ router.get("/parcel/:parcelId/type/:documentType", (req, res) => {
             });
         }
 
-        const profile = getLandProfile(normalizedParcelId);
-        if (!profile) {
-            return res.status(404).json({
-                success: false,
-                parcelId: normalizedParcelId,
-                documentType: normalizedType,
-                message: `Parcel '${normalizedParcelId}' not found.`,
-                count: 0,
-                documents: []
-            });
-        }
-
-        const docs = getDocumentsByType(normalizedParcelId, normalizedType);
+        const rawDocs = getDocumentsByType(normalizedParcelId, normalizedType);
+        const docs = filterDocumentData(req.user, rawDocs);
 
         return res.json({
             success: true,
@@ -197,7 +213,7 @@ router.get("/parcel/:parcelId/type/:documentType", (req, res) => {
             documents: docs
         });
     } catch (error) {
-        console.error("[Document API] Error in GET /api/documents/parcel/:parcelId/type/:documentType:", error);
+        console.error("[Document API] Error fetching typed documents:", error);
         return res.status(500).json({
             success: false,
             message: "Internal server error fetching documents by type."
@@ -205,94 +221,111 @@ router.get("/parcel/:parcelId/type/:documentType", (req, res) => {
     }
 });
 
-/* =========================================================
-   GET /api/documents/:documentId/file
-   Safely stream/download stored document file.
-   ========================================================= */
-router.get("/:documentId/file", (req, res) => {
+/**
+ * GET /api/documents/:documentId
+ */
+router.get("/:documentId", requireAuth, (req, res) => {
     try {
         const { documentId } = req.params;
-
-        if (!documentId || typeof documentId !== "string" || documentId.trim() === "") {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid document ID provided."
-            });
-        }
-
-        const normalizedDocId = documentId.trim().toUpperCase();
-        const doc = getDocumentById(normalizedDocId);
+        const doc = getDocumentById(documentId);
 
         if (!doc) {
             return res.status(404).json({
                 success: false,
-                message: `Document '${normalizedDocId}' not found.`
+                message: `Document '${documentId}' not found.`
             });
         }
 
-        if (!doc.fileName) {
-            return res.status(404).json({
+        if (doc.parcelId && !canAccessParcel(req.user, doc.parcelId)) {
+            return res.status(403).json({
                 success: false,
-                message: `No file attached to document '${normalizedDocId}'.`
+                error: "FORBIDDEN",
+                message: "You do not have permission to view this document."
             });
         }
 
-        const filePath = resolveStoredFilePath(doc.fileName);
-        if (!filePath) {
-            return res.status(404).json({
+        const filtered = filterDocumentData(req.user, [doc]);
+        if (filtered.length === 0) {
+            return res.status(403).json({
                 success: false,
-                message: `Stored file for document '${normalizedDocId}' was not found on server.`
+                error: "FORBIDDEN",
+                message: "Access restricted to this document."
             });
         }
 
-        if (doc.fileType) {
-            res.setHeader("Content-Type", doc.fileType);
-        }
+        auditService.logEvent({
+            actor: req.user.email || req.user.officerId,
+            target: documentId,
+            action: "VIEW_DOCUMENT_METADATA",
+            result: "SUCCESS"
+        });
 
-        return res.sendFile(filePath);
+        return res.json({
+            success: true,
+            document: filtered[0]
+        });
     } catch (error) {
-        console.error("[Document API] Error in GET /api/documents/:documentId/file:", error);
+        console.error("[Document API] Error fetching document by ID:", error);
         return res.status(500).json({
             success: false,
-            message: "Internal server error streaming document file."
+            message: "Internal server error fetching document."
         });
     }
 });
 
-/* =========================================================
-   GET /api/documents/:documentId
-   Get document details by document ID.
-   ========================================================= */
-router.get("/:documentId", (req, res) => {
+/**
+ * GET /api/documents/:documentId/file
+ */
+router.get("/:documentId/file", requireAuth, (req, res) => {
     try {
         const { documentId } = req.params;
-
-        if (!documentId || typeof documentId !== "string" || documentId.trim() === "") {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid document ID provided."
-            });
-        }
-
-        const normalizedDocId = documentId.trim().toUpperCase();
-        const doc = getDocumentById(normalizedDocId);
+        const doc = getDocumentById(documentId);
 
         if (!doc) {
             return res.status(404).json({
                 success: false,
-                message: `Document '${normalizedDocId}' not found.`
+                message: `Document '${documentId}' not found.`
             });
         }
 
-        return res.json({
-            success: true,
-            document: doc
+        if (doc.parcelId && !canAccessParcel(req.user, doc.parcelId)) {
+            return res.status(403).json({
+                success: false,
+                error: "FORBIDDEN",
+                message: "You do not have permission to download this document file."
+            });
+        }
+
+        const filtered = filterDocumentData(req.user, [doc]);
+        if (filtered.length === 0) {
+            return res.status(403).json({
+                success: false,
+                error: "FORBIDDEN",
+                message: "Access restricted to this document file."
+            });
+        }
+
+        const filePath = resolveStoredFilePath(doc);
+        if (!filePath) {
+            return res.status(404).json({
+                success: false,
+                message: `Physical file for document '${documentId}' could not be located.`
+            });
+        }
+
+        auditService.logEvent({
+            actor: req.user.email || req.user.officerId,
+            target: documentId,
+            action: "DOWNLOAD_DOCUMENT_FILE",
+            result: "SUCCESS"
         });
+
+        return res.sendFile(filePath);
     } catch (error) {
-        console.error("[Document API] Error in GET /api/documents/:documentId:", error);
+        console.error("[Document API] Error downloading file:", error);
         return res.status(500).json({
             success: false,
-            message: "Internal server error fetching document details."
+            message: "Internal server error serving document file."
         });
     }
 });

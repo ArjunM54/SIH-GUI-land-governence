@@ -74,65 +74,16 @@ async function getParcels() {
    ========================================================= */
 
 async function getLandProfile(parcelId) {
-
     try {
-
-        console.log(
-            "Fetching land profile:",
-            parcelId
-        );
-
-
-        const response =
-            await fetch(
-                `http://localhost:5000/api/land-profile/${parcelId}`
-            );
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                `HTTP error: ${response.status}`
-            );
-
-        }
-
-
-        const result =
-            await response.json();
-
-
-        if (!result.success) {
-
-            throw new Error(
-                result.message ||
-                "Unable to load land profile"
-            );
-
-        }
-
-
-        console.log(
-            "Land profile received:",
-            result.data
-        );
-
-
-        return result.data;
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "Land profile API error:",
-            error
-        );
-
+        console.log("Fetching land profile:", parcelId);
+        const result = await apiRequest(`/api/land-profile/${parcelId}`);
+        const data = result.data || result;
+        console.log("Land profile received:", data);
+        return data;
+    } catch (error) {
+        console.error("Land profile API error:", error);
         throw error;
-
     }
-
 }
 
 
@@ -252,8 +203,12 @@ async function getDocumentsByType(parcelId, documentType) {
 }
 
 async function uploadDocument(formData) {
+    const token = window.AuthManager ? window.AuthManager.getToken() : "";
     const response = await fetch(`${API_BASE_URL}/api/documents/upload`, {
         method: "POST",
+        headers: {
+            ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        },
         body: formData
     });
 

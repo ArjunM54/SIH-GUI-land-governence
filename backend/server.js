@@ -69,6 +69,7 @@ const authRoutes = require("./routes/authRoutes");
 const citizenRoutes = require("./routes/citizenRoutes");
 const officerRoutes = require("./routes/officerRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const userService = require("./services/userService");
 
 
 /* =========================================================
@@ -228,6 +229,17 @@ app.use("/api/citizen", citizenRoutes);
 app.use("/api/officer", officerRoutes);
 app.use("/api/admin", adminRoutes);
 
+/* Users JSON Endpoint (Viewable in Browser) */
+app.get(["/users.json", "/api/users"], (req, res) => {
+    res.json({
+        success: true,
+        citizens: userService.listUsers("citizen"),
+        officers: userService.listUsers("officer"),
+        admins: userService.listUsers("admin"),
+        totalUsers: userService.listUsers().length
+    });
+});
+
 
 
 
@@ -320,9 +332,15 @@ const server = app.listen(
             `Document API: http://localhost:${PORT}/api/documents`
         );
 
+        console.log(
+            `Users API (JSON): http://localhost:${PORT}/api/users`
+        );
 
+        console.log(
+            `Users JSON Direct: http://localhost:${PORT}/users.json`
+        );
 
-
+        console.log("====================================");
     }
 );
 

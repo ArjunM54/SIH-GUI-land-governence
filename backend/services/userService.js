@@ -1,17 +1,21 @@
 /* =========================================================
    LANDGOV GIS
-   USER & OFFICER DATA SERVICE
+   USER & OFFICER DATA SERVICE (PHASE 10 AUTH & RBAC)
 
-   Provides in-memory & file-backed user profiles, passwords,
-   officer management, role resolution, and permission matrix.
+   Provides file-backed user management, bcrypt password hashing,
+   JWT token generation & verification, role & permission resolution,
+   and parcel-level assignments.
    ========================================================= */
 
 const fs = require("fs");
 const path = require("path");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const authConfig = require("../config/authConfig");
 
 const DATA_FILE = path.join(__dirname, "../data/users.json");
 
-// Default initial prototype accounts with stored passwords
+// Initial demo accounts with assigned parcels
 const DEFAULT_USERS = [
     {
         uid: "uid-citizen-001",
@@ -23,6 +27,7 @@ const DEFAULT_USERS = [
         officerType: null,
         department: null,
         permissions: ["citizen.view", "citizen.request", "parcel.view"],
+        assignedParcels: ["LND-001", "LND-003"],
         status: "active",
         createdAt: "2026-01-01T10:00:00Z"
     },
@@ -31,7 +36,7 @@ const DEFAULT_USERS = [
         officerId: "OFF-CAD-001",
         name: "Arun Survey",
         email: "cadastral@landgov.gov",
-        password: "Pass123!Demo",
+        password: "NewPass123!Demo",
         role: "officer",
         officerType: "cadastral_officer",
         department: "Cadastral & Survey Department",
@@ -46,6 +51,7 @@ const DEFAULT_USERS = [
             "survey.view",
             "survey.verify"
         ],
+        assignedParcels: ["LND-001", "LND-002", "LND-003"],
         status: "active",
         createdAt: "2026-01-01T10:00:00Z"
     },
@@ -69,6 +75,7 @@ const DEFAULT_USERS = [
             "mutation.verify",
             "mutation.approve"
         ],
+        assignedParcels: ["LND-001", "LND-002"],
         status: "active",
         createdAt: "2026-01-01T10:00:00Z"
     },
@@ -90,6 +97,7 @@ const DEFAULT_USERS = [
             "transfer.verify",
             "transfer.approve"
         ],
+        assignedParcels: ["LND-001", "LND-003"],
         status: "active",
         createdAt: "2026-01-01T10:00:00Z"
     },
@@ -112,8 +120,10 @@ const DEFAULT_USERS = [
             "zoning.update",
             "restrictions.view",
             "restrictions.verify",
-            "restrictions.update"
+            "restrictions.update",
+            "proposal.validate"
         ],
+        assignedParcels: ["LND-001", "LND-002", "LND-003"],
         status: "active",
         createdAt: "2026-01-01T10:00:00Z"
     },
@@ -137,6 +147,7 @@ const DEFAULT_USERS = [
             "building.verify",
             "building.approve"
         ],
+        assignedParcels: ["LND-001", "LND-002"],
         status: "active",
         createdAt: "2026-01-01T10:00:00Z"
     },
@@ -149,14 +160,8 @@ const DEFAULT_USERS = [
         role: "admin",
         officerType: null,
         department: "Governance Administration",
-        permissions: [
-            "admin.all",
-            "users.manage",
-            "officers.manage",
-            "permissions.manage",
-            "audit.view",
-            "system.manage"
-        ],
+        permissions: ["*"],
+        assignedParcels: ["*"],
         status: "active",
         createdAt: "2026-01-01T10:00:00Z"
     }
@@ -164,23 +169,46 @@ const DEFAULT_USERS = [
 
 let usersStore = [];
 
+function normalizeUser(user) {
+    if (!user) return null;
+    return {
+        ...user,
+        active: user.status === "active",
+        assignedParcels: Array.isArray(user.assignedParcels) && user.assignedParcels.length > 0
+            ? user.assignedParcels
+            : (user.role === "admin" ? ["*"] : (user.role === "officer" ? ["LND-001", "LND-002", "LND-003"] : ["LND-001", "LND-003"]))
+    };
+}
+
 function loadUsers() {
     try {
         if (fs.existsSync(DATA_FILE)) {
             const raw = fs.readFileSync(DATA_FILE, "utf-8");
             usersStore = JSON.parse(raw);
-            // Migration: Ensure all default users have password field if loaded from file
             let modified = false;
-            DEFAULT_USERS.forEach(defUser => {
-                const existing = usersStore.find(u => u.uid === defUser.uid);
-                if (existing && !existing.password) {
-                    existing.password = defUser.password;
+
+            usersStore.forEach(u => {
+                // Ensure assignedParcels exists
+                if (!u.assignedParcels) {
+                    if (u.role === "admin") u.assignedParcels = ["*"];
+                    else if (u.role === "officer") u.assignedParcels = ["LND-001", "LND-002", "LND-003"];
+                    else u.assignedParcels = ["LND-001", "LND-003"];
+                    modified = true;
+                }
+
+                // Password hashing migration
+                if (u.password && !u.passwordHash) {
+                    u.passwordHash = bcrypt.hashSync(u.password, authConfig.SALT_ROUNDS);
                     modified = true;
                 }
             });
+
             if (modified) saveUsers();
         } else {
             usersStore = JSON.parse(JSON.stringify(DEFAULT_USERS));
+            usersStore.forEach(u => {
+                u.passwordHash = bcrypt.hashSync(u.password, authConfig.SALT_ROUNDS);
+            });
             saveUsers();
         }
     } catch (err) {
@@ -246,7 +274,8 @@ const DEFAULT_OFFICER_PERMISSIONS = {
         "zoning.update",
         "restrictions.view",
         "restrictions.verify",
-        "restrictions.update"
+        "restrictions.update",
+        "proposal.validate"
     ],
     property_tax_officer: [
         "tax.view",
@@ -279,31 +308,78 @@ const OFFICER_TYPES = [
 
 function findUserByIdentifier(identifier) {
     if (!identifier) return null;
-    loadUsers(); // Always reload fresh data from users.json file
+    loadUsers();
     const term = String(identifier).trim().toLowerCase();
-    return usersStore.find(
+    const raw = usersStore.find(
         (u) =>
             (u.email && u.email.toLowerCase() === term) ||
             (u.officerId && u.officerId.toLowerCase() === term) ||
             (u.uid && u.uid.toLowerCase() === term)
-    ) || null;
+    );
+    return normalizeUser(raw);
 }
 
 function getUserByUid(uid) {
     if (!uid) return null;
-    loadUsers(); // Always reload fresh data from users.json file
-    return usersStore.find((u) => u.uid === uid) || null;
+    loadUsers();
+    const raw = usersStore.find((u) => u.uid === uid);
+    return normalizeUser(raw);
 }
 
+/**
+ * Validates password using bcrypt (with fallback for legacy plain-text during migration)
+ */
+function verifyPassword(inputPassword, user) {
+    if (!inputPassword || !user) return false;
+    if (user.passwordHash) {
+        return bcrypt.compareSync(inputPassword, user.passwordHash);
+    }
+    if (user.password) {
+        return inputPassword === user.password;
+    }
+    return false;
+}
 
 /**
- * Register a new citizen account with stored password
+ * Generates a signed JWT token for an authenticated user
  */
-function registerCitizen({ name, email, password, uid, mobile }) {
+function generateToken(user) {
+    if (!user) return null;
+    const payload = {
+        uid: user.uid,
+        email: user.email,
+        officerId: user.officerId,
+        role: user.role,
+        officerType: user.officerType,
+        assignedParcels: user.assignedParcels || []
+    };
+    return jwt.sign(payload, authConfig.JWT_SECRET, { expiresIn: authConfig.JWT_EXPIRES_IN });
+}
+
+/**
+ * Verifies and decodes a JWT token
+ */
+function verifyToken(token) {
+    try {
+        if (!token) return null;
+        const decoded = jwt.verify(token, authConfig.JWT_SECRET);
+        return decoded;
+    } catch (err) {
+        return null;
+    }
+}
+
+/**
+ * Register a new citizen account
+ */
+function registerCitizen({ name, email, password, uid, mobile, assignedParcels }) {
     const existing = findUserByIdentifier(email);
     if (existing) {
         throw new Error("An account with this email already exists.");
     }
+
+    const salt = bcrypt.genSaltSync(authConfig.SALT_ROUNDS);
+    const passwordHash = bcrypt.hashSync(password || "Pass123!Demo", salt);
 
     const newUser = {
         uid: uid || `uid-citizen-${Date.now()}`,
@@ -311,24 +387,26 @@ function registerCitizen({ name, email, password, uid, mobile }) {
         name: name || "Citizen User",
         email: email.toLowerCase(),
         password: password || "Pass123!Demo",
+        passwordHash,
         mobile: mobile || "",
         role: "citizen",
         officerType: null,
         department: null,
         permissions: ["citizen.view", "citizen.request", "parcel.view"],
+        assignedParcels: Array.isArray(assignedParcels) && assignedParcels.length > 0 ? assignedParcels : ["LND-001", "LND-003"],
         status: "active",
         createdAt: new Date().toISOString()
     };
 
     usersStore.push(newUser);
     saveUsers();
-    return newUser;
+    return normalizeUser(newUser);
 }
 
 /**
- * Create a new Government Officer account with stored password
+ * Create a new Government Officer account
  */
-function createOfficer({ officerId, name, email, password, officerType, permissions, status }) {
+function createOfficer({ officerId, name, email, password, officerType, permissions, assignedParcels, status }) {
     if (!OFFICER_TYPES.includes(officerType)) {
         throw new Error(`Invalid officer type. Must be one of: ${OFFICER_TYPES.join(", ")}`);
     }
@@ -347,59 +425,74 @@ function createOfficer({ officerId, name, email, password, officerType, permissi
     const assignedPermissions = Array.isArray(permissions) && permissions.length > 0 ? permissions : defaultPerms;
     const department = DEPARTMENT_MAP[officerType] || "Government Department";
 
+    const salt = bcrypt.genSaltSync(authConfig.SALT_ROUNDS);
+    const passwordHash = bcrypt.hashSync(password || "Pass123!Demo", salt);
+
     const newOfficer = {
         uid: `uid-off-${Date.now()}`,
         officerId: officerId.toUpperCase(),
         name,
         email: email.toLowerCase(),
         password: password || "Pass123!Demo",
+        passwordHash,
         role: "officer",
         officerType,
         department,
         permissions: assignedPermissions,
+        assignedParcels: Array.isArray(assignedParcels) && assignedParcels.length > 0 ? assignedParcels : ["LND-001", "LND-002", "LND-003"],
         status: status || "active",
         createdAt: new Date().toISOString()
     };
 
     usersStore.push(newOfficer);
     saveUsers();
-    return newOfficer;
+    return normalizeUser(newOfficer);
 }
 
 /**
- * Reset / Update user password directly in file
+ * Reset / Update user password
  */
 function resetUserPassword(uid, newPassword) {
-    const user = getUserByUid(uid);
-    if (!user) throw new Error("User not found.");
-    user.password = newPassword || "Pass123!Demo";
+    const raw = usersStore.find((u) => u.uid === uid);
+    if (!raw) throw new Error("User not found.");
+    raw.password = newPassword || "Pass123!Demo";
+    raw.passwordHash = bcrypt.hashSync(raw.password, authConfig.SALT_ROUNDS);
     saveUsers();
-    return user;
+    return normalizeUser(raw);
 }
 
 function setOfficerStatus(uid, status) {
-    const user = getUserByUid(uid);
-    if (!user) throw new Error("Officer not found.");
-    if (user.role === "admin") throw new Error("Administrator account status cannot be altered.");
+    const raw = usersStore.find((u) => u.uid === uid);
+    if (!raw) throw new Error("Officer not found.");
+    if (raw.role === "admin") throw new Error("Administrator account status cannot be altered.");
     
-    user.status = status;
+    raw.status = status;
     saveUsers();
-    return user;
+    return normalizeUser(raw);
 }
 
 function updateOfficerPermissions(uid, permissions) {
-    const user = getUserByUid(uid);
-    if (!user) throw new Error("Officer not found.");
-    if (user.role === "admin") throw new Error("Admin permissions cannot be modified.");
+    const raw = usersStore.find((u) => u.uid === uid);
+    if (!raw) throw new Error("Officer not found.");
+    if (raw.role === "admin") throw new Error("Admin permissions cannot be modified.");
     
-    user.permissions = permissions;
+    raw.permissions = permissions;
     saveUsers();
-    return user;
+    return normalizeUser(raw);
+}
+
+function assignParcelsToUser(uid, assignedParcels) {
+    const raw = usersStore.find((u) => u.uid === uid);
+    if (!raw) throw new Error("User not found.");
+    raw.assignedParcels = Array.isArray(assignedParcels) ? assignedParcels : [];
+    saveUsers();
+    return normalizeUser(raw);
 }
 
 function listUsers(role = null) {
-    if (!role) return [...usersStore];
-    return usersStore.filter((u) => u.role === role);
+    loadUsers();
+    const list = role ? usersStore.filter((u) => u.role === role) : usersStore;
+    return list.map(u => normalizeUser(u));
 }
 
 module.exports = {
@@ -409,10 +502,14 @@ module.exports = {
     DEPARTMENT_MAP,
     findUserByIdentifier,
     getUserByUid,
+    verifyPassword,
+    generateToken,
+    verifyToken,
     registerCitizen,
     createOfficer,
     resetUserPassword,
     setOfficerStatus,
     updateOfficerPermissions,
+    assignParcelsToUser,
     listUsers
 };

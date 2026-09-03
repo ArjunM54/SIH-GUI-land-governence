@@ -1,82 +1,52 @@
-
 /* =========================================================
    LANDGOV GIS
-   SIH26014
-
-   RECORD OF RIGHTS ROUTES
+   RECORD OF RIGHTS (RoR) ROUTES (PROTECTED)
    ========================================================= */
-
 
 const express = require("express");
+const router = express.Router();
+const rorData = require("../data/ror");
+const { requireAuth } = require("../middleware/authMiddleware");
+const { requirePermission } = require("../middleware/permissionMiddleware");
+const { canAccessParcel } = require("../services/parcelAccessService");
 
-const rorData =
-    require("../data/ror");
+router.use(requireAuth);
 
-
-const router =
-    express.Router();
-
-
-/* =========================================================
-   GET ALL RoR RECORDS
-   ========================================================= */
-
-router.get("/", (req, res) => {
-
+router.get("/", requirePermission("ror.view"), (req, res) => {
+    const authorized = rorData.filter(item => canAccessParcel(req.user, item.parcelId));
     res.json({
-
         success: true,
-
-        count: rorData.length,
-
-        data: rorData
-
+        count: authorized.length,
+        data: authorized
     });
-
 });
 
+router.get("/:parcelId", requirePermission("ror.view"), (req, res) => {
+    const parcelId = req.params.parcelId;
 
-/* =========================================================
-   GET RoR BY PARCEL ID
-   ========================================================= */
-
-router.get("/:parcelId", (req, res) => {
-
-    const parcelId =
-        req.params.parcelId;
-
-
-    const record =
-        rorData.find(
-            item =>
-                item.parcelId.toLowerCase() ===
-                parcelId.toLowerCase()
-        );
-
-
-    if (!record) {
-
-        return res.status(404).json({
-
+    if (!canAccessParcel(req.user, parcelId)) {
+        return res.status(403).json({
             success: false,
-
-            message:
-                "RoR record not found"
-
+            error: "FORBIDDEN",
+            message: "You do not have permission to access RoR data for this parcel."
         });
-
     }
 
+    const record = rorData.find(
+        item => item.parcelId.toLowerCase() === parcelId.toLowerCase()
+    );
+
+    if (!record) {
+        return res.status(404).json({
+            success: false,
+            message: "Record of Rights not found"
+        });
+    }
 
     res.json({
-
         success: true,
-
         data: record
-
     });
-
 });
-
 
 module.exports = router;

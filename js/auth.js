@@ -1,18 +1,18 @@
 /* =========================================================
    LANDGOV GIS
-   AUTH SESSION & ROUTE GUARD SERVICE
+   AUTH SESSION & ROUTE GUARD SERVICE (JWT & CLIENT STATE)
 
-   Manages local storage auth tokens, current user state,
+   Manages JWT auth tokens in client storage, user state,
    and page protection redirects.
    ========================================================= */
 
 const STORAGE_KEY_USER = "landgov_user_profile";
-const STORAGE_KEY_TOKEN = "landgov_token";
+const STORAGE_KEY_TOKEN = "landgov_jwt_token";
 
 const AuthManager = {
     getUser: function () {
         try {
-            const raw = localStorage.getItem(STORAGE_KEY_USER);
+            const raw = sessionStorage.getItem(STORAGE_KEY_USER) || localStorage.getItem(STORAGE_KEY_USER);
             return raw ? JSON.parse(raw) : null;
         } catch (e) {
             return null;
@@ -20,22 +20,33 @@ const AuthManager = {
     },
 
     getToken: function () {
-        return localStorage.getItem(STORAGE_KEY_TOKEN) || "";
+        return sessionStorage.getItem(STORAGE_KEY_TOKEN) || localStorage.getItem(STORAGE_KEY_TOKEN) || "";
     },
 
     setUserSession: function (user, token) {
         if (!user) return;
-        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
-        localStorage.setItem(STORAGE_KEY_TOKEN, token || user.email || user.officerId || user.uid);
+        const normalizedRole = (user.role || "citizen").toLowerCase();
+        const userObj = {
+            ...user,
+            role: normalizedRole
+        };
+        sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(userObj));
+        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(userObj));
+        if (token) {
+            sessionStorage.setItem(STORAGE_KEY_TOKEN, token);
+            localStorage.setItem(STORAGE_KEY_TOKEN, token);
+        }
     },
 
     clearSession: function () {
+        sessionStorage.removeItem(STORAGE_KEY_USER);
+        sessionStorage.removeItem(STORAGE_KEY_TOKEN);
         localStorage.removeItem(STORAGE_KEY_USER);
         localStorage.removeItem(STORAGE_KEY_TOKEN);
     },
 
     isLoggedIn: function () {
-        return !!this.getUser();
+        return !!this.getUser() && !!this.getToken();
     },
 
     /**
@@ -48,9 +59,10 @@ const AuthManager = {
             return;
         }
 
-        if (currentUser.role === "admin") {
+        const role = (currentUser.role || "").toLowerCase();
+        if (role === "admin") {
             window.location.href = "admin-dashboard.html";
-        } else if (currentUser.role === "officer") {
+        } else if (role === "officer") {
             window.location.href = "officer-dashboard.html";
         } else {
             window.location.href = "citizen-dashboard.html";
@@ -63,13 +75,16 @@ const AuthManager = {
     enforcePageAccess: function (expectedRole) {
         const user = this.getUser();
 
-        if (!user) {
+        if (!user || !this.getToken()) {
             window.location.href = "login.html";
             return null;
         }
 
-        if (expectedRole && user.role !== expectedRole && user.role !== "admin") {
-            console.warn(`Unauthorized access to ${expectedRole} page by user role '${user.role}'`);
+        const role = (user.role || "").toLowerCase();
+        const targetRole = (expectedRole || "").toLowerCase();
+
+        if (targetRole && role !== targetRole && role !== "admin") {
+            console.warn(`Unauthorized access to ${expectedRole} page by user role '${role}'`);
             this.redirectToDashboard(user);
             return null;
         }

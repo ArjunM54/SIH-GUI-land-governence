@@ -73,51 +73,36 @@ async function openCompleteLandProfile(parcelId) {
 
 
     try {
-
-        const response =
-            await fetch(
-                `http://localhost:5000/api/land-profile/${parcelId}`
-            );
-
+        const token = window.AuthManager ? window.AuthManager.getToken() : "";
+        const response = await fetch(`http://localhost:5000/api/land-profile/${parcelId}`, {
+            headers: {
+                "Content-Type": "application/json",
+                ...(token ? { "Authorization": `Bearer ${token}` } : {})
+            }
+        });
 
         if (!response.ok) {
-
-            throw new Error(
-                `API returned HTTP ${response.status}`
-            );
-
+            let errMsg = "Unable to load land profile. Please try again.";
+            if (response.status === 401) {
+                errMsg = "Your session has expired. Please login again.";
+            } else if (response.status === 403) {
+                errMsg = "You are not authorized to view this parcel.";
+            } else if (response.status === 404) {
+                errMsg = "Land profile not found.";
+            }
+            throw new Error(errMsg);
         }
 
-
-        const result =
-            await response.json();
-
+        const result = await response.json();
 
         if (!result.success) {
-
-            throw new Error(
-                result.message ||
-                "Land profile not found"
-            );
-
+            throw new Error(result.message || "Land profile not found");
         }
 
+        const landProfile = result.data || result;
+        window.selectedLandProfile = landProfile;
 
-        const landProfile =
-            result.data;
-
-
-        /* Store globally */
-
-        window.selectedLandProfile =
-            landProfile;
-
-
-        console.log(
-            "Complete land profile:",
-            landProfile
-        );
-
+        console.log("Complete land profile received:", landProfile);
 
         /* Check for stale request before rendering */
         if (window.activeLandProfileParcelId !== parcelId) {
@@ -125,17 +110,15 @@ async function openCompleteLandProfile(parcelId) {
             return;
         }
 
-        renderLandProfile(
-            landProfile
-        );
+        renderLandProfile(landProfile);
 
-        /* Fetch governance validation asynchronously */
-        fetchGovernanceStatus(parcelId);
-
-        /* Fetch parcel documents asynchronously */
-        fetchParcelDocuments(parcelId);
-
-
+        /* Asynchronous background updates if functions exist */
+        if (typeof window.fetchGovernanceStatus === "function") {
+            window.fetchGovernanceStatus(parcelId);
+        }
+        if (typeof window.fetchParcelDocuments === "function") {
+            window.fetchParcelDocuments(parcelId);
+        }
     }
 
     catch (error) {

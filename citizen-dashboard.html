@@ -45,19 +45,8 @@
                                 <th>Action</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr>
-                                <td><strong>P-101</strong></td>
-                                <td>Ramgarh / Central</td>
-                                <td>4,500</td>
-                                <td><button class="action-btn" onclick="viewParcelProfile('P-101')">View Land Profile</button></td>
-                            </tr>
-                            <tr>
-                                <td><strong>P-103</strong></td>
-                                <td>Ramgarh / North</td>
-                                <td>3,200</td>
-                                <td><button class="action-btn" onclick="viewParcelProfile('P-103')">View Land Profile</button></td>
-                            </tr>
+                        <tbody id="my-parcels-tbody">
+                            <!-- Populated dynamically by js/citizen.js -->
                         </tbody>
                     </table>
                 </div>
@@ -90,7 +79,7 @@
             <form id="new-request-form" onsubmit="submitNewRequest(event)" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 1rem; align-items: end;">
                 <div>
                     <label style="font-size: 0.82rem; color: #94a3b8; display: block; margin-bottom: 0.3rem;">Parcel ID</label>
-                    <input type="text" id="req-parcel-id" class="form-input" placeholder="e.g. P-101" required>
+                    <input type="text" id="req-parcel-id" class="form-input" placeholder="e.g. LND-001" required>
                 </div>
                 <div>
                     <label style="font-size: 0.82rem; color: #94a3b8; display: block; margin-bottom: 0.3rem;">Request Type</label>

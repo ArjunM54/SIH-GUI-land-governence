@@ -1,23 +1,25 @@
 /* =========================================================
    LANDGOV GIS
-   ADMINISTRATOR ROUTES
+   ADMINISTRATOR ROUTES (PROTECTED)
 
    Protected API routes for System Administrator:
-   - Officer Account Management
-   - Create Officer (1 of 5 allowed types)
-   - Enable / Disable Officer
+   - Officer & User Account Management
+   - Parcel Assignments
+   - Enable / Disable Accounts
    - Permission Matrix Assignment
-   - Secure Firebase Password Reset Trigger
+   - Password Resets
    - Audit Trail Monitoring
    ========================================================= */
 
 const express = require("express");
 const router = express.Router();
+const { requireAuth } = require("../middleware/authMiddleware");
 const { requireRole } = require("../middleware/permissionMiddleware");
 const userService = require("../services/userService");
 const auditService = require("../services/auditService");
 
-// Protect all admin routes with strict admin role check
+// Protect all admin routes with authentication & strict admin role check
+router.use(requireAuth);
 router.use(requireRole("admin"));
 
 /**
@@ -64,7 +66,7 @@ router.get("/officers", (req, res) => {
  */
 router.post("/officers", (req, res) => {
     try {
-        const { officerId, name, email, password, officerType, permissions, status } = req.body;
+        const { officerId, name, email, password, officerType, permissions, assignedParcels, status } = req.body;
 
         if (!officerId || !name || !email || !officerType) {
             return res.status(400).json({
@@ -80,9 +82,9 @@ router.post("/officers", (req, res) => {
             password: password || "Pass123!Demo",
             officerType,
             permissions,
+            assignedParcels,
             status: status || "active"
         });
-
 
         auditService.logEvent({
             actor: req.user.email || req.user.officerId,
@@ -115,7 +117,7 @@ router.post("/officers", (req, res) => {
 
 /**
  * @route   PATCH /api/admin/officers/:uid/status
- * @desc    Enable or Disable an officer account
+ * @desc    Enable or Disable an officer/user account
  */
 router.patch("/officers/:uid/status", (req, res) => {
     try {
@@ -130,8 +132,7 @@ router.patch("/officers/:uid/status", (req, res) => {
         }
 
         const updated = userService.setOfficerStatus(uid, status);
-
-        const actionName = status === "disabled" ? "OFFICER_DISABLED" : "OFFICER_ENABLED";
+        const actionName = status === "disabled" ? "USER_DISABLED" : "USER_ENABLED";
 
         auditService.logEvent({
             actor: req.user.email || req.user.officerId,
@@ -143,7 +144,7 @@ router.patch("/officers/:uid/status", (req, res) => {
 
         res.json({
             success: true,
-            message: `Officer account ${updated.officerId || updated.email} status updated to '${status}'.`,
+            message: `Account status updated to '${status}'.`,
             officer: updated
         });
     } catch (error) {
@@ -182,7 +183,7 @@ router.put("/officers/:uid/permissions", (req, res) => {
 
         res.json({
             success: true,
-            message: `Permissions updated for officer ${updated.officerId || updated.email}.`,
+            message: `Permissions updated for user ${updated.officerId || updated.email}.`,
             officer: updated
         });
     } catch (error) {
@@ -194,8 +195,47 @@ router.put("/officers/:uid/permissions", (req, res) => {
 });
 
 /**
+ * @route   PUT /api/admin/users/:uid/parcels
+ * @desc    Update user parcel assignments (assignedParcels)
+ */
+router.put("/users/:uid/parcels", (req, res) => {
+    try {
+        const { uid } = req.params;
+        const { assignedParcels } = req.body;
+
+        if (!Array.isArray(assignedParcels)) {
+            return res.status(400).json({
+                success: false,
+                error: "assignedParcels must be an array of parcel IDs."
+            });
+        }
+
+        const updated = userService.assignParcelsToUser(uid, assignedParcels);
+
+        auditService.logEvent({
+            actor: req.user.email || req.user.officerId,
+            target: updated.officerId || updated.email,
+            action: "PARCEL_ASSIGNMENT_CHANGED",
+            result: "SUCCESS",
+            details: { assignedParcels }
+        });
+
+        res.json({
+            success: true,
+            message: `Assigned parcels updated for user ${updated.email || updated.officerId}.`,
+            user: updated
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
  * @route   POST /api/admin/officers/:uid/reset-password
- * @desc    Initiate secure password reset trigger for an officer (NEVER reveals passwords)
+ * @desc    Initiate secure password reset trigger for an officer
  */
 router.post("/officers/:uid/reset-password", (req, res) => {
     try {
@@ -206,7 +246,7 @@ router.post("/officers/:uid/reset-password", (req, res) => {
         if (!targetUser) {
             return res.status(404).json({
                 success: false,
-                error: "Officer account not found."
+                error: "Account not found."
             });
         }
 
@@ -216,14 +256,14 @@ router.post("/officers/:uid/reset-password", (req, res) => {
         auditService.logEvent({
             actor: req.user.email || req.user.officerId,
             target: targetUser.officerId || targetUser.email,
-            action: "OFFICER_PASSWORD_RESET",
+            action: "PASSWORD_RESET",
             result: "SUCCESS",
             details: { targetEmail: targetUser.email }
         });
 
         res.json({
             success: true,
-            message: `Password reset successfully for ${targetUser.name} (${targetUser.email}). Stored in users.json.`
+            message: `Password reset successfully for ${targetUser.name} (${targetUser.email}).`
         });
     } catch (error) {
         res.status(400).json({
@@ -232,7 +272,6 @@ router.post("/officers/:uid/reset-password", (req, res) => {
         });
     }
 });
-
 
 /**
  * @route   GET /api/admin/citizens

@@ -1,8 +1,6 @@
 /* =========================================================
    LANDGOV GIS
-   SIH26014 - Digital Land Governance
-
-   AUDIT TRAIL ROUTES
+   AUDIT TRAIL ROUTES (PROTECTED)
 
    Exposes REST endpoints for audit record retrieval and history.
    ========================================================= */
@@ -15,13 +13,25 @@ const {
     getAuditsByParcel,
     listAudits
 } = require("../services/auditService");
+const { requireAuth } = require("../middleware/authMiddleware");
+const { canAccessParcel } = require("../services/parcelAccessService");
 
-/* =========================================================
-   GET /api/audits
-   Lists audit records (newest first, limit max 100).
-   ========================================================= */
+router.use(requireAuth);
+
+/**
+ * GET /api/audits
+ * Lists audit records (Admin or Officer only)
+ */
 router.get("/", (req, res) => {
     try {
+        if (req.user.role === "citizen") {
+            return res.status(403).json({
+                success: false,
+                error: "FORBIDDEN",
+                message: "Citizens are not authorized to view global audit records."
+            });
+        }
+
         const limitParam = req.query.limit !== undefined ? req.query.limit : 20;
         const audits = listAudits(limitParam);
 
@@ -40,17 +50,18 @@ router.get("/", (req, res) => {
     }
 });
 
-/* =========================================================
-   GET /api/audits/parcel/:parcelId
-   Retrieves all validation audit records for a specific parcel.
-   ========================================================= */
+/**
+ * GET /api/audits/parcel/:parcelId
+ * Retrieves validation audit records for an authorized parcel.
+ */
 router.get("/parcel/:parcelId", (req, res) => {
     try {
         const { parcelId } = req.params;
-        if (!parcelId || parcelId.trim() === "") {
-            return res.status(400).json({
+        if (!canAccessParcel(req.user, parcelId)) {
+            return res.status(403).json({
                 success: false,
-                message: "Missing 'parcelId' parameter."
+                error: "FORBIDDEN",
+                message: "You do not have permission to view audit history for this parcel."
             });
         }
 
@@ -71,25 +82,26 @@ router.get("/parcel/:parcelId", (req, res) => {
     }
 });
 
-/* =========================================================
-   GET /api/audits/:auditId
-   Retrieves a single audit record by Audit ID.
-   ========================================================= */
+/**
+ * GET /api/audits/:auditId
+ */
 router.get("/:auditId", (req, res) => {
     try {
         const { auditId } = req.params;
-        if (!auditId || auditId.trim() === "") {
-            return res.status(400).json({
-                success: false,
-                message: "Missing 'auditId' parameter."
-            });
-        }
-
         const record = getAuditRecord(auditId);
+
         if (!record) {
             return res.status(404).json({
                 success: false,
                 message: `Audit record '${auditId}' not found.`
+            });
+        }
+
+        if (record.parcelId && !canAccessParcel(req.user, record.parcelId)) {
+            return res.status(403).json({
+                success: false,
+                error: "FORBIDDEN",
+                message: "You do not have permission to view this audit record."
             });
         }
 

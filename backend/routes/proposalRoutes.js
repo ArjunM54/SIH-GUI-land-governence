@@ -12,7 +12,9 @@ const router = express.Router();
 
 const { getLandProfile, getAllLandProfiles } = require("../data/landProfile");
 const { validateDevelopmentProposal, VALID_ACTIVITY_TYPES, VALID_DEVELOPMENT_TYPES } = require("../services/proposalValidator");
-const { createAuditRecord } = require("../services/auditService");
+const { createAuditRecord, logEvent } = require("../services/auditService");
+const { requireAuth } = require("../middleware/authMiddleware");
+const { canAccessParcel } = require("../services/parcelAccessService");
 
 
 /**
@@ -65,7 +67,7 @@ function validateAllParcels(proposalInput) {
    GET /api/proposals & GET /api/proposals/all
    Validates proposals across ALL parcels.
    ========================================================= */
-router.get(["/", "/all", "/validate/all"], (req, res) => {
+router.get(["/", "/all", "/validate/all"], requireAuth, (req, res) => {
     try {
         console.log("[Proposal API] Executing bulk proposal validation for all parcels.");
         const results = validateAllParcels(req.query || {});
@@ -83,7 +85,7 @@ router.get(["/", "/all", "/validate/all"], (req, res) => {
    POST /api/proposals/all & POST /api/proposals/validate/all
    Validates proposals across ALL parcels via POST body.
    ========================================================= */
-router.post(["/all", "/validate/all"], (req, res) => {
+router.post(["/all", "/validate/all"], requireAuth, (req, res) => {
     try {
         console.log("[Proposal API] Executing bulk proposal validation for all parcels via POST.");
         const { proposal } = req.body || {};
@@ -102,7 +104,7 @@ router.post(["/all", "/validate/all"], (req, res) => {
    GET /api/proposals/validate
    Validates single parcel or all parcels via query parameters.
    ========================================================= */
-router.get("/validate", (req, res) => {
+router.get("/validate", requireAuth, (req, res) => {
     try {
         const { parcelId, activityType, developmentType, proposedArea } = req.query || {};
 
@@ -110,6 +112,14 @@ router.get("/validate", (req, res) => {
             if (parcelId.toUpperCase() === "ALL") {
                 const results = validateAllParcels(req.query);
                 return res.json(results);
+            }
+
+            if (!canAccessParcel(req.user, parcelId)) {
+                return res.status(403).json({
+                    success: false,
+                    error: "FORBIDDEN",
+                    message: "You do not have permission to validate proposals for this parcel."
+                });
             }
 
             const sanitizedActivity = (activityType || "OTHER").toUpperCase();
@@ -208,7 +218,7 @@ router.get("/validate", (req, res) => {
    POST /api/proposals/validate
    Validates a development proposal for a specific parcel (or ALL if parcelId === 'ALL').
    ========================================================= */
-router.post("/validate", (req, res) => {
+router.post("/validate", requireAuth, (req, res) => {
     try {
         const { parcelId, proposal } = req.body || {};
 
@@ -221,6 +231,14 @@ router.post("/validate", (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Invalid or missing 'parcelId' in request body."
+            });
+        }
+
+        if (parcelId.toUpperCase() !== "ALL" && !canAccessParcel(req.user, parcelId)) {
+            return res.status(403).json({
+                success: false,
+                error: "FORBIDDEN",
+                message: "You do not have permission to validate proposals for this parcel."
             });
         }
 

@@ -1,6 +1,6 @@
 /* =========================================================
    LANDGOV GIS
-   LOGIN & REGISTRATION UI LOGIC
+   LOGIN & REGISTRATION UI LOGIC (JWT INTEGRATED)
    ========================================================= */
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -17,23 +17,24 @@ function switchAuthTab(tab) {
     const tabRegister = document.getElementById("tab-register");
     const alertBox = document.getElementById("alert-box");
 
-    alertBox.style.display = "none";
+    if (alertBox) alertBox.style.display = "none";
 
     if (tab === "login") {
-        loginForm.style.display = "block";
-        regForm.style.display = "none";
-        tabLogin.classList.add("active");
-        tabRegister.classList.remove("active");
+        if (loginForm) loginForm.style.display = "block";
+        if (regForm) regForm.style.display = "none";
+        if (tabLogin) tabLogin.classList.add("active");
+        if (tabRegister) tabRegister.classList.remove("active");
     } else {
-        loginForm.style.display = "none";
-        regForm.style.display = "block";
-        tabRegister.classList.add("active");
-        tabLogin.classList.remove("active");
+        if (loginForm) loginForm.style.display = "none";
+        if (regForm) regForm.style.display = "block";
+        if (tabRegister) tabRegister.classList.add("active");
+        if (tabLogin) tabLogin.classList.remove("active");
     }
 }
 
 function showAlert(message, type = "error") {
     const alertBox = document.getElementById("alert-box");
+    if (!alertBox) return;
     alertBox.textContent = message;
     alertBox.className = `alert-message alert-${type}`;
     alertBox.style.display = "block";
@@ -46,14 +47,14 @@ async function handleLoginSubmit(event) {
 
     try {
         const response = await window.loginUser(identifier, password);
-        if (response.success && response.user) {
+        if (response.success && response.user && response.token) {
             showAlert("Login successful! Redirecting...", "success");
-            window.AuthManager.setUserSession(response.user, response.user.email || response.user.officerId);
+            window.AuthManager.setUserSession(response.user, response.token);
             setTimeout(() => {
                 window.AuthManager.redirectToDashboard(response.user);
             }, 600);
         } else {
-            showAlert(response.error || "Login failed.", "error");
+            showAlert(response.message || response.error || "Login failed.", "error");
         }
     } catch (err) {
         showAlert(err.message || "Unable to reach server. Please check backend status.", "error");
@@ -82,14 +83,14 @@ async function handleRegisterSubmit(event) {
             confirmPassword
         });
 
-        if (response.success) {
+        if (response.success && response.token) {
             showAlert("Registration successful! Logging you in...", "success");
-            window.AuthManager.setUserSession(response.user, response.user.email);
+            window.AuthManager.setUserSession(response.user, response.token);
             setTimeout(() => {
                 window.AuthManager.redirectToDashboard(response.user);
             }, 800);
         } else {
-            showAlert(response.error || "Registration failed.", "error");
+            showAlert(response.message || response.error || "Registration failed.", "error");
         }
     } catch (err) {
         showAlert(err.message || "Registration failed.", "error");

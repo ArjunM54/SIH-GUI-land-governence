@@ -1,104 +1,75 @@
-
 /* =========================================================
    LANDGOV GIS
-   SIH26014
-
-   PARCEL ROUTES
-
-   All parcel-related APIs are handled here.
-   ========================================================= */
-
-
-/* =========================================================
-   1. IMPORT EXPRESS
+   PARCEL API ROUTES (PROTECTED)
    ========================================================= */
 
 const express = require("express");
+const router = express.Router();
+const parcels = require("../data/parcels");
+const { requireAuth } = require("../middleware/authMiddleware");
+const { filterParcelsForUser, canAccessParcel } = require("../services/parcelAccessService");
+const auditService = require("../services/auditService");
 
+/**
+ * @route   GET /api/parcels
+ * @desc    Returns authorized parcels for the logged-in user context
+ */
+router.get("/", requireAuth, (req, res) => {
+    const userParcels = filterParcelsForUser(req.user, parcels);
 
-/* =========================================================
-   2. IMPORT PARCEL DATA
-   ========================================================= */
-
-const parcels =
-    require("../data/parcels");
-
-
-/* =========================================================
-   3. CREATE ROUTER
-   ========================================================= */
-
-const router =
-    express.Router();
-
-
-/* =========================================================
-   4. GET ALL PARCELS
-   ========================================================= */
-
-router.get("/", (req, res) => {
-
-    res.json({
-
-        success: true,
-
-        count: parcels.length,
-
-        data: parcels
-
+    auditService.logEvent({
+        actor: req.user.email || req.user.officerId,
+        target: "PARCEL_LIST",
+        action: "VIEW_PARCELS",
+        result: "SUCCESS",
+        details: { returnedCount: userParcels.length }
     });
 
+    res.json({
+        success: true,
+        count: userParcels.length,
+        data: userParcels
+    });
 });
 
+/**
+ * @route   GET /api/parcels/:id
+ * @desc    Get single parcel details if authorized
+ */
+router.get("/:id", requireAuth, (req, res) => {
+    const parcelId = req.params.id;
 
-/* =========================================================
-   5. GET PARCEL BY ID
-   ========================================================= */
-
-router.get("/:id", (req, res) => {
-
-    const parcelId =
-        req.params.id;
-
-
-    const parcel =
-        parcels.find(
-            item =>
-                item.id.toLowerCase() ===
-                parcelId.toLowerCase()
-        );
-
-
-    /* Parcel not found */
-
-    if (!parcel) {
-
-        return res.status(404).json({
-
+    if (!canAccessParcel(req.user, parcelId)) {
+        return res.status(403).json({
             success: false,
-
-            message: "Parcel not found"
-
+            error: "FORBIDDEN",
+            message: "You do not have permission to access this parcel."
         });
-
     }
 
+    const parcel = parcels.find(
+        item => item.id.toLowerCase() === parcelId.toLowerCase()
+    );
 
-    /* Parcel found */
+    if (!parcel) {
+        return res.status(404).json({
+            success: false,
+            error: "NOT_FOUND",
+            message: "Parcel not found"
+        });
+    }
 
-    res.json({
-
-        success: true,
-
-        data: parcel
-
+    auditService.logEvent({
+        actor: req.user.email || req.user.officerId,
+        target: parcelId,
+        action: "VIEW_PARCEL_DETAIL",
+        result: "SUCCESS"
     });
 
+    res.json({
+        success: true,
+        data: parcel
+    });
 });
-
-
-/* =========================================================
-   6. EXPORT ROUTER
-   ========================================================= */
 
 module.exports = router;

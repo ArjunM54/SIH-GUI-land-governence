@@ -1,9 +1,9 @@
 /* =========================================================
    LANDGOV GIS
-   AUTHENTICATION ROUTES
+   AUTHENTICATION ROUTES (PHASE 10 JWT & SECURITY)
 
-   Handles Citizen Registration, Officer/Citizen Login,
-   Profile identification, and Auth state checks.
+   Handles Citizen Registration, JWT Login, Password Verification,
+   Profile identification, and Auth verification.
    ========================================================= */
 
 const express = require("express");
@@ -13,7 +13,7 @@ const auditService = require("../services/auditService");
 
 /**
  * @route   POST /api/auth/register-citizen
- * @desc    Public Citizen Registration (Strictly creates role = citizen)
+ * @desc    Public Citizen Registration (Creates role = citizen)
  */
 router.post("/register-citizen", (req, res) => {
     try {
@@ -22,14 +22,16 @@ router.post("/register-citizen", (req, res) => {
         if (!email || !password) {
             return res.status(400).json({
                 success: false,
-                error: "Email and password are required."
+                error: "BAD_REQUEST",
+                message: "Email and password are required."
             });
         }
 
         if (password !== confirmPassword && confirmPassword !== undefined) {
             return res.status(400).json({
                 success: false,
-                error: "Password and Confirm Password do not match."
+                error: "BAD_REQUEST",
+                message: "Password and Confirm Password do not match."
             });
         }
 
@@ -40,6 +42,7 @@ router.post("/register-citizen", (req, res) => {
             mobile: mobile || ""
         });
 
+        const token = userService.generateToken(newUser);
 
         auditService.logEvent({
             actor: newUser.email,
@@ -52,6 +55,7 @@ router.post("/register-citizen", (req, res) => {
         return res.status(201).json({
             success: true,
             message: "Citizen registered successfully.",
+            token,
             user: newUser
         });
     } catch (error) {
@@ -65,23 +69,25 @@ router.post("/register-citizen", (req, res) => {
 
         return res.status(400).json({
             success: false,
-            error: error.message
+            error: "REGISTRATION_FAILED",
+            message: error.message
         });
     }
 });
 
 /**
  * @route   POST /api/auth/login
- * @desc    Unified Login by Email or Officer ID
+ * @desc    Unified JWT Login by Email or Officer ID with bcrypt password verification
  */
 router.post("/login", (req, res) => {
     try {
         const { identifier, password } = req.body;
 
-        if (!identifier) {
+        if (!identifier || !password) {
             return res.status(400).json({
                 success: false,
-                error: "Email or Officer ID is required."
+                error: "BAD_REQUEST",
+                message: "Email or Officer ID and password are required."
             });
         }
 
@@ -98,13 +104,14 @@ router.post("/login", (req, res) => {
 
             return res.status(401).json({
                 success: false,
-                error: "Invalid email or Officer ID."
+                error: "INVALID_CREDENTIALS",
+                message: "Invalid email/Officer ID or password."
             });
         }
 
-        // Validate password against file storage
-        const expectedPassword = user.password || "Pass123!Demo";
-        if (password && password !== expectedPassword) {
+        // Validate password with bcrypt
+        const isPasswordValid = userService.verifyPassword(password, user);
+        if (!isPasswordValid) {
             auditService.logEvent({
                 actor: identifier,
                 target: user.uid,
@@ -115,11 +122,12 @@ router.post("/login", (req, res) => {
 
             return res.status(401).json({
                 success: false,
-                error: "Incorrect password."
+                error: "INVALID_CREDENTIALS",
+                message: "Invalid email/Officer ID or password."
             });
         }
 
-        if (user.status === "disabled") {
+        if (user.status === "disabled" || user.active === false) {
             auditService.logEvent({
                 actor: user.email || user.officerId,
                 target: user.uid,
@@ -130,10 +138,13 @@ router.post("/login", (req, res) => {
 
             return res.status(403).json({
                 success: false,
-                error: "Account is disabled. Please contact system administrator."
+                error: "ACCOUNT_DISABLED",
+                message: "Account is disabled. Please contact system administrator."
             });
         }
 
+        // Issue JWT Token
+        const token = userService.generateToken(user);
 
         auditService.logEvent({
             actor: user.email || user.officerId,
@@ -146,12 +157,15 @@ router.post("/login", (req, res) => {
         return res.json({
             success: true,
             message: "Login successful.",
+            token,
             user
         });
     } catch (error) {
+        console.error("Login error:", error);
         return res.status(500).json({
             success: false,
-            error: "Internal server error during authentication."
+            error: "SERVER_ERROR",
+            message: "Internal server error during authentication."
         });
     }
 });
@@ -164,7 +178,8 @@ router.get("/me", (req, res) => {
     if (!req.user) {
         return res.status(401).json({
             success: false,
-            error: "Not authenticated."
+            error: "UNAUTHORIZED",
+            message: "Not authenticated."
         });
     }
     return res.json({

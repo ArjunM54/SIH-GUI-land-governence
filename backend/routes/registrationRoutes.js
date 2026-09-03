@@ -1,82 +1,52 @@
-
 /* =========================================================
    LANDGOV GIS
-   SIH26014
-
-   PROPERTY REGISTRATION ROUTES
+   REGISTRATION API ROUTES (PROTECTED)
    ========================================================= */
-
 
 const express = require("express");
+const router = express.Router();
+const registrationData = require("../data/registration");
+const { requireAuth } = require("../middleware/authMiddleware");
+const { requirePermission } = require("../middleware/permissionMiddleware");
+const { canAccessParcel } = require("../services/parcelAccessService");
 
-const registrationData =
-    require("../data/registration");
+router.use(requireAuth);
 
-
-const router =
-    express.Router();
-
-
-/* =========================================================
-   GET ALL REGISTRATION RECORDS
-   ========================================================= */
-
-router.get("/", (req, res) => {
-
+router.get("/", requirePermission("registration.view"), (req, res) => {
+    const authorized = registrationData.filter(item => canAccessParcel(req.user, item.parcelId));
     res.json({
-
         success: true,
-
-        count: registrationData.length,
-
-        data: registrationData
-
+        count: authorized.length,
+        data: authorized
     });
-
 });
 
+router.get("/:parcelId", requirePermission("registration.view"), (req, res) => {
+    const parcelId = req.params.parcelId;
 
-/* =========================================================
-   GET REGISTRATION BY PARCEL ID
-   ========================================================= */
-
-router.get("/:parcelId", (req, res) => {
-
-    const parcelId =
-        req.params.parcelId;
-
-
-    const registration =
-        registrationData.find(
-            item =>
-                item.parcelId.toLowerCase() ===
-                parcelId.toLowerCase()
-        );
-
-
-    if (!registration) {
-
-        return res.status(404).json({
-
+    if (!canAccessParcel(req.user, parcelId)) {
+        return res.status(403).json({
             success: false,
-
-            message:
-                "Registration record not found"
-
+            error: "FORBIDDEN",
+            message: "You do not have permission to access registration data for this parcel."
         });
-
     }
 
+    const record = registrationData.find(
+        item => item.parcelId.toLowerCase() === parcelId.toLowerCase()
+    );
+
+    if (!record) {
+        return res.status(404).json({
+            success: false,
+            message: "Registration record not found"
+        });
+    }
 
     res.json({
-
         success: true,
-
-        data: registration
-
+        data: record
     });
-
 });
-
 
 module.exports = router;

@@ -1,9 +1,9 @@
 /* =========================================================
    LANDGOV GIS
-   AUTHENTICATION MIDDLEWARE
+   AUTHENTICATION MIDDLEWARE (PHASE 10 JWT & ACCESS CONTROL)
 
-   Verifies Firebase ID Tokens or authorization headers,
-   resolves user identity from userService, and enforces
+   Verifies JWT ID Tokens from Authorization Bearer headers,
+   resolves fresh user context from userService, and enforces
    active account status.
    ========================================================= */
 
@@ -18,31 +18,41 @@ async function verifyAuth(req, res, next) {
             return next();
         }
 
-        let identifier = "";
+        let tokenOrIdentifier = "";
 
         if (authHeader.startsWith("Bearer ")) {
-            identifier = authHeader.substring(7).trim();
+            tokenOrIdentifier = authHeader.substring(7).trim();
         } else {
-            identifier = authHeader.trim();
+            tokenOrIdentifier = authHeader.trim();
         }
 
-        if (!identifier) {
+        if (!tokenOrIdentifier) {
             req.user = null;
             return next();
         }
 
-        // Search user by email, officerId, or UID
-        const user = userService.findUserByIdentifier(identifier);
+        let user = null;
+
+        // Try JWT decoding first
+        const decoded = userService.verifyToken(tokenOrIdentifier);
+        if (decoded && (decoded.uid || decoded.email || decoded.officerId)) {
+            user = userService.getUserByUid(decoded.uid) || userService.findUserByIdentifier(decoded.email || decoded.officerId);
+        } else {
+            // Fallback for raw identifier lookup
+            user = userService.findUserByIdentifier(tokenOrIdentifier);
+        }
 
         if (!user) {
             req.user = null;
             return next();
         }
 
-        if (user.status === "disabled") {
+        // Active account enforcement
+        if (user.status === "disabled" || user.active === false) {
             return res.status(403).json({
                 success: false,
-                error: "Account is disabled. Contact system administrator."
+                error: "FORBIDDEN",
+                message: "Account is disabled. Contact system administrator."
             });
         }
 
@@ -56,13 +66,14 @@ async function verifyAuth(req, res, next) {
 }
 
 /**
- * Strict authentication check - requires a valid logged-in user
+ * Strict authentication check - requires a valid logged-in user context
  */
 function requireAuth(req, res, next) {
     if (!req.user) {
         return res.status(401).json({
             success: false,
-            error: "Authentication required. Please log in."
+            error: "UNAUTHORIZED",
+            message: "Authentication required. Token missing or invalid."
         });
     }
     next();

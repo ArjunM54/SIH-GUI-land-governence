@@ -14,7 +14,12 @@
       "parcel.view"
     ],
     "status": "active",
-    "createdAt": "2026-01-01T10:00:00Z"
+    "createdAt": "2026-01-01T10:00:00Z",
+    "assignedParcels": [
+      "LND-001",
+      "LND-003"
+    ],
+    "passwordHash": "$2b$10$qLUwuajaYxgyOG4iPUyn6..ZwHuZ0F4klS861SJY.TJlot4A6bhuW"
   },
   {
     "uid": "uid-off-cad-001",
@@ -37,7 +42,13 @@
       "survey.verify"
     ],
     "status": "active",
-    "createdAt": "2026-01-01T10:00:00Z"
+    "createdAt": "2026-01-01T10:00:00Z",
+    "assignedParcels": [
+      "LND-001",
+      "LND-002",
+      "LND-003"
+    ],
+    "passwordHash": "$2b$10$Isdi.LuPEojR1nVmTAmzwubkYszhnlVMmJf41OqLdEaYavPryxP/O"
   },
   {
     "uid": "uid-off-ror-001",
@@ -60,7 +71,13 @@
       "mutation.approve"
     ],
     "status": "active",
-    "createdAt": "2026-01-01T10:00:00Z"
+    "createdAt": "2026-01-01T10:00:00Z",
+    "assignedParcels": [
+      "LND-001",
+      "LND-002",
+      "LND-003"
+    ],
+    "passwordHash": "$2b$10$jBrDKYzC.V94AfWjYGZhSue6uZu0P6r192604Wg7/Samnk8vvKppu"
   },
   {
     "uid": "uid-off-reg-001",
@@ -81,7 +98,13 @@
       "transfer.approve"
     ],
     "status": "active",
-    "createdAt": "2026-01-01T10:00:00Z"
+    "createdAt": "2026-01-01T10:00:00Z",
+    "assignedParcels": [
+      "LND-001",
+      "LND-002",
+      "LND-003"
+    ],
+    "passwordHash": "$2b$10$SiK98RRRNt/mie4zJIedE.JrE9Pzw20P4eTYkatvjIxovWS7MG1Im"
   },
   {
     "uid": "uid-off-lu-001",
@@ -105,7 +128,13 @@
       "restrictions.update"
     ],
     "status": "active",
-    "createdAt": "2026-01-01T10:00:00Z"
+    "createdAt": "2026-01-01T10:00:00Z",
+    "assignedParcels": [
+      "LND-001",
+      "LND-002",
+      "LND-003"
+    ],
+    "passwordHash": "$2b$10$IbUsm.7w9mMtO5lxw4vJpO2Qu0OKYXf9NeBaput3HxLcg61nbqj4S"
   },
   {
     "uid": "uid-off-tax-001",
@@ -128,7 +157,13 @@
       "building.approve"
     ],
     "status": "active",
-    "createdAt": "2026-01-01T10:00:00Z"
+    "createdAt": "2026-01-01T10:00:00Z",
+    "assignedParcels": [
+      "LND-001",
+      "LND-002",
+      "LND-003"
+    ],
+    "passwordHash": "$2b$10$cSUMbUhNRExFayEUThkhMeA0qojZE8s8YcNDF6JQ92TLGBzw/fZf6"
   },
   {
     "uid": "uid-admin-001",
@@ -148,7 +183,11 @@
       "system.manage"
     ],
     "status": "active",
-    "createdAt": "2026-01-01T10:00:00Z"
+    "createdAt": "2026-01-01T10:00:00Z",
+    "assignedParcels": [
+      "*"
+    ],
+    "passwordHash": "$2b$10$h.47HINtN8g9aIRa2WUEL.u8PbVPY7kbAFjM1bVaWT7RHR7AcVxXG"
   },
   {
     "uid": "uid-off-1788364037443",
@@ -171,7 +210,13 @@
       "survey.verify"
     ],
     "status": "active",
-    "createdAt": "2026-09-02T15:47:17.443Z"
+    "createdAt": "2026-09-02T15:47:17.443Z",
+    "assignedParcels": [
+      "LND-001",
+      "LND-002",
+      "LND-003"
+    ],
+    "passwordHash": "$2b$10$M9MT7gq8D1isT0s.dKnGTe2JkbT7vAXakYZvst/EbaMOvZ2g209fS"
   },
   {
     "uid": "uid-citizen-1788364815130",
@@ -189,7 +234,12 @@
       "parcel.view"
     ],
     "status": "active",
-    "createdAt": "2026-09-02T16:00:15.130Z"
+    "createdAt": "2026-09-02T16:00:15.130Z",
+    "assignedParcels": [
+      "LND-001",
+      "LND-003"
+    ],
+    "passwordHash": "$2b$10$4VdKt8VJ8ChROeYGuW8dfePWYDx3vjyCaJFUm6F0.Fwp8uNWTW4Gu"
   },
   {
     "uid": "uid-citizen-1788365266732",
@@ -207,6 +257,11 @@
       "parcel.view"
     ],
     "status": "active",
-    "createdAt": "2026-09-02T16:07:46.732Z"
+    "createdAt": "2026-09-02T16:07:46.732Z",
+    "assignedParcels": [
+      "LND-001",
+      "LND-003"
+    ],
+    "passwordHash": "$2b$10$mXfYE601woUH1SaN4dMlLusgenVCdFBGDgaiE54/Na75myHh7WX9m"
   }
 ]

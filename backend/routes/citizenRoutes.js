@@ -1,6 +1,6 @@
 /* =========================================================
    LANDGOV GIS
-   CITIZEN PORTAL ROUTES
+   CITIZEN PORTAL ROUTES (PROTECTED)
 
    Provides endpoints for Citizen Requests, Land Overview,
    and Property Status tracking.
@@ -8,14 +8,18 @@
 
 const express = require("express");
 const router = express.Router();
+const { requireAuth } = require("../middleware/authMiddleware");
 const { requireRole } = require("../middleware/permissionMiddleware");
+const { canAccessParcel } = require("../services/parcelAccessService");
+
+router.use(requireAuth);
 
 // Simulated citizen requests store
 const citizenRequests = [
     {
         requestId: "REQ-2026-001",
         citizenEmail: "citizen@landgov.gov",
-        parcelId: "P-101",
+        parcelId: "LND-001",
         type: "Mutation Request",
         department: "Land Records Department",
         status: "Pending Verification",
@@ -24,7 +28,7 @@ const citizenRequests = [
     {
         requestId: "REQ-2026-002",
         citizenEmail: "citizen@landgov.gov",
-        parcelId: "P-102",
+        parcelId: "LND-003",
         type: "Land Use Conversion",
         department: "Land Use & Planning Department",
         status: "Under Review",
@@ -37,7 +41,7 @@ const citizenRequests = [
  * @desc    Get requests belonging to logged-in citizen
  */
 router.get("/requests", requireRole("citizen", "admin"), (req, res) => {
-    const userEmail = req.user ? req.user.email : "citizen@landgov.gov";
+    const userEmail = req.user.email;
     const userRequests = citizenRequests.filter(r => req.user.role === "admin" || r.citizenEmail === userEmail);
     return res.json({
         success: true,
@@ -47,7 +51,7 @@ router.get("/requests", requireRole("citizen", "admin"), (req, res) => {
 
 /**
  * @route   POST /api/citizen/request
- * @desc    Submit a new citizen land request
+ * @desc    Submit a new citizen land request for authorized parcel
  */
 router.post("/request", requireRole("citizen", "admin"), (req, res) => {
     const { parcelId, type, department, description } = req.body;
@@ -55,7 +59,16 @@ router.post("/request", requireRole("citizen", "admin"), (req, res) => {
     if (!parcelId || !type) {
         return res.status(400).json({
             success: false,
-            error: "Parcel ID and Request Type are required."
+            error: "BAD_REQUEST",
+            message: "Parcel ID and Request Type are required."
+        });
+    }
+
+    if (!canAccessParcel(req.user, parcelId)) {
+        return res.status(403).json({
+            success: false,
+            error: "FORBIDDEN",
+            message: "You do not have permission to submit requests for this parcel."
         });
     }
 

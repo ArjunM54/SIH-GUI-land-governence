@@ -1,6 +1,6 @@
 /* =========================================================
    LANDGOV GIS
-   OFFICER DEPARTMENT ROUTES
+   OFFICER DEPARTMENT ROUTES (PROTECTED)
 
    Protected API routes for all 5 Officer Departments:
    1. Cadastral & Survey
@@ -12,8 +12,12 @@
 
 const express = require("express");
 const router = express.Router();
+const { requireAuth } = require("../middleware/authMiddleware");
 const { requireRole, requirePermission } = require("../middleware/permissionMiddleware");
 const auditService = require("../services/auditService");
+
+// Enforce authentication for all officer department routes
+router.use(requireAuth);
 
 // --- 1. CADASTRAL & SURVEY OFFICER ---
 
@@ -29,9 +33,9 @@ router.get("/cadastral/overview", requirePermission("cadastral.view"), (req, res
             boundaryConflicts: 3
         },
         records: [
-            { surveyNo: "SUR-101", parcelId: "P-101", village: "Ramgarh", areaSqM: 4500, verified: true, status: "Verified" },
-            { surveyNo: "SUR-102", parcelId: "P-102", village: "Ramgarh", areaSqM: 12000, verified: false, status: "Pending Survey Verification" },
-            { surveyNo: "SUR-103", parcelId: "P-103", village: "Ramgarh", areaSqM: 3200, verified: true, status: "Verified" }
+            { surveyNo: "SUR-101", parcelId: "LND-001", village: "Ramgarh", areaSqM: 4500, verified: true, status: "Verified" },
+            { surveyNo: "SUR-102", parcelId: "LND-002", village: "Ramgarh", areaSqM: 12000, verified: false, status: "Pending Survey Verification" },
+            { surveyNo: "SUR-103", parcelId: "LND-003", village: "Ramgarh", areaSqM: 3200, verified: true, status: "Verified" }
         ]
     });
 });
@@ -59,14 +63,14 @@ router.get("/ror/overview", requirePermission("ror.view"), (req, res) => {
         department: "Land Records Department",
         officer: req.user,
         stats: {
-            totalLandRecords: 1420,
-            pendingVerification: 12,
-            pendingMutation: 5,
-            ownershipConflicts: 2
+            totalRoRRecords: 1420,
+            pendingMutations: 12,
+            verifiedOwnerships: 1408,
+            disputedRoR: 2
         },
         mutations: [
-            { mutationId: "MUT-2026-01", parcelId: "P-101", owner: "Rajesh Sharma", requestedChange: "Inheritance Transfer", status: "Pending Approval" },
-            { mutationId: "MUT-2026-02", parcelId: "P-103", owner: "Green Field Corp", requestedChange: "Ownership Sale", status: "Pending Verification" }
+            { mutationId: "MUT-2026-001", parcelId: "LND-001", owner: "Ramesh Sharma", requestedChange: "Inheritance Mutation", status: "Pending Approval" },
+            { mutationId: "MUT-2026-002", parcelId: "LND-002", owner: "Industrial Infra Ltd", requestedChange: "Ownership Transfer", status: "Pending Approval" }
         ]
     });
 });
@@ -76,13 +80,13 @@ router.post("/ror/approve-mutation", requirePermission("mutation.approve"), (req
     auditService.logEvent({
         actor: req.user.officerId || req.user.email,
         target: mutationId,
-        action: "MUTATION_APPROVAL_UPDATED",
+        action: "ROR_MUTATION_DECISION",
         result: "SUCCESS",
         details: { status, remarks }
     });
     res.json({
         success: true,
-        message: `Mutation ${mutationId} status updated to '${status || "APPROVED"}' by ${req.user.name}.`
+        message: `Mutation ${mutationId} status set to '${status || 'APPROVED'}' by ${req.user.name}.`
     });
 });
 
@@ -94,14 +98,13 @@ router.get("/registration/overview", requirePermission("registration.view"), (re
         department: "Registration Department",
         officer: req.user,
         stats: {
-            totalRegistrations: 980,
-            pendingRegistrations: 6,
-            pendingTransfers: 4,
-            documentVerificationPending: 3
+            registeredDeeds: 1420,
+            pendingDeedApproval: 5,
+            totalStampDutyCollected: "₹ 4.2 Cr",
+            encumbranceCertificates: 340
         },
         registrations: [
-            { regNo: "REG-2026-89", parcelId: "P-101", buyer: "Anita Gupta", seller: "Rajesh Sharma", stampDutyPaid: true, status: "Pending Transfer Approval" },
-            { regNo: "REG-2026-90", parcelId: "P-104", buyer: "Vikram Tech Ltd", seller: "Sohan Lal", stampDutyPaid: true, status: "Verified" }
+            { regNo: "REG-2026-089", parcelId: "LND-001", buyer: "Ramesh Sharma", seller: "Vikram Singh", stampDutyPaid: true, status: "Under Deed Verification" }
         ]
     });
 });
@@ -111,13 +114,13 @@ router.post("/registration/approve-transfer", requirePermission("transfer.approv
     auditService.logEvent({
         actor: req.user.officerId || req.user.email,
         target: regNo,
-        action: "PROPERTY_TRANSFER_APPROVED",
+        action: "DEED_REGISTRATION_DECISION",
         result: "SUCCESS",
         details: { decision, remarks }
     });
     res.json({
         success: true,
-        message: `Registration property transfer ${regNo} marked as ${decision || "APPROVED"}.`
+        message: `Registration ${regNo} ${decision || 'APPROVED'} successfully.`
     });
 });
 
@@ -129,14 +132,13 @@ router.get("/land-use/overview", requirePermission("landuse.view"), (req, res) =
         department: "Land Use & Planning Department",
         officer: req.user,
         stats: {
-            landUseDistribution: { agricultural: 65, commercial: 20, residential: 15 },
-            pendingConversions: 4,
-            zoningIssues: 1,
-            planningRestrictionsActive: 18
+            masterPlanZones: 12,
+            pendingZoningConversions: 4,
+            ecoSensitiveRestrictions: 45,
+            proposalValidationsRun: 128
         },
         conversions: [
-            { conversionId: "CONV-101", parcelId: "P-102", fromZone: "Agricultural", toZone: "Commercial", status: "Under Environmental Impact Review" },
-            { conversionId: "CONV-102", parcelId: "P-105", fromZone: "Residential", toZone: "Commercial", status: "Pending Approval" }
+            { conversionId: "CONV-2026-004", parcelId: "LND-002", currentZone: "AGRICULTURAL", requestedZone: "COMMERCIAL", status: "In Technical Review" }
         ]
     });
 });
@@ -146,13 +148,13 @@ router.post("/land-use/approve-conversion", requirePermission("landuse.approve")
     auditService.logEvent({
         actor: req.user.officerId || req.user.email,
         target: conversionId,
-        action: "LAND_USE_CONVERSION_APPROVED",
+        action: "LANDUSE_CONVERSION_DECISION",
         result: "SUCCESS",
         details: { decision, zoningCode }
     });
     res.json({
         success: true,
-        message: `Land use conversion request ${conversionId} updated to ${decision || "APPROVED"}.`
+        message: `Land use conversion ${conversionId} updated to ${decision || 'APPROVED'}.`
     });
 });
 
@@ -164,16 +166,14 @@ router.get("/property-tax/overview", requirePermission("tax.view"), (req, res) =
         department: "Property Tax & Municipal Department",
         officer: req.user,
         stats: {
-            totalProperties: 1420,
-            taxCollected: "₹1,42,50,000",
-            pendingTaxCount: 42,
-            outstandingTaxAmount: "₹8,20,000",
-            buildingRequestsPending: 5
+            assessedProperties: 1420,
+            taxClearanceRate: "94.2%",
+            pendingBuildingPermits: 9,
+            utilityConnectionRequests: 14
         },
         taxRecords: [
-            { parcelId: "P-101", annualTax: 12500, outstanding: 0, status: "Paid", buildingPermit: "Approved" },
-            { parcelId: "P-102", annualTax: 35000, outstanding: 70000, status: "Overdue", buildingPermit: "Blocked due to tax default" },
-            { parcelId: "P-103", annualTax: 9800, outstanding: 0, status: "Paid", buildingPermit: "Pending Inspection" }
+            { parcelId: "LND-001", annualTax: 4500, outstanding: 0, status: "Paid", buildingPermit: "Approved" },
+            { parcelId: "LND-002", annualTax: 185000, outstanding: 25000, status: "Partial Dues", buildingPermit: "Under Review" }
         ]
     });
 });
@@ -183,13 +183,13 @@ router.post("/property-tax/verify-clearance", requirePermission("tax.verify"), (
     auditService.logEvent({
         actor: req.user.officerId || req.user.email,
         target: parcelId,
-        action: "PROPERTY_TAX_VERIFIED",
+        action: "TAX_CLEARANCE_VERIFIED",
         result: "SUCCESS",
         details: { clearedAmount, remarks }
     });
     res.json({
         success: true,
-        message: `Tax record & clearance for parcel ${parcelId} verified by ${req.user.name}.`
+        message: `Property tax clearance verified for parcel ${parcelId}.`
     });
 });
 

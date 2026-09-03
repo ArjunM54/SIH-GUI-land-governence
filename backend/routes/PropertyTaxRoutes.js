@@ -1,82 +1,52 @@
-
 /* =========================================================
    LANDGOV GIS
-   SIH26014
-
-   PROPERTY TAX ROUTES
+   PROPERTY TAX ROUTES (PROTECTED)
    ========================================================= */
-
 
 const express = require("express");
+const router = express.Router();
+const propertyTaxData = require("../data/PropertyTax");
+const { requireAuth } = require("../middleware/authMiddleware");
+const { requirePermission } = require("../middleware/permissionMiddleware");
+const { canAccessParcel } = require("../services/parcelAccessService");
 
-const propertyTaxData =
-    require("../data/PropertyTax");
+router.use(requireAuth);
 
-
-const router =
-    express.Router();
-
-
-/* =========================================================
-   GET ALL PROPERTY TAX RECORDS
-   ========================================================= */
-
-router.get("/", (req, res) => {
-
+router.get("/", requirePermission("tax.view"), (req, res) => {
+    const authorized = propertyTaxData.filter(item => canAccessParcel(req.user, item.parcelId));
     res.json({
-
         success: true,
-
-        count: propertyTaxData.length,
-
-        data: propertyTaxData
-
+        count: authorized.length,
+        data: authorized
     });
-
 });
 
+router.get("/:parcelId", requirePermission("tax.view"), (req, res) => {
+    const parcelId = req.params.parcelId;
 
-/* =========================================================
-   GET PROPERTY TAX BY PARCEL ID
-   ========================================================= */
-
-router.get("/:parcelId", (req, res) => {
-
-    const parcelId =
-        req.params.parcelId;
-
-
-    const taxRecord =
-        propertyTaxData.find(
-            item =>
-                item.parcelId.toLowerCase() ===
-                parcelId.toLowerCase()
-        );
-
-
-    if (!taxRecord) {
-
-        return res.status(404).json({
-
+    if (!canAccessParcel(req.user, parcelId)) {
+        return res.status(403).json({
             success: false,
-
-            message:
-                "Property tax record not found"
-
+            error: "FORBIDDEN",
+            message: "You do not have permission to access property tax data for this parcel."
         });
-
     }
 
+    const record = propertyTaxData.find(
+        item => item.parcelId.toLowerCase() === parcelId.toLowerCase()
+    );
+
+    if (!record) {
+        return res.status(404).json({
+            success: false,
+            message: "Property tax record not found"
+        });
+    }
 
     res.json({
-
         success: true,
-
-        data: taxRecord
-
+        data: record
     });
-
 });
-
 
 module.exports = router;

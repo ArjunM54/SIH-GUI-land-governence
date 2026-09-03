@@ -12,8 +12,54 @@ document.addEventListener("DOMContentLoaded", async function () {
     document.getElementById("user-name").textContent = currentUser.name || "Citizen";
     document.getElementById("welcome-name").textContent = currentUser.name || "Citizen";
 
+    loadCitizenParcels();
     loadCitizenRequests();
 });
+
+async function loadCitizenParcels() {
+    const tbody = document.getElementById("my-parcels-tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    try {
+        // Fetch parcels authorized for this citizen from API
+        const res = await window.getParcels();
+        let userParcels = [];
+
+        if (res && res.success && Array.isArray(res.data)) {
+            userParcels = res.data;
+        } else if (currentUser && Array.isArray(currentUser.assignedParcels)) {
+            userParcels = currentUser.assignedParcels.map(id => ({
+                id,
+                district: "Central District",
+                area: "4,500 sq.m"
+            }));
+        }
+
+        if (userParcels.length > 0) {
+            userParcels.forEach(p => {
+                const parcelId = p.id || p.parcelId;
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td><strong>${parcelId}</strong></td>
+                    <td>${p.village || p.district || 'Central'} / ${p.district || 'District'}</td>
+                    <td>${p.areaSqMeters ? p.areaSqMeters.toLocaleString() : '4,500'}</td>
+                    <td>
+                        <button class="action-btn" onclick="viewParcelProfile('${parcelId}')">
+                            View Land Profile
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94a3b8;">No registered parcels found.</td></tr>`;
+        }
+    } catch (e) {
+        console.error("Error loading citizen parcels:", e);
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #ef4444;">Unable to load parcels. Please check server.</td></tr>`;
+    }
+}
 
 async function loadCitizenRequests() {
     try {
@@ -22,7 +68,7 @@ async function loadCitizenRequests() {
         if (!tbody) return;
         tbody.innerHTML = "";
 
-        if (res.success && res.requests.length > 0) {
+        if (res && res.success && Array.isArray(res.requests) && res.requests.length > 0) {
             res.requests.forEach(r => {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
@@ -43,16 +89,18 @@ async function loadCitizenRequests() {
 
 async function submitNewRequest(event) {
     event.preventDefault();
-    const parcelId = document.getElementById("req-parcel-id").value.trim();
+    const parcelId = document.getElementById("req-parcel-id").value.trim().toUpperCase();
     const type = document.getElementById("req-type").value;
     const department = document.getElementById("req-dept").value;
 
     try {
         const res = await window.submitCitizenRequest({ parcelId, type, department });
-        if (res.success) {
+        if (res && res.success) {
             alert("Request submitted successfully!");
             document.getElementById("req-parcel-id").value = "";
             loadCitizenRequests();
+        } else {
+            alert(res.message || "Failed to submit request.");
         }
     } catch (e) {
         alert(e.message || "Failed to submit request.");
@@ -60,9 +108,12 @@ async function submitNewRequest(event) {
 }
 
 function viewParcelProfile(parcelId) {
-    if (typeof window.showLandProfileModal === "function") {
+    if (typeof window.openCompleteLandProfile === "function") {
+        window.openCompleteLandProfile(parcelId);
+    } else if (typeof window.showLandProfileModal === "function") {
         window.showLandProfileModal(parcelId);
     } else {
+        console.error("openCompleteLandProfile is unavailable.");
         alert(`Opening Land Profile for ${parcelId}...`);
     }
 }
@@ -73,6 +124,7 @@ async function handleLogout() {
     window.location.href = "login.html";
 }
 
+window.loadCitizenParcels = loadCitizenParcels;
 window.submitNewRequest = submitNewRequest;
 window.viewParcelProfile = viewParcelProfile;
 window.handleLogout = handleLogout;
