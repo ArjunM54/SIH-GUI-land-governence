@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Officer Dashboard | LandGov GIS</title>
+    <title>Cadastral & Survey Officer Workspace | LandGov GIS</title>
+    <meta name="description" content="LandGov Cadastral & Survey Department Land Boundary and Survey Administration System">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/officer.css">
     <link rel="stylesheet" href="css/admin.css">
@@ -12,103 +15,1178 @@
 
     <div class="officer-layout">
         <!-- SIDEBAR -->
-        <aside class="officer-sidebar">
-            <div class="sidebar-header">
-                <span>🌐</span>
-                <span>LandGov Officer</span>
+        <aside class="officer-sidebar" id="officer-sidebar">
+            <div class="sidebar-brand">
+                <div class="sidebar-title">
+                    <span>📐</span> LANDGOV
+                </div>
+                <div class="sidebar-sub">Digital Land Governance</div>
             </div>
 
             <div class="officer-profile-card">
                 <span id="officer-id-tag" class="officer-id-tag">OFF-CAD-001</span>
-                <div id="officer-name" class="officer-name">Officer Name</div>
-                <div id="officer-dept" class="officer-dept">Department</div>
+                <div id="officer-name" class="officer-name">Arun Survey</div>
+                <div id="officer-dept" class="officer-dept">Cadastral & Survey Department</div>
             </div>
 
-            <ul class="nav-menu">
-                <li class="nav-item">
-                    <a class="nav-link active" onclick="switchOfficerTab('overview')">
-                        <span>📊</span> Department Dashboard
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" onclick="switchOfficerTab('records')">
-                        <span>📂</span> Department Records
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="index.html#map-section">
-                        <span>🗺️</span> GIS Land Map
-                    </a>
-                </li>
-            </ul>
+            <div id="sidebar-nav-container" style="flex: 1; overflow-y: auto;">
+                <!-- Populated dynamically per officer type -->
+            </div>
 
-            <button class="logout-btn" onclick="handleLogout()" style="margin-top: auto; width: 100%;">Log Out</button>
+            <button class="logout-btn" onclick="handleLogout()">
+                <span>🚪</span> Log Out
+            </button>
         </aside>
 
-        <!-- MAIN CONTENT -->
+        <!-- MAIN CONTENT AREA -->
         <main class="officer-content">
 
             <!-- HEADER -->
             <div class="dept-header">
-                <div>
-                    <h1 id="dept-title" style="margin: 0 0 0.4rem 0;">Department Dashboard</h1>
-                    <p style="color: #94a3b8; margin: 0;">Authorized Government Officer Portal — Role-Based Execution Layer</p>
+                <div class="dept-header-title">
+                    <h1 id="dept-title">Cadastral & Survey Department</h1>
+                    <p id="dept-subtitle">Land Boundary and Survey Administration</p>
                 </div>
-                <span id="dept-badge" class="dept-badge badge-cadastral">Cadastral & Survey</span>
+                <div class="header-right">
+                    <span id="dept-badge" class="dept-badge badge-cadastral">Cadastral & Survey</span>
+                    <button class="btn-govt-secondary" onclick="loadOfficerDashboard()" title="Refresh Dashboard Data">🔄 Refresh</button>
+                </div>
             </div>
 
-            <!-- DYNAMIC METRICS -->
-            <div id="metrics-container" class="metrics-row">
-                <!-- Populated dynamically -->
-            </div>
-
-            <!-- DYNAMIC MODULE TABLE -->
-            <div class="admin-card">
-                <div class="admin-card-header">
-                    <h3 id="module-table-title" style="margin: 0;">Department Action Queue</h3>
-                </div>
-                <div id="module-table-container">
+            <!-- DASHBOARD OVERVIEW VIEW -->
+            <div id="view-overview">
+                <!-- DYNAMIC METRICS -->
+                <div id="metrics-container" class="metrics-row">
                     <!-- Populated dynamically -->
+                </div>
+
+                <!-- WORK QUEUE -->
+                <div class="govt-card">
+                    <div class="govt-card-header">
+                        <h3 id="work-queue-card-title">📋 PENDING WORK</h3>
+                        <span class="nav-badge" id="work-queue-count">0 items</span>
+                    </div>
+                    <div class="govt-card-body" style="padding:0;">
+                        <div id="work-queue-table-container">
+                            <!-- Table populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MY ASSIGNED PARCELS -->
+                <div class="govt-card">
+                    <div class="govt-card-header">
+                        <h3 id="assigned-parcels-card-title">📐 MY ASSIGNED PARCELS</h3>
+                        <span class="nav-badge" id="assigned-parcels-count">0 parcels</span>
+                    </div>
+                    <div class="govt-card-body" style="padding:0;">
+                        <div id="assigned-parcels-table-container">
+                            <!-- Table populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECONDARY SECTIONS: REQUESTS & CASES -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+                    <div class="govt-card">
+                        <div class="govt-card-header">
+                            <h3 id="dept-requests-card-title">📤 DEPARTMENT REQUESTS</h3>
+                        </div>
+                        <div class="govt-card-body" style="padding:0;" id="dept-requests-container">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                    <div class="govt-card">
+                        <div class="govt-card-header">
+                            <h3 id="cases-card-title">📁 ACTIVE CASES</h3>
+                        </div>
+                        <div class="govt-card-body" style="padding:0;" id="cases-container">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PARCEL CADASTRAL WORKSPACE VIEW -->
+            <div id="view-parcel-workspace" style="display: none;">
+                <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <button class="btn-govt-secondary" onclick="switchOfficerTab('overview')">← Back to Dashboard</button>
+                    <span id="workspace-parcel-title" style="font-size: 1.2rem; font-weight: 700; color: #38bdf8;">LAND PARCEL LND-001</span>
+                </div>
+
+                <!-- ACTION PANEL -->
+                <div class="cadastral-actions-panel">
+                    <button class="btn-govt-primary" onclick="openVerifyBoundaryModal()">✓ Verify Boundary</button>
+                    <button class="btn-govt-secondary" onclick="openUpdateSurveyModal()">✎ Update Survey</button>
+                    <button class="btn-govt-warning" onclick="openReportConflictModal()">⚠ Report Boundary Conflict</button>
+                    <button class="btn-govt-secondary" onclick="openAddInspectionModal()">📝 Add Inspection Remarks</button>
+                    <button class="btn-govt-secondary" onclick="openAddDocumentModal()">📄 Add Survey Document</button>
+                </div>
+
+                <div class="workspace-grid">
+                    <!-- BASIC & CADASTRAL INFO -->
+                    <div class="govt-card">
+                        <div class="govt-card-header">
+                            <h3>🏛 BASIC & CADASTRAL INFORMATION</h3>
+                        </div>
+                        <div class="govt-card-body">
+                            <div class="info-box-grid" id="workspace-basic-info">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GIS MAP & GEOMETRY STATUS -->
+                    <div class="govt-card">
+                        <div class="govt-card-header">
+                            <h3>🗺 GIS MAP & BOUNDARY GEOMETRY</h3>
+                            <span id="workspace-boundary-badge" class="status-tag status-pending">Pending</span>
+                        </div>
+                        <div class="govt-card-body" style="padding: 0.5rem;">
+                            <div id="workspace-gis-map" class="officer-map-container"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BOUNDARY DESCRIPTION -->
+                <div class="govt-card">
+                    <div class="govt-card-header">
+                        <h3>📍 BOUNDARY INFORMATION</h3>
+                    </div>
+                    <div class="govt-card-body">
+                        <div class="info-box-grid" id="workspace-boundary-info">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="workspace-grid">
+                    <!-- SURVEY & INSPECTION HISTORY -->
+                    <div class="govt-card">
+                        <div class="govt-card-header">
+                            <h3>📜 SURVEY & INSPECTION HISTORY</h3>
+                        </div>
+                        <div class="govt-card-body" id="workspace-history-container">
+                            <!-- History populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- AUDIT TRAIL & DOCUMENTS -->
+                    <div class="govt-card">
+                        <div class="govt-card-header">
+                            <h3>🕒 AUDIT TRAIL & ASSOCIATED DOCUMENTS</h3>
+                        </div>
+                        <div class="govt-card-body" id="workspace-audit-docs-container">
+                            <!-- Audits populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GENERIC TABLE VIEW FOR OTHER TABS -->
+            <div id="view-generic-records" style="display: none;">
+                <div class="govt-card">
+                    <div class="govt-card-header">
+                        <h3 id="generic-tab-title">Department Records</h3>
+                    </div>
+                    <div class="govt-card-body" style="padding:0;" id="generic-records-container">
+                        <!-- Generic records table -->
+                    </div>
                 </div>
             </div>
 
         </main>
     </div>
 
-    <!-- ACTION / VERIFICATION MODAL -->
-    <div id="action-modal" class="modal-overlay" style="display: none;">
+    <!-- MODAL: BOUNDARY VERIFICATION -->
+    <div id="modal-verify-boundary" class="modal-overlay" style="display: none;">
         <div class="modal-card">
             <div class="modal-header">
-                <h3 id="modal-title" style="margin: 0;">Officer Verification Action</h3>
-                <button class="close-modal-btn" onclick="closeActionModal()">×</button>
+                <h3>✓ VERIFY CADASTRAL BOUNDARY</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-verify-boundary')">×</button>
             </div>
-            <form id="action-form" onsubmit="handleActionSubmit(event)">
-                <input type="hidden" id="action-target-id">
+            <form onsubmit="handleVerifyBoundarySubmit(event)">
+                <input type="hidden" id="verify-parcel-id">
                 <div class="form-group">
-                    <label id="target-id-label">Target Item ID</label>
-                    <input type="text" id="action-display-id" class="form-input" readonly>
+                    <label>Target Parcel ID & Survey No</label>
+                    <input type="text" id="verify-parcel-label" class="form-input" readonly>
                 </div>
                 <div class="form-group">
-                    <label>Action / Decision</label>
-                    <select id="action-decision" class="form-input">
-                        <option value="APPROVED">APPROVE & VERIFY</option>
-                        <option value="REJECTED">REJECT</option>
-                        <option value="UNDER_REVIEW">MARK FOR RE-AUDIT</option>
+                    <label>Verification Result</label>
+                    <select id="verify-result-select" class="form-input" required>
+                        <option value="Verified">Verified (Boundary Valid & Match)</option>
+                        <option value="Requires Correction">Requires Correction (Discrepancy Noted)</option>
+                        <option value="Unable to Verify">Unable to Verify (Inconclusive Field Data)</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Officer Inspection Remarks</label>
-                    <textarea id="action-remarks" class="form-input" rows="3" placeholder="Enter officer verification notes..."></textarea>
+                    <label>Inspection & Boundary Remarks</label>
+                    <textarea id="verify-remarks" class="form-input" rows="3" placeholder="Enter detailed inspection and boundary verification notes..." required></textarea>
                 </div>
-                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
-                    <button type="button" class="btn-secondary" onclick="closeActionModal()">Cancel</button>
-                    <button type="submit" class="btn-primary">Confirm & Log Audit</button>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-verify-boundary')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary">Confirm Verification & Log Audit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: UPDATE SURVEY -->
+    <div id="modal-update-survey" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>✎ UPDATE SURVEY RECORD</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-update-survey')">×</button>
+            </div>
+            <form onsubmit="handleUpdateSurveySubmit(event)">
+                <input type="hidden" id="survey-parcel-id">
+                <div class="info-box-grid" style="margin-bottom: 0.85rem;">
+                    <div class="form-group">
+                        <label>Survey Number</label>
+                        <input type="text" id="survey-num-input" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Survey Date</label>
+                        <input type="date" id="survey-date-input" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Area</label>
+                        <input type="text" id="survey-area-input" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Survey Reference</label>
+                        <input type="text" id="survey-ref-input" class="form-input" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>North Boundary</label>
+                    <input type="text" id="survey-north-input" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>South Boundary</label>
+                    <input type="text" id="survey-south-input" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>East Boundary</label>
+                    <input type="text" id="survey-east-input" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>West Boundary</label>
+                    <input type="text" id="survey-west-input" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Survey Remarks</label>
+                    <textarea id="survey-remarks-input" class="form-input" rows="2" placeholder="Notes on instruments used (DGPS/ETS), accuracy..."></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-update-survey')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary">Save Survey & Log Audit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REPORT BOUNDARY CONFLICT -->
+    <div id="modal-report-conflict" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>⚠ REPORT BOUNDARY CONFLICT</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-report-conflict')">×</button>
+            </div>
+            <form onsubmit="handleReportConflictSubmit(event)">
+                <input type="hidden" id="conflict-parcel-id">
+                <div class="form-group">
+                    <label>Conflict Type</label>
+                    <select id="conflict-type-select" class="form-input" required>
+                        <option value="Boundary Overlap">Boundary Overlap</option>
+                        <option value="Survey Number Mismatch">Survey Number Mismatch</option>
+                        <option value="Area Mismatch">Area Mismatch</option>
+                        <option value="Neighboring Parcel Conflict">Neighboring Parcel Conflict</option>
+                        <option value="GIS Boundary Mismatch">GIS Boundary Mismatch</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Severity Level</label>
+                    <select id="conflict-severity-select" class="form-input" required>
+                        <option value="Low">Low (Minor discrepancy)</option>
+                        <option value="Medium" selected>Medium (Action required)</option>
+                        <option value="High">High (Legal dispute risk)</option>
+                        <option value="Critical">Critical (Immediate freeze required)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Conflict Description & Observations</label>
+                    <textarea id="conflict-desc-input" class="form-input" rows="3" placeholder="Describe the overlapping claims or measurement mismatch..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-report-conflict')">Cancel</button>
+                    <button type="submit" class="btn-govt-danger">Submit Conflict Report</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD INSPECTION REMARKS -->
+    <div id="modal-add-inspection" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>📝 ADD FIELD INSPECTION REMARKS</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-add-inspection')">×</button>
+            </div>
+            <form onsubmit="handleAddInspectionSubmit(event)">
+                <input type="hidden" id="inspection-parcel-id">
+                <div class="form-group">
+                    <label>Inspection Date</label>
+                    <input type="date" id="inspection-date-input" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label>Field Remarks & Observations</label>
+                    <textarea id="inspection-remarks-input" class="form-input" rows="4" placeholder="Enter officer field inspection findings..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-add-inspection')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary">Save Inspection</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD SURVEY DOCUMENT -->
+    <div id="modal-add-document" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>📄 ASSOCIATE SURVEY DOCUMENT</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-add-document')">×</button>
+            </div>
+            <form onsubmit="handleAddDocumentSubmit(event)">
+                <input type="hidden" id="doc-parcel-id">
+                <div class="form-group">
+                    <label>Document Title</label>
+                    <input type="text" id="doc-title-input" class="form-input" placeholder="e.g. Field Measurement Sketch (FMB)" required>
+                </div>
+                <div class="form-group">
+                    <label>Document Type</label>
+                    <select id="doc-type-select" class="form-input" required>
+                        <option value="SURVEY_MAP">Survey Map / FMB Sketch</option>
+                        <option value="BOUNDARY_VERIFICATION">Boundary Verification Certificate</option>
+                        <option value="FIELD_REPORT">Field Inspection Report</option>
+                        <option value="OTHER">Other Cadastral Document</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Document Reference Number</label>
+                    <input type="text" id="doc-number-input" class="form-input" placeholder="e.g. DOC-CAD-2026-88">
+                </div>
+                <div class="form-group">
+                    <label>Description / Notes</label>
+                    <textarea id="doc-desc-input" class="form-input" rows="2" placeholder="Brief document description..."></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-add-document')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary">Save Document</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: RESPOND DEPARTMENT REQUEST -->
+    <div id="modal-respond-request" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>📤 RESPOND TO DEPARTMENT REQUEST</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-respond-request')">×</button>
+            </div>
+            <form onsubmit="handleRespondRequestSubmit(event)">
+                <input type="hidden" id="request-id-input">
+                <div class="form-group">
+                    <label>Response Status</label>
+                    <select id="request-status-select" class="form-input" required>
+                        <option value="Boundary Verified">Boundary Verified</option>
+                        <option value="Boundary Issue Found">Boundary Issue Found</option>
+                        <option value="Request More Information">Request More Information</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Department Remarks</label>
+                    <textarea id="request-remarks-input" class="form-input" rows="3" placeholder="Enter department response notes..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-respond-request')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary">Send Response</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: VERIFY OWNERSHIP -->
+    <div id="modal-verify-ownership" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>✓ VERIFY RECORD OF RIGHTS OWNERSHIP</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-verify-ownership')">×</button>
+            </div>
+            <form onsubmit="handleVerifyOwnershipSubmit(event)">
+                <input type="hidden" id="verify-ror-parcel-id">
+                <div class="form-group">
+                    <label>Target Parcel ID & RoR Record</label>
+                    <input type="text" id="verify-ror-label" class="form-input" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Verification Result</label>
+                    <select id="verify-ror-result-select" class="form-input" required>
+                        <option value="VERIFIED">Verified (Ownership Title & Deed Clear)</option>
+                        <option value="Requires More Information">Requires More Information (Missing Deed Proof)</option>
+                        <option value="Ownership Disputed">Ownership Disputed (Adverse Claims)</option>
+                        <option value="Rejected">Rejected (Invalid Title Record)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Officer Ownership Verification Notes</label>
+                    <textarea id="verify-ror-remarks" class="form-input" rows="3" placeholder="Enter RoR officer verification notes..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-verify-ownership')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary">Confirm Ownership & Log Audit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: APPROVE MUTATION -->
+    <div id="modal-approve-mutation" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>✓ APPROVE MUTATION REQUEST</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-approve-mutation')">×</button>
+            </div>
+            <form onsubmit="handleApproveMutationSubmit(event)">
+                <input type="hidden" id="approve-mutation-id">
+                <div class="form-group">
+                    <label>Target Mutation ID</label>
+                    <input type="text" id="approve-mutation-label" class="form-input" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Prerequisite Verification Status</label>
+                    <div id="approve-mutation-prerequisites" style="background:#0f172a; padding:0.75rem; border:1px solid var(--govt-border); font-size:0.8rem;">
+                        <!-- Dynamically filled with Cadastral & Ownership check results -->
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Approval Remarks & Order Reference</label>
+                    <textarea id="approve-mutation-remarks" class="form-input" rows="3" placeholder="Enter mutation approval order notes..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-approve-mutation')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary" id="btn-confirm-approve-mutation">Execute Mutation & Transfer Ownership</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REJECT MUTATION -->
+    <div id="modal-reject-mutation" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>✕ REJECT MUTATION REQUEST</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-reject-mutation')">×</button>
+            </div>
+            <form onsubmit="handleRejectMutationSubmit(event)">
+                <input type="hidden" id="reject-mutation-id">
+                <div class="form-group">
+                    <label>Rejection Reason</label>
+                    <select id="reject-reason-select" class="form-input" required>
+                        <option value="Invalid ownership document">Invalid ownership document</option>
+                        <option value="Ownership dispute">Ownership dispute / Objection filed</option>
+                        <option value="Survey mismatch">Survey / Cadastral boundary mismatch</option>
+                        <option value="Insufficient documentation">Insufficient documentation</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Detailed Rejection Remarks</label>
+                    <textarea id="reject-mutation-remarks" class="form-input" rows="3" placeholder="Explain the legal or administrative grounds for rejection..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-reject-mutation')">Cancel</button>
+                    <button type="submit" class="btn-govt-danger">Reject Mutation</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REQUEST MORE INFORMATION FOR MUTATION -->
+    <div id="modal-request-info" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>📤 REQUEST ADDITIONAL INFORMATION</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-request-info')">×</button>
+            </div>
+            <form onsubmit="handleRequestInfoSubmit(event)">
+                <input type="hidden" id="reqinfo-mutation-id">
+                <div class="form-group">
+                    <label>Information / Documents Required</label>
+                    <input type="text" id="reqinfo-input" class="form-input" placeholder="e.g. Certified Copy of Encumbrance Certificate" required>
+                </div>
+                <div class="form-group">
+                    <label>Reason / Clarification Needed</label>
+                    <textarea id="reqinfo-reason" class="form-input" rows="3" placeholder="Explain why this information is required before proceeding..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-request-info')">Cancel</button>
+                    <button type="submit" class="btn-govt-warning">Send Information Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REPORT OWNERSHIP DISPUTE -->
+    <div id="modal-report-ownership-dispute" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>⚠ REPORT OWNERSHIP DISPUTE</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-report-ownership-dispute')">×</button>
+            </div>
+            <form onsubmit="handleReportOwnershipDisputeSubmit(event)">
+                <input type="hidden" id="dispute-ror-parcel-id">
+                <div class="form-group">
+                    <label>Dispute Type</label>
+                    <select id="dispute-type-select" class="form-input" required>
+                        <option value="Multiple Ownership Claims">Multiple Ownership Claims</option>
+                        <option value="Name Mismatch">Name Mismatch / Alias Dispute</option>
+                        <option value="Ownership Document Conflict">Ownership Document Conflict</option>
+                        <option value="Inheritance Dispute">Inheritance Dispute</option>
+                        <option value="Court Case">Pending Court Case / Stay Order</option>
+                        <option value="Mutation Conflict">Mutation Conflict</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Severity</label>
+                    <select id="dispute-severity-select" class="form-input" required>
+                        <option value="Low">Low (Minor objection)</option>
+                        <option value="Medium" selected>Medium (Objection under review)</option>
+                        <option value="High">High (Substantive legal claim)</option>
+                        <option value="Critical">Critical (Court injunction / Freeze required)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Dispute Description & Evidence Details</label>
+                    <textarea id="dispute-desc-input" class="form-input" rows="3" placeholder="Provide details of the conflicting claims or legal filings..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-report-ownership-dispute')">Cancel</button>
+                    <button type="submit" class="btn-govt-danger">Record Ownership Dispute</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CORRECT ROR RECORD -->
+    <div id="modal-correct-ror" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>✏ CORRECT RECORD OF RIGHTS (RoR)</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-correct-ror')">×</button>
+            </div>
+            <form onsubmit="handleCorrectRoRSubmit(event)">
+                <input type="hidden" id="correct-ror-parcel-id">
+                <div class="form-group">
+                    <label>Owner Name</label>
+                    <input type="text" id="correct-owner-input" class="form-input" required>
+                </div>
+                <div class="info-box-grid" style="margin-bottom:0.85rem;">
+                    <div class="form-group">
+                        <label>Ownership Type</label>
+                        <select id="correct-type-select" class="form-input">
+                            <option value="Individual">Individual</option>
+                            <option value="Joint">Joint Ownership</option>
+                            <option value="Ancestral">Ancestral / Undivided</option>
+                            <option value="Corporate / Commercial">Corporate / Commercial</option>
+                            <option value="Government">Government / Public</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Ownership Share</label>
+                        <input type="text" id="correct-share-input" class="form-input" placeholder="e.g. 100% or 1/2">
+                    </div>
+                    <div class="form-group">
+                        <label>Possession Status</label>
+                        <input type="text" id="correct-possession-input" class="form-input" placeholder="e.g. Self or Tenant">
+                    </div>
+                    <div class="form-group">
+                        <label>RoR Record Number</label>
+                        <input type="text" id="correct-ror-num-input" class="form-input" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Correction Authority & Remarks</label>
+                    <textarea id="correct-remarks-input" class="form-input" rows="3" placeholder="Reason for clerical or administrative correction..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-correct-ror')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary">Save Correction & Log Audit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: VERIFY DEED -->
+    <div id="modal-verify-deed" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>✓ VERIFY SALE DEED & DOCUMENTATION</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-verify-deed')">×</button>
+            </div>
+            <form onsubmit="handleVerifyDeedSubmit(event)">
+                <input type="hidden" id="verify-deed-reg-id">
+                <div class="form-group">
+                    <label>Target Registration Case</label>
+                    <input type="text" id="verify-deed-label" class="form-input" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Deed Verification Decision</label>
+                    <select id="verify-deed-result-select" class="form-input" required>
+                        <option value="VERIFIED">Verified (Deed legally executed & attested)</option>
+                        <option value="Requires Correction">Requires Correction (Clerical error in description)</option>
+                        <option value="Rejected">Rejected (Fraudulent / Invalid deed)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Sub-Registrar Officer Deed Remarks</label>
+                    <textarea id="verify-deed-remarks" class="form-input" rows="3" placeholder="Enter deed verification notes, witness verification..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-verify-deed')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary">Save Deed Verification & Log Audit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: VERIFY STAMP DUTY -->
+    <div id="modal-verify-stamp-duty" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>💰 VERIFY STAMP DUTY & REGISTRATION FEES</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-verify-stamp-duty')">×</button>
+            </div>
+            <form onsubmit="handleVerifyStampDutySubmit(event)">
+                <input type="hidden" id="stamp-duty-reg-id">
+                <div class="form-group">
+                    <label>Payment Reference / Treasury E-Challan No.</label>
+                    <input type="text" id="stamp-duty-ref-input" class="form-input" placeholder="e.g. PAY-STAMP-2026-8891" required>
+                </div>
+                <div class="form-group">
+                    <label>Verification Remarks</label>
+                    <textarea id="stamp-duty-remarks-input" class="form-input" rows="3" placeholder="Verify treasury receipt against guidance value..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-verify-stamp-duty')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary">Confirm Stamp Duty Verification</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ENCUMBRANCE CHECK -->
+    <div id="modal-encumbrance-check" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>🔍 PERFORM ENCUMBRANCE SEARCH</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-encumbrance-check')">×</button>
+            </div>
+            <form onsubmit="handleEncumbranceCheckSubmit(event)">
+                <input type="hidden" id="encumbrance-reg-id">
+                <div class="form-group">
+                    <label>Encumbrance Search Remarks & Certificate Reference</label>
+                    <textarea id="encumbrance-remarks-input" class="form-input" rows="3" placeholder="Enter encumbrance search findings (EC-2026-901 clear of prior mortgages)..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-encumbrance-check')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary">Mark Encumbrance CLEAR & Log Audit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REQUEST TAX CLEARANCE -->
+    <div id="modal-request-tax-clearance" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>🧾 REQUEST PROPERTY TAX CLEARANCE</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-request-tax-clearance')">×</button>
+            </div>
+            <form onsubmit="handleRequestTaxClearanceSubmit(event)">
+                <input type="hidden" id="taxreq-reg-id">
+                <div class="form-group">
+                    <label>Target Department</label>
+                    <input type="text" class="form-input" value="Property Tax & Municipal Department" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Request Remarks</label>
+                    <textarea id="taxreq-remarks-input" class="form-input" rows="3" placeholder="Request Property Tax department to verify municipal dues..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-request-tax-clearance')">Cancel</button>
+                    <button type="submit" class="btn-govt-warning">Send Tax Clearance Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: APPROVE REGISTRATION TRANSFER -->
+    <div id="modal-approve-registration" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>✓ APPROVE PROPERTY REGISTRATION & TRANSFER</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-approve-registration')">×</button>
+            </div>
+            <form onsubmit="handleApproveRegistrationSubmit(event)">
+                <input type="hidden" id="approve-reg-id">
+                <div class="form-group">
+                    <label>Target Registration ID</label>
+                    <input type="text" id="approve-reg-label" class="form-input" readonly>
+                </div>
+                <div class="form-group">
+                    <label>8-Point Interdepartmental Clearance Checklist</label>
+                    <div id="approve-reg-prerequisites" style="background:#0f172a; padding:0.75rem; border:1px solid var(--govt-border); font-size:0.8rem;">
+                        <!-- Filled dynamically -->
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Registration Order & Approval Remarks</label>
+                    <textarea id="approve-reg-remarks" class="form-input" rows="3" placeholder="Enter registration order notes..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-approve-registration')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary" id="btn-confirm-approve-reg">Execute Property Transfer & Notify RoR</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REJECT REGISTRATION -->
+    <div id="modal-reject-registration" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>✕ REJECT REGISTRATION REQUEST</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-reject-registration')">×</button>
+            </div>
+            <form onsubmit="handleRejectRegistrationSubmit(event)">
+                <input type="hidden" id="reject-reg-id">
+                <div class="form-group">
+                    <label>Rejection Reason</label>
+                    <select id="reject-reg-reason-select" class="form-input" required>
+                        <option value="Invalid Deed">Invalid Deed / Execution Defect</option>
+                        <option value="Ownership Mismatch">Ownership Mismatch with RoR</option>
+                        <option value="Stamp Duty Deficit">Stamp Duty Deficit / Unpaid</option>
+                        <option value="Encumbrance Reported">Encumbrance / Prior Mortgage Lien</option>
+                        <option value="Tax Clearance Failure">Tax Clearance Failure / Dues Outstanding</option>
+                        <option value="Land Use Restriction">Land Use Restriction Conflict</option>
+                        <option value="Other">Other Administrative Grounds</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Detailed Rejection Remarks</label>
+                    <textarea id="reject-reg-remarks" class="form-input" rows="3" placeholder="Explain statutory grounds for rejection..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-reject-registration')">Cancel</button>
+                    <button type="submit" class="btn-govt-danger">Reject Registration</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REQUEST REGISTRATION INFORMATION -->
+    <div id="modal-request-reg-info" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>📤 REQUEST REGISTRATION CLARIFICATION</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-request-reg-info')">×</button>
+            </div>
+            <form onsubmit="handleRequestRegInfoSubmit(event)">
+                <input type="hidden" id="reqreg-id">
+                <div class="form-group">
+                    <label>Information / Proof Required</label>
+                    <input type="text" id="reqreg-info-input" class="form-input" placeholder="e.g. Certified Copy of Identity Proof or Valuation Report" required>
+                </div>
+                <div class="form-group">
+                    <label>Reason / Clarification</label>
+                    <textarea id="reqreg-reason-input" class="form-input" rows="3" placeholder="Explain why clarification is needed..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-request-reg-info')">Cancel</button>
+                    <button type="submit" class="btn-govt-warning">Send Information Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ENVIRONMENTAL CHECK -->
+    <div id="modal-environmental-check" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>🌱 VERIFY ENVIRONMENTAL & ECO-SENSITIVE STATUS</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-environmental-check')">×</button>
+            </div>
+            <form onsubmit="handleEnvironmentalCheckSubmit(event)">
+                <input type="hidden" id="env-parcel-id">
+                <div class="form-group">
+                    <label>Environmental Status</label>
+                    <select id="env-status-select" class="form-input" required>
+                        <option value="CLEAR">CLEAR (No Eco-Sensitive or Forest Buffer Restrictions)</option>
+                        <option value="REVIEW_REQUIRED">REVIEW REQUIRED (Near Eco-sensitive / Water Body Buffer)</option>
+                        <option value="RESTRICTED">RESTRICTED (Protected Forest / Water Body Encroachment)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Environmental Officer Remarks</label>
+                    <textarea id="env-remarks-input" class="form-input" rows="3" placeholder="Enter findings from GIS environmental buffer analysis..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-environmental-check')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary">Save Environmental Status & Log Audit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ROAD ACCESS CHECK -->
+    <div id="modal-road-access-check" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>🛣 VERIFY ROAD ACCESS & SETBACK</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-road-access-check')">×</button>
+            </div>
+            <form onsubmit="handleRoadAccessCheckSubmit(event)">
+                <input type="hidden" id="road-parcel-id">
+                <div class="form-group">
+                    <label>Road Access Status</label>
+                    <select id="road-status-select" class="form-input" required>
+                        <option value="AVAILABLE">AVAILABLE (Public Road Access Verified)</option>
+                        <option value="NOT_AVAILABLE">NOT AVAILABLE (No Registered Road Frontage)</option>
+                        <option value="PROPOSED">PROPOSED (Subject to Master Plan Road Widening)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Road Width & Classification</label>
+                    <input type="text" id="road-width-input" class="form-input" placeholder="e.g. 30 ft Public Panchayati Bitumen Road" required>
+                </div>
+                <div class="form-group">
+                    <label>Officer Road Access Remarks</label>
+                    <textarea id="road-remarks-input" class="form-input" rows="3" placeholder="Enter road access inspection notes..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-road-access-check')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary">Confirm Road Access & Log Audit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REPORT PLANNING CONFLICT -->
+    <div id="modal-planning-conflict" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>⚠ REPORT PLANNING CONFLICT</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-planning-conflict')">×</button>
+            </div>
+            <form onsubmit="handlePlanningConflictSubmit(event)">
+                <input type="hidden" id="conflict-lu-parcel-id">
+                <div class="form-group">
+                    <label>Conflict Type</label>
+                    <select id="conflict-lu-type-select" class="form-input" required>
+                        <option value="Zoning Incompatibility">Zoning Incompatibility</option>
+                        <option value="Master Plan Violation">Master Plan Violation</option>
+                        <option value="Setback Non-compliance">Setback Non-compliance</option>
+                        <option value="Road Width Deficit">Road Width Deficit</option>
+                        <option value="Environmental Buffer Conflict">Environmental Buffer Conflict</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Severity</label>
+                    <select id="conflict-lu-severity-select" class="form-input" required>
+                        <option value="Low">Low (Technical non-conformity)</option>
+                        <option value="Medium" selected>Medium (Requires master plan variance)</option>
+                        <option value="High">High (Prohibited development)</option>
+                        <option value="Critical">Critical (Eco-sensitive prohibition)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Conflict Description</label>
+                    <textarea id="conflict-lu-desc-input" class="form-input" rows="3" placeholder="Explain the planning or zoning violation details..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-planning-conflict')">Cancel</button>
+                    <button type="submit" class="btn-govt-danger">Record Planning Conflict</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REVIEW BUILDING PERMISSION -->
+    <div id="modal-review-building-permission" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>🏗 REVIEW BUILDING PERMISSION APPLICATION</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-review-building-permission')">×</button>
+            </div>
+            <form onsubmit="handleReviewBuildingPermissionSubmit(event)">
+                <input type="hidden" id="bp-app-id">
+                <div class="form-group">
+                    <label>Application Number</label>
+                    <input type="text" id="bp-app-label" class="form-input" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Review Decision</label>
+                    <select id="bp-decision-select" class="form-input" required>
+                        <option value="Approved">Approved (Complies with Setbacks, FAR & Height)</option>
+                        <option value="Under Review">Under Review (Requires Plan Re-submission)</option>
+                        <option value="Rejected">Rejected (Non-compliant with Zoning Rules)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Planning Officer Building Remarks</label>
+                    <textarea id="bp-remarks-input" class="form-input" rows="3" placeholder="Enter building plan scrutiny notes..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-review-building-permission')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary">Save Building Decision & Log Audit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: APPROVE LAND USE CONVERSION -->
+    <div id="modal-approve-conversion" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>✓ APPROVE LAND USE CONVERSION</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-approve-conversion')">×</button>
+            </div>
+            <form onsubmit="handleApproveConversionSubmit(event)">
+                <input type="hidden" id="approve-lu-req-id">
+                <div class="form-group">
+                    <label>Conversion Request ID</label>
+                    <input type="text" id="approve-lu-req-label" class="form-input" readonly>
+                </div>
+                <div class="form-group">
+                    <label>7-Point Planning Clearance Checklist</label>
+                    <div id="approve-lu-prerequisites" style="background:#0f172a; padding:0.75rem; border:1px solid var(--govt-border); font-size:0.8rem;">
+                        <!-- Filled dynamically -->
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Planning Order & Conversion Remarks</label>
+                    <textarea id="approve-lu-remarks" class="form-input" rows="3" placeholder="Enter land conversion order notes..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-approve-conversion')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary" id="btn-confirm-approve-lu">Approve Conversion & Update Master Plan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REJECT CONVERSION -->
+    <div id="modal-reject-conversion" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>✕ REJECT LAND USE CONVERSION</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-reject-conversion')">×</button>
+            </div>
+            <form onsubmit="handleRejectConversionSubmit(event)">
+                <input type="hidden" id="reject-lu-req-id">
+                <div class="form-group">
+                    <label>Rejection Grounds</label>
+                    <select id="reject-lu-reason-select" class="form-input" required>
+                        <option value="Zoning Incompatibility">Zoning Incompatibility</option>
+                        <option value="Master Plan Conflict">Master Plan Conflict</option>
+                        <option value="Environmental Restriction">Environmental Restriction / Buffer Conflict</option>
+                        <option value="Insufficient Road Access">Insufficient Road Access</option>
+                        <option value="Ownership Issue">Ownership Issue</option>
+                        <option value="Restricted Land">Restricted Land / Acquisition Zone</option>
+                        <option value="Other">Other Planning Grounds</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Detailed Rejection Remarks</label>
+                    <textarea id="reject-lu-remarks" class="form-input" rows="3" placeholder="Explain statutory grounds for rejection..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-reject-conversion')">Cancel</button>
+                    <button type="submit" class="btn-govt-danger">Reject Conversion</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REQUEST LAND USE INFORMATION -->
+    <div id="modal-request-lu-info" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>📤 REQUEST PLANNING CLARIFICATION</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-request-lu-info')">×</button>
+            </div>
+            <form onsubmit="handleRequestLuInfoSubmit(event)">
+                <input type="hidden" id="reqlu-id">
+                <div class="form-group">
+                    <label>Information / Technical Report Required</label>
+                    <input type="text" id="reqlu-info-input" class="form-input" placeholder="e.g. Traffic Impact Assessment or Environmental Clearance Certificate" required>
+                </div>
+                <div class="form-group">
+                    <label>Reason / Clarification</label>
+                    <textarea id="reqlu-reason-input" class="form-input" rows="3" placeholder="Explain why technical clarification is needed..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-request-lu-info')">Cancel</button>
+                    <button type="submit" class="btn-govt-warning">Send Information Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: VERIFY PROPERTY TAX ASSESSMENT -->
+    <div id="modal-verify-assessment" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>✓ VERIFY PROPERTY TAX ASSESSMENT</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-verify-assessment')">×</button>
+            </div>
+            <form onsubmit="handleVerifyAssessmentSubmit(event)">
+                <input type="hidden" id="tax-ass-id">
+                <div class="form-group">
+                    <label>Assessment ID</label>
+                    <input type="text" id="tax-ass-label" class="form-input" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Tax Assessment Scrutiny Remarks</label>
+                    <textarea id="tax-ass-remarks" class="form-input" rows="3" placeholder="Enter findings from property valuation and rental demand scrutiny..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-verify-assessment')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary">Confirm Assessment & Log Audit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: VERIFY TAX PAYMENT -->
+    <div id="modal-verify-tax-payment" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>💰 VERIFY TAX PAYMENT RECORD</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-verify-tax-payment')">×</button>
+            </div>
+            <form onsubmit="handleVerifyTaxPaymentSubmit(event)">
+                <input type="hidden" id="tax-pay-id">
+                <div class="form-group">
+                    <label>Payment Reference / E-Challan No</label>
+                    <input type="text" id="tax-pay-label" class="form-input" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Verification Remarks</label>
+                    <textarea id="tax-pay-remarks" class="form-input" rows="3" placeholder="Enter bank receipt / treasury e-challan verification notes..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-verify-tax-payment')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary">Verify Payment & Set Dues to Zero</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: APPROVE TAX CLEARANCE -->
+    <div id="modal-approve-tax-clearance" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>🧾 ISSUE PROPERTY TAX CLEARANCE</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-approve-tax-clearance')">×</button>
+            </div>
+            <form onsubmit="handleApproveTaxClearanceSubmit(event)">
+                <input type="hidden" id="approve-tax-req-id">
+                <div class="form-group">
+                    <label>Clearance Request ID</label>
+                    <input type="text" id="approve-tax-req-label" class="form-input" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Tax Dues Status</label>
+                    <div id="approve-tax-dues-status" style="background:#0f172a; padding:0.75rem; border:1px solid var(--govt-border); font-size:0.85rem;">
+                        <!-- Filled dynamically -->
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Clearance Certificate Order Remarks</label>
+                    <textarea id="approve-tax-remarks" class="form-input" rows="3" placeholder="Enter municipal tax clearance certificate remarks..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-approve-tax-clearance')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary" id="btn-confirm-approve-tax">Issue Clearance Certificate & Notify Registration</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REJECT TAX CLEARANCE -->
+    <div id="modal-reject-tax-clearance" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>✕ REJECT TAX CLEARANCE</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-reject-tax-clearance')">×</button>
+            </div>
+            <form onsubmit="handleRejectTaxClearanceSubmit(event)">
+                <input type="hidden" id="reject-tax-req-id">
+                <div class="form-group">
+                    <label>Rejection Grounds</label>
+                    <select id="reject-tax-reason-select" class="form-input" required>
+                        <option value="Outstanding Municipal Dues">Outstanding Municipal Dues</option>
+                        <option value="Unverified Assessment">Unverified Assessment / Valuation Dispute</option>
+                        <option value="Unauthorized Construction Penalty">Unauthorized Construction Penalty</option>
+                        <option value="Unpaid Sewerage / Water Dues">Unpaid Sewerage / Water Dues</option>
+                        <option value="Other">Other Statutory Grounds</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Detailed Rejection Remarks</label>
+                    <textarea id="reject-tax-remarks" class="form-input" rows="3" placeholder="Explain grounds for rejection..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-reject-tax-clearance')">Cancel</button>
+                    <button type="submit" class="btn-govt-danger">Reject Clearance</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REQUEST TAX INFORMATION -->
+    <div id="modal-request-tax-info" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>📤 REQUEST TAX CLARIFICATION / ASSESSMENT PROOF</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-request-tax-info')">×</button>
+            </div>
+            <form onsubmit="handleRequestTaxInfoSubmit(event)">
+                <input type="hidden" id="reqtax-id">
+                <div class="form-group">
+                    <label>Information / Proof Required</label>
+                    <input type="text" id="reqtax-info-input" class="form-input" placeholder="e.g. Property Demand Receipt or Self-Assessment Return" required>
+                </div>
+                <div class="form-group">
+                    <label>Reason / Clarification</label>
+                    <textarea id="reqtax-reason-input" class="form-input" rows="3" placeholder="Explain why tax clarification is needed..." required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-request-tax-info')">Cancel</button>
+                    <button type="submit" class="btn-govt-warning">Send Information Request</button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- SCRIPTS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="js/firebase-config.js"></script>
     <script src="js/permissions.js"></script>
     <script src="js/auth.js"></script>

@@ -298,24 +298,247 @@ async function verifyCadastralBoundary(parcelId, surveyNo, verificationRemarks) 
     });
 }
 
-async function approveRoRMutation(mutationId, status, remarks) {
-    return await apiRequest("/api/officer/ror/approve-mutation", {
+async function getCadastralParcelDetail(parcelId) {
+    return await apiRequest(`/api/officer/cadastral/parcels/${parcelId}`);
+}
+
+async function verifyCadastralParcelBoundary(parcelId, verificationResult, remarks) {
+    return await apiRequest(`/api/officer/cadastral/parcels/${parcelId}/verify-boundary`, {
         method: "POST",
-        body: JSON.stringify({ mutationId, status, remarks })
+        body: JSON.stringify({ verificationResult, remarks })
     });
 }
 
-async function approvePropertyTransfer(regNo, decision, remarks) {
-    return await apiRequest("/api/officer/registration/approve-transfer", {
-        method: "POST",
-        body: JSON.stringify({ regNo, decision, remarks })
+async function updateCadastralSurvey(parcelId, surveyData) {
+    return await apiRequest(`/api/officer/cadastral/parcels/${parcelId}/survey`, {
+        method: "PUT",
+        body: JSON.stringify(surveyData)
     });
 }
 
-async function approveLandUseConversion(conversionId, decision, zoningCode) {
-    return await apiRequest("/api/officer/land-use/approve-conversion", {
+async function reportCadastralConflict(parcelId, conflictData) {
+    return await apiRequest(`/api/officer/cadastral/parcels/${parcelId}/conflicts`, {
         method: "POST",
-        body: JSON.stringify({ conversionId, decision, zoningCode })
+        body: JSON.stringify(conflictData)
+    });
+}
+
+async function addCadastralInspection(parcelId, inspectionDate, remarks) {
+    return await apiRequest(`/api/officer/cadastral/parcels/${parcelId}/inspections`, {
+        method: "POST",
+        body: JSON.stringify({ inspectionDate, remarks })
+    });
+}
+
+async function addCadastralDocument(parcelId, docData) {
+    return await apiRequest(`/api/officer/cadastral/parcels/${parcelId}/documents`, {
+        method: "POST",
+        body: JSON.stringify(docData)
+    });
+}
+
+async function respondDepartmentRequest(requestId, responseStatus, remarks) {
+    return await apiRequest(`/api/officer/cadastral/requests/${requestId}/respond`, {
+        method: "POST",
+        body: JSON.stringify({ responseStatus, remarks })
+    });
+}
+
+async function getRoRParcelDetail(parcelId) {
+    return await apiRequest(`/api/officer/ror/parcels/${parcelId}`);
+}
+
+async function verifyOwnership(parcelId, verificationResult, remarks) {
+    return await apiRequest(`/api/officer/ror/parcels/${parcelId}/verify-ownership`, {
+        method: "POST",
+        body: JSON.stringify({ verificationResult, remarks })
+    });
+}
+
+async function approveMutation(mutationId, remarks) {
+    return await apiRequest(`/api/officer/ror/mutations/${mutationId}/approve`, {
+        method: "POST",
+        body: JSON.stringify({ remarks })
+    });
+}
+
+async function rejectMutation(mutationId, rejectionReason, remarks) {
+    return await apiRequest(`/api/officer/ror/mutations/${mutationId}/reject`, {
+        method: "POST",
+        body: JSON.stringify({ rejectionReason, remarks })
+    });
+}
+
+async function requestMutationInformation(mutationId, infoRequired, reason) {
+    return await apiRequest(`/api/officer/ror/mutations/${mutationId}/request-information`, {
+        method: "POST",
+        body: JSON.stringify({ infoRequired, reason })
+    });
+}
+
+async function reportOwnershipDispute(parcelId, disputeData) {
+    return await apiRequest(`/api/officer/ror/parcels/${parcelId}/disputes`, {
+        method: "POST",
+        body: JSON.stringify(disputeData)
+    });
+}
+
+async function correctRoRRecord(parcelId, correctionData) {
+    return await apiRequest(`/api/officer/ror/parcels/${parcelId}/record`, {
+        method: "PUT",
+        body: JSON.stringify(correctionData)
+    });
+}
+
+async function verifyRoRDocument(documentId, verificationStatus, remarks) {
+    return await apiRequest(`/api/officer/ror/documents/${documentId}/verify`, {
+        method: "POST",
+        body: JSON.stringify({ verificationStatus, remarks })
+    });
+}
+
+async function getRegistrationParcelDetail(parcelId) {
+    return await apiRequest(`/api/officer/registration/parcels/${parcelId}`);
+}
+
+async function verifyDeed(registrationId, verificationResult, remarks) {
+    return await apiRequest(`/api/officer/registration/requests/${registrationId}/verify-deed`, {
+        method: "POST",
+        body: JSON.stringify({ verificationResult, remarks })
+    });
+}
+
+async function verifyStampDuty(registrationId, paymentRef, remarks) {
+    return await apiRequest(`/api/officer/registration/requests/${registrationId}/verify-stamp-duty`, {
+        method: "POST",
+        body: JSON.stringify({ paymentRef, remarks })
+    });
+}
+
+async function performEncumbranceCheck(registrationId, remarks) {
+    return await apiRequest(`/api/officer/registration/requests/${registrationId}/encumbrance-check`, {
+        method: "POST",
+        body: JSON.stringify({ remarks })
+    });
+}
+
+async function requestTaxClearance(registrationId, remarks) {
+    return await apiRequest(`/api/officer/registration/requests/${registrationId}/request-tax-clearance`, {
+        method: "POST",
+        body: JSON.stringify({ remarks })
+    });
+}
+
+async function approveRegistrationTransfer(registrationId, remarks) {
+    return await apiRequest(`/api/officer/registration/requests/${registrationId}/approve`, {
+        method: "POST",
+        body: JSON.stringify({ remarks })
+    });
+}
+
+async function rejectRegistration(registrationId, rejectionReason, remarks) {
+    return await apiRequest(`/api/officer/registration/requests/${registrationId}/reject`, {
+        method: "POST",
+        body: JSON.stringify({ rejectionReason, remarks })
+    });
+}
+
+async function requestRegistrationInformation(registrationId, infoRequired, reason) {
+    return await apiRequest(`/api/officer/registration/requests/${registrationId}/request-information`, {
+        method: "POST",
+        body: JSON.stringify({ infoRequired, reason })
+    });
+}
+
+async function getLandUseParcelDetail(parcelId) {
+    return await apiRequest(`/api/officer/land-use/parcels/${parcelId}`);
+}
+
+async function verifyEnvironmentalStatus(parcelId, environmentalStatus, remarks) {
+    return await apiRequest(`/api/officer/land-use/parcels/${parcelId}/environmental-check`, {
+        method: "POST",
+        body: JSON.stringify({ environmentalStatus, remarks })
+    });
+}
+
+async function verifyRoadAccess(parcelId, roadAccessStatus, roadWidth, remarks) {
+    return await apiRequest(`/api/officer/land-use/parcels/${parcelId}/road-access`, {
+        method: "POST",
+        body: JSON.stringify({ roadAccessStatus, roadWidth, remarks })
+    });
+}
+
+async function reportPlanningConflict(parcelId, conflictData) {
+    return await apiRequest(`/api/officer/land-use/parcels/${parcelId}/conflicts`, {
+        method: "POST",
+        body: JSON.stringify(conflictData)
+    });
+}
+
+async function reviewBuildingPermission(applicationId, status, remarks) {
+    return await apiRequest(`/api/officer/land-use/building-permissions/${applicationId}/review`, {
+        method: "POST",
+        body: JSON.stringify({ status, remarks })
+    });
+}
+
+async function approveLandUseConversionReq(requestId, remarks) {
+    return await apiRequest(`/api/officer/land-use/conversions/${requestId}/approve`, {
+        method: "POST",
+        body: JSON.stringify({ remarks })
+    });
+}
+
+async function rejectLandUseConversionReq(requestId, rejectionReason, remarks) {
+    return await apiRequest(`/api/officer/land-use/conversions/${requestId}/reject`, {
+        method: "POST",
+        body: JSON.stringify({ rejectionReason, remarks })
+    });
+}
+
+async function requestLandUseInformation(requestId, infoRequired, reason) {
+    return await apiRequest(`/api/officer/land-use/conversions/${requestId}/request-information`, {
+        method: "POST",
+        body: JSON.stringify({ infoRequired, reason })
+    });
+}
+
+async function getPropertyTaxParcelDetail(parcelId) {
+    return await apiRequest(`/api/officer/property-tax/parcels/${parcelId}`);
+}
+
+async function verifyTaxAssessment(assessmentId, remarks) {
+    return await apiRequest(`/api/officer/property-tax/assessments/${assessmentId}/verify`, {
+        method: "POST",
+        body: JSON.stringify({ remarks })
+    });
+}
+
+async function verifyTaxPaymentRecord(paymentId, remarks) {
+    return await apiRequest(`/api/officer/property-tax/payments/${paymentId}/verify`, {
+        method: "POST",
+        body: JSON.stringify({ remarks })
+    });
+}
+
+async function approveTaxClearanceReq(requestId, remarks) {
+    return await apiRequest(`/api/officer/property-tax/clearance-requests/${requestId}/approve`, {
+        method: "POST",
+        body: JSON.stringify({ remarks })
+    });
+}
+
+async function rejectTaxClearanceReq(requestId, rejectionReason, remarks) {
+    return await apiRequest(`/api/officer/property-tax/clearance-requests/${requestId}/reject`, {
+        method: "POST",
+        body: JSON.stringify({ rejectionReason, remarks })
+    });
+}
+
+async function requestTaxClearanceInfo(requestId, infoRequired, reason) {
+    return await apiRequest(`/api/officer/property-tax/clearance-requests/${requestId}/more-info`, {
+        method: "POST",
+        body: JSON.stringify({ infoRequired, reason })
     });
 }
 

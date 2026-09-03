@@ -180,6 +180,13 @@ function normalizeUser(user) {
     };
 }
 
+function toPublicUser(user) {
+    if (!user) return null;
+    const normalized = normalizeUser(user);
+    const { password, passwordHash, ...safe } = normalized;
+    return safe;
+}
+
 function loadUsers() {
     try {
         if (fs.existsSync(DATA_FILE)) {

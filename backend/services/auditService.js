@@ -142,7 +142,7 @@ function getAuditsByParcel(parcelId) {
     if (!parcelId || typeof parcelId !== "string") return [];
     const targetParcel = parcelId.trim().toUpperCase();
     return auditStore
-        .filter(record => (record.parcelId || "").toUpperCase() === targetParcel)
+        .filter(record => (record.parcelId || record.target || "").toUpperCase() === targetParcel)
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
@@ -186,6 +186,7 @@ function logEvent(eventData = {}) {
 
     const auditRecord = {
         auditId,
+        parcelId: eventData.target || eventData.parcelId || "SYSTEM",
         actor: eventData.actor || "SYSTEM",
         target: eventData.target || "SYSTEM",
         action: eventData.action || "GENERAL_EVENT",
