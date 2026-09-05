@@ -603,6 +603,39 @@ function renderOverviewPane(profile, overallStatus, deptStatuses, conflicts) {
 
         </div>
 
+        <!-- =================================================
+             3.1 OWNERSHIP HISTORY
+             ================================================= -->
+        <div class="profile-section">
+            <div class="profile-section-title">
+                📜 Ownership History & Title Lineage
+            </div>
+            ${(profile.ownershipHistory && profile.ownershipHistory.length > 0) ? `
+                <table class="table-custom" style="width: 100%; font-size: 0.85rem; border-collapse: collapse; margin-top: 0.5rem;">
+                    <thead>
+                        <tr style="background: #1e293b; color: #38bdf8; text-align: left;">
+                            <th style="padding: 0.5rem;">Transfer Date</th>
+                            <th style="padding: 0.5rem;">Previous Owner</th>
+                            <th style="padding: 0.5rem;">New Owner</th>
+                            <th style="padding: 0.5rem;">Application ID</th>
+                            <th style="padding: 0.5rem;">Verification</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${profile.ownershipHistory.map(h => `
+                            <tr style="border-bottom: 1px solid #334155;">
+                                <td style="padding: 0.5rem;">${h.transferDate}</td>
+                                <td style="padding: 0.5rem;">${h.previousOwner}</td>
+                                <td style="padding: 0.5rem; color: #34d399; font-weight: 600;">${h.newOwner}</td>
+                                <td style="padding: 0.5rem;">${h.applicationId}</td>
+                                <td style="padding: 0.5rem;"><span class="status-tag tag-approved">${h.verificationStatus || '5/5 Approved'}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            ` : `<div style="font-size: 0.85rem; color: #94a3b8; padding: 0.5rem;">No previous ownership transfers recorded for this parcel.</div>`}
+        </div>
+
 
         <!-- =================================================
              4. LAND USE

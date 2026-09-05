@@ -121,6 +121,7 @@ function addDocumentRecord(newDoc) {
     const documentId = newDoc.documentId || generateDocumentId();
     const record = {
         documentId,
+        applicationId: newDoc.applicationId || null,
         parcelId: (newDoc.parcelId || "").trim().toUpperCase(),
         documentType: (newDoc.documentType || "OTHER").trim().toUpperCase(),
         documentNumber: (newDoc.documentNumber || "").trim(),
@@ -128,10 +129,20 @@ function addDocumentRecord(newDoc) {
         issuingDepartment: (newDoc.issuingDepartment || "General Authority").trim(),
         issueDate: newDoc.issueDate || new Date().toISOString().split("T")[0],
         status: newDoc.status || "AVAILABLE",
+        verificationStatus: newDoc.verificationStatus || "PENDING",
+        required: newDoc.required !== undefined ? newDoc.required : true,
+        responsibleDepartments: Array.isArray(newDoc.responsibleDepartments) ? newDoc.responsibleDepartments : ["registration"],
         fileName: newDoc.fileName || null,
-        fileType: newDoc.fileType || null,
+        originalFileName: newDoc.originalFileName || newDoc.fileName || "Document.pdf",
+        fileType: newDoc.fileType || "application/pdf",
         fileSize: newDoc.fileSize || 0,
         storageStatus: newDoc.storageStatus || "STORED",
+        version: newDoc.version || 1,
+        uploadedBy: newDoc.uploadedBy || "Citizen",
+        uploadedAt: newDoc.uploadedAt || new Date().toISOString(),
+        verifiedBy: newDoc.verifiedBy || null,
+        verifiedAt: newDoc.verifiedAt || null,
+        verificationRemarks: newDoc.verificationRemarks || null,
         textExtraction: newDoc.textExtraction || {
             status: "UNAVAILABLE",
             characterCount: 0,
@@ -145,14 +156,83 @@ function addDocumentRecord(newDoc) {
     return { ...record };
 }
 
+/**
+ * Retrieves all documents belonging to a specific master Application ID.
+ */
+function getDocumentsByApplicationId(applicationId) {
+    if (!applicationId) return [];
+    const appKey = String(applicationId).trim().toUpperCase();
+    return documents.filter(d => (d.applicationId || "").toUpperCase() === appKey);
+}
+
+/**
+ * Retrieves documents mapped to a specific Officer Department.
+ */
+function getDocumentsForDepartment(departmentKey) {
+    if (!departmentKey) return [];
+    const deptKey = String(departmentKey).trim().toLowerCase();
+
+    // Mapping department officerType to requirement department keys
+    const deptMap = {
+        cadastral_officer: "cadastral",
+        land_records_officer: "ror",
+        registration_officer: "registration",
+        land_use_officer: "landUse",
+        property_tax_officer: "propertyTax"
+    };
+
+    const targetDept = deptMap[deptKey] || deptKey;
+
+    return documents.filter(d => {
+        if (!Array.isArray(d.responsibleDepartments)) return true;
+        return d.responsibleDepartments.some(r => r.toLowerCase() === targetDept);
+    });
+}
+
+/**
+ * Updates document-level verification decision and remarks.
+ */
+function verifyDocumentRecord(officerUser, documentId, decision, remarks) {
+    const doc = getDocumentById(documentId);
+    if (!doc) {
+        return { success: false, message: "Document not found." };
+    }
+
+    const now = new Date().toISOString();
+    const statusVal = (decision || "VERIFIED").toUpperCase();
+    let finalStatus = "VERIFIED";
+    if (statusVal === "REJECTED") finalStatus = "REJECTED";
+    else if (statusVal === "DOCUMENT_REQUIRED" || statusVal === "REQUEST_DOCUMENT") finalStatus = "DOCUMENT_REQUIRED";
+
+    doc.verificationStatus = finalStatus;
+    doc.verifiedBy = officerUser.name || officerUser.officerId || officerUser.email;
+    doc.verifiedAt = now;
+    doc.verificationRemarks = remarks || `${officerUser.name || 'Officer'} verified document.`;
+
+    const auditService = require("./auditService");
+    auditService.logEvent({
+        actor: officerUser.officerId || officerUser.email,
+        target: doc.documentId,
+        action: `DOCUMENT_${finalStatus}`,
+        result: "SUCCESS",
+        details: { applicationId: doc.applicationId, documentType: doc.documentType, remarks }
+    });
+
+    return { success: true, status: finalStatus, document: doc, message: `Document '${doc.title || doc.documentId}' status set to ${finalStatus}.` };
+}
+
 module.exports = {
     getAllDocuments,
     getDocumentById,
     getDocumentsByParcelId,
     getDocumentsByType,
+    getDocumentsByApplicationId,
+    getDocumentsForDepartment,
     generateDocumentId,
     addDocumentRecord,
+    verifyDocumentRecord,
     VALID_DOCUMENT_TYPES,
     VALID_STATUSES
 };
+
 

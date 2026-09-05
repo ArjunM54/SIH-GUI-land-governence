@@ -223,6 +223,41 @@ function getDocumentFileUrl(documentId) {
     return `${API_BASE_URL}/api/documents/${documentId}/file`;
 }
 
+async function getApplicationRequirements(appType) {
+    return await apiRequest(`/api/documents/requirements/${appType}`);
+}
+
+async function getApplicationDocuments(applicationId) {
+    return await apiRequest(`/api/documents/application/${applicationId}`);
+}
+
+async function uploadRequirementDocument(applicationId, formData) {
+    const token = window.AuthManager ? window.AuthManager.getToken() : "";
+    const response = await fetch(`${API_BASE_URL}/api/documents/application/${applicationId}/upload-requirement`, {
+        method: "POST",
+        headers: {
+            ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        },
+        body: formData
+    });
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message || `Upload failed with status ${response.status}`);
+    }
+    return data;
+}
+
+async function getOfficerDepartmentDocuments() {
+    return await apiRequest("/api/officer/documents");
+}
+
+async function verifyOfficerDocument(documentId, status, remarks) {
+    return await apiRequest(`/api/documents/${documentId}/verify`, {
+        method: "POST",
+        body: JSON.stringify({ status, remarks })
+    });
+}
+
 
 
 
@@ -268,15 +303,88 @@ async function logoutUser() {
 
 /* Citizen API */
 async function getCitizenRequests() {
-    return await apiRequest("/api/citizen/requests");
+    return await apiRequest("/api/citizen/applications");
 }
 
 async function submitCitizenRequest(data) {
-    return await apiRequest("/api/citizen/request", {
+    return await apiRequest("/api/citizen/applications/service", {
         method: "POST",
         body: JSON.stringify(data)
     });
 }
+
+async function getCitizenDashboardSummary() {
+    return await apiRequest("/api/citizen/dashboard-summary");
+}
+
+async function getCitizenMyLand() {
+    return await apiRequest("/api/citizen/my-land");
+}
+
+async function getCitizenApplications() {
+    return await apiRequest("/api/citizen/applications");
+}
+
+async function getCitizenApplicationById(id) {
+    return await apiRequest(`/api/citizen/applications/${id}`);
+}
+
+async function submitOwnerChangeApplication(data) {
+    return await apiRequest("/api/citizen/applications/owner-change", {
+        method: "POST",
+        body: JSON.stringify(data)
+    });
+}
+
+async function submitServiceApplication(data) {
+    return await apiRequest("/api/citizen/applications/service", {
+        method: "POST",
+        body: JSON.stringify(data)
+    });
+}
+
+async function resubmitApplicationDocument(appId, deptKey, documentName) {
+    return await apiRequest(`/api/citizen/applications/${appId}/resubmit-document`, {
+        method: "POST",
+        body: JSON.stringify({ deptKey, documentName })
+    });
+}
+
+async function getLandOwnershipHistory(parcelId) {
+    return await apiRequest(`/api/citizen/properties/${parcelId}/history`);
+}
+
+async function getCitizenServices() {
+    return await apiRequest("/api/citizen/services");
+}
+
+async function getCitizenDocuments() {
+    return await apiRequest("/api/citizen/documents");
+}
+
+async function getCitizenPropertyTax() {
+    return await apiRequest("/api/citizen/property-tax");
+}
+
+async function getCitizenNotifications() {
+    return await apiRequest("/api/citizen/notifications");
+}
+
+async function markNotificationRead(id) {
+    return await apiRequest(`/api/citizen/notifications/${id}/read`, { method: "PATCH" });
+}
+
+async function getCitizenProfile() {
+    return await apiRequest("/api/citizen/profile");
+}
+
+async function updateCitizenProfile(data) {
+    return await apiRequest("/api/citizen/profile", {
+        method: "PUT",
+        body: JSON.stringify(data)
+    });
+}
+
 
 /* Officer Department APIs */
 async function getOfficerDepartmentOverview(officerType) {
@@ -660,7 +768,51 @@ async function getParcelDepartmentRequests(parcelId) {
     return await apiRequest(`/api/department-requests/parcels/${parcelId}/department-requests`);
 }
 
-// Expose to window
+/* Department Officer Document Review & Stage Verification APIs */
+async function getOfficerDepartmentDocuments() {
+    return await apiRequest("/api/officer/documents");
+}
+
+async function verifyOfficerDocument(documentId, decision, remarks) {
+    return await apiRequest(`/api/officer/documents/${documentId}/verify`, {
+        method: "POST",
+        body: JSON.stringify({ decision, remarks })
+    });
+}
+
+async function updateVerificationStage(target, deptKey, decision, verificationRemarks, requestedDocument) {
+    const endpointMap = {
+        cadastral: "/api/officer/cadastral/verify-boundary",
+        ror: "/api/officer/ror/approve-mutation",
+        registration: "/api/officer/registration/approve-transfer",
+        landUse: "/api/officer/land-use/approve-conversion",
+        propertyTax: "/api/officer/property-tax/approve-clearance"
+    };
+    const endpoint = endpointMap[deptKey] || "/api/officer/cadastral/verify-boundary";
+
+    return await apiRequest(endpoint, {
+        method: "POST",
+        body: JSON.stringify({
+            parcelId: target,
+            mutationId: target,
+            registrationId: target,
+            conversionId: target,
+            requestId: target,
+            decision,
+            status: decision,
+            verificationRemarks,
+            remarks: verificationRemarks,
+            requestedDocument
+        })
+    });
+}
+
+// Expose to API object & window
+window.API = window.API || {};
+window.API.getOfficerDepartmentDocuments = getOfficerDepartmentDocuments;
+window.API.verifyOfficerDocument = verifyOfficerDocument;
+window.API.updateVerificationStage = updateVerificationStage;
+
 window.getDepartmentRequests = getDepartmentRequests;
 window.getDepartmentRequestById = getDepartmentRequestById;
 window.createDepartmentRequest = createDepartmentRequest;
@@ -672,8 +824,12 @@ window.rejectDepartmentRequest = rejectDepartmentRequest;
 window.escalateDepartmentRequest = escalateDepartmentRequest;
 window.cancelDepartmentRequest = cancelDepartmentRequest;
 window.getParcelDepartmentRequests = getParcelDepartmentRequests;
+window.getOfficerDepartmentDocuments = getOfficerDepartmentDocuments;
+window.verifyOfficerDocument = verifyOfficerDocument;
+window.updateVerificationStage = updateVerificationStage;
 
 console.log("LandGov API client initialized with Auth, Officer & Department Request methods.");
+
 
 
 

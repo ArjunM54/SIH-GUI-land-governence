@@ -286,5 +286,28 @@
     ],
     "status": "active",
     "createdAt": "2026-09-03T14:48:27.667Z"
+  },
+  {
+    "uid": "uid-citizen-1788620792751",
+    "officerId": null,
+    "name": "hariprem",
+    "email": "hari@gmail.com",
+    "password": "hari",
+    "passwordHash": "$2b$10$4S2cb2MQVeaHnatIAsiaIOx00CrX6xfQ04WPjlpyWHfbYrHSpQx4K",
+    "mobile": "6383120790",
+    "role": "citizen",
+    "officerType": null,
+    "department": null,
+    "permissions": [
+      "citizen.view",
+      "citizen.request",
+      "parcel.view"
+    ],
+    "assignedParcels": [
+      "LND-001",
+      "LND-003"
+    ],
+    "status": "active",
+    "createdAt": "2026-09-05T15:06:32.751Z"
   }
 ]

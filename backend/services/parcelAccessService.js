@@ -20,8 +20,8 @@ function canAccessParcel(user, parcelId) {
         return false;
     }
 
-    // Admin or global access override
-    if (user.role === "admin" || (Array.isArray(user.assignedParcels) && user.assignedParcels.includes("*"))) {
+    // Admin, officer, or global access override
+    if (user.role === "admin" || user.role === "officer" || (Array.isArray(user.assignedParcels) && user.assignedParcels.includes("*"))) {
         return true;
     }
 

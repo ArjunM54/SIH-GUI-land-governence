@@ -192,8 +192,10 @@ function getLandProfile(parcelId) {
             restrictions || null,
 
         utilities:
-            utilities || null
+            utilities || null,
 
+        ownershipHistory:
+            (require("../services/applicationService").getOwnershipHistory(parcel.id)) || []
     };
 
 

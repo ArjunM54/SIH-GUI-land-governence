@@ -13,9 +13,21 @@ const buildingPermissionData = require("../data/BuildingPermission");
 const propertyTaxData = require("../data/PropertyTax");
 const auditService = require("../services/auditService");
 const documentService = require("../services/documentService");
+const { updateVerificationStage, applications } = require("../services/applicationService");
 
 // Enforce authentication for all officer department routes
 router.use(requireAuth);
+
+// GET /api/officer/documents - Department-level document review queue for officer
+router.get("/documents", (req, res) => {
+    const officerType = req.user.officerType || "cadastral_officer";
+    const docs = documentService.getDocumentsForDepartment(officerType);
+    return res.json({
+        success: true,
+        count: docs.length,
+        documents: docs
+    });
+});
 
 // --- 1. CADASTRAL & SURVEY OFFICER ---
 
@@ -52,6 +64,28 @@ router.get("/cadastral/overview", requirePermission("cadastral.view"), (req, res
         landType: p.landType,
         surveyDate: p.surveyDate
     }));
+
+    // Prepend live citizen applications awaiting Cadastral boundary verification
+    const activeApps = applications.filter(a => a.status !== "COMPLETED" && a.status !== "REJECTED" && canAccessParcel(req.user, a.parcelId));
+    activeApps.forEach(a => {
+        if (a.verifications && a.verifications.cadastral && a.verifications.cadastral.status !== "APPROVED") {
+            workQueue.unshift({
+                applicationId: a.applicationId,
+                parcelId: a.parcelId,
+                surveyNo: a.surveyNumber || "145/2A",
+                village: "Ramgarh",
+                area: "4,500 sq.m",
+                task: `Citizen App: Boundary Verification (${a.type})`,
+                priority: "HIGH",
+                status: a.verifications.cadastral.status || "PENDING",
+                owner: a.currentOwner || a.citizenEmail,
+                applicant: a.citizenEmail,
+                newOwner: a.newOwner,
+                submittedDate: a.submittedDate,
+                actionType: "VERIFY_BOUNDARY"
+            });
+        }
+    });
 
     // Collect all cases and requests from authorized parcels
     const allCases = authorizedParcels.flatMap(p => p.cases || []);
@@ -147,6 +181,10 @@ router.post("/cadastral/parcels/:parcelId/verify-boundary", requirePermission("c
         status: resultStatus,
         notes: remarks || "Boundary verification action executed."
     });
+
+    // Sync application verification stage
+    const verifResult = updateVerificationStage(req.user, parcelId, "cadastral", req.body.decision || "APPROVED", remarks || "Boundary verification completed.");
+    console.log("[Cadastral Route] updateVerificationStage sync result:", verifResult);
 
     // Create audit event
     auditService.logEvent({
@@ -422,6 +460,25 @@ router.get("/ror/overview", requirePermission("ror.view"), (req, res) => {
         }
     });
 
+    // Prepend live citizen applications awaiting RoR / Ownership verification
+    const activeApps = applications.filter(a => a.status !== "COMPLETED" && a.status !== "REJECTED" && canAccessParcel(req.user, a.parcelId));
+    activeApps.forEach(a => {
+        if (a.verifications && a.verifications.ror && a.verifications.ror.status !== "APPROVED") {
+            workQueue.unshift({
+                applicationId: a.applicationId,
+                parcelId: a.parcelId,
+                surveyNo: a.surveyNumber || "SUR-101",
+                owner: a.currentOwner || a.citizenEmail,
+                proposedOwner: a.newOwner || "New Owner",
+                task: `Citizen App: Mutation & Ownership (${a.type})`,
+                priority: "HIGH",
+                status: a.verifications.ror.status || "PENDING",
+                mutationId: a.applicationId,
+                actionType: "PROCESS_MUTATION"
+            });
+        }
+    });
+
     res.json({
         success: true,
         department: "Land Records / Record of Rights Department",
@@ -525,6 +582,9 @@ router.post("/ror/parcels/:parcelId/verify-ownership", requirePermission("owners
     rorRecord.verifiedBy = req.user.officerId || req.user.name;
     rorRecord.verifiedAt = timestamp;
     rorRecord.ownershipRemarks = remarks || "Ownership verification executed by RoR officer.";
+
+    // Sync application verification stage
+    updateVerificationStage(req.user, parcelId, "ror", req.body.decision || "APPROVED", remarks || "Ownership verified by RoR officer.");
 
     // Log audit event
     auditService.logEvent({
@@ -901,6 +961,29 @@ router.get("/registration/overview", requirePermission("registration.view"), (re
             currentStage: r.currentStage || "TAX_CLEARANCE"
         }));
 
+    // Prepend live citizen applications awaiting Registration verification
+    const activeApps = applications.filter(a => a.status !== "COMPLETED" && a.status !== "REJECTED" && canAccessParcel(req.user, a.parcelId));
+    activeApps.forEach(a => {
+        if (a.verifications && a.verifications.registration && a.verifications.registration.status !== "APPROVED") {
+            workQueue.unshift({
+                applicationId: a.applicationId,
+                registrationId: a.applicationId,
+                parcelId: a.parcelId,
+                surveyNo: a.surveyNumber || "145/2A",
+                currentOwner: a.currentOwner || a.citizenEmail,
+                proposedOwner: a.newOwner || "New Owner",
+                buyer: a.newOwner || "Buyer",
+                seller: a.currentOwner || "Seller",
+                type: a.type,
+                task: `Citizen App: Property Registration & Deed (${a.type})`,
+                priority: "HIGH",
+                status: a.verifications.registration.status || "PENDING",
+                currentStage: "DEED_VERIFICATION",
+                actionType: "VERIFY_DEED"
+            });
+        }
+    });
+
     const assignedParcels = authorizedRecords.map(r => ({
         parcelId: r.parcelId,
         surveyNumber: r.surveyNumber,
@@ -1031,6 +1114,9 @@ router.post("/registration/requests/:registrationId/verify-deed", requirePermiss
     if (regRecord.checklist) regRecord.checklist.deed = regRecord.deedStatus;
     regRecord.lastUpdated = new Date().toISOString().split("T")[0];
     regRecord.updatedBy = req.user.officerId || req.user.name;
+
+    // Sync application verification stage
+    updateVerificationStage(req.user, regRecord.parcelId, "registration", req.body.decision || "APPROVED", remarks || "Deed verified by Registration officer.");
 
     auditService.logEvent({
         actor: req.user.officerId || req.user.email,
@@ -1376,6 +1462,27 @@ router.get("/land-use/overview", requirePermission("landuse.view"), (req, res) =
             currentStage: r.currentStage || "ENVIRONMENTAL_CHECK"
         }));
 
+    // Prepend live citizen applications awaiting Land Use verification
+    const activeApps = applications.filter(a => a.status !== "COMPLETED" && a.status !== "REJECTED" && canAccessParcel(req.user, a.parcelId));
+    activeApps.forEach(a => {
+        if (a.verifications && a.verifications.landUse && a.verifications.landUse.status !== "APPROVED") {
+            workQueue.unshift({
+                applicationId: a.applicationId,
+                conversionId: a.applicationId,
+                parcelId: a.parcelId,
+                surveyNo: a.surveyNumber || "145/2A",
+                currentUse: a.currentLandUse || "AGRICULTURAL",
+                requestedUse: a.requestedLandUse || "RESIDENTIAL",
+                zone: a.requestedLandUse || "Residential Zone",
+                task: `Citizen App: Land Use & Zoning (${a.type})`,
+                priority: "HIGH",
+                status: a.verifications.landUse.status || "PENDING",
+                currentStage: "PLANNING_REVIEW",
+                actionType: "PROCESS_CONVERSION"
+            });
+        }
+    });
+
     const assignedParcels = authorizedRecords.map(r => ({
         parcelId: r.parcelId,
         surveyNumber: r.surveyNumber,
@@ -1506,6 +1613,9 @@ router.post("/land-use/parcels/:parcelId/environmental-check", requirePermission
     if (landRecord.checklist) landRecord.checklist.environmental = landRecord.environmentalStatus;
     landRecord.lastUpdated = new Date().toISOString().split("T")[0];
     landRecord.updatedBy = req.user.officerId || req.user.name;
+
+    // Sync application verification stage
+    updateVerificationStage(req.user, parcelId, "landUse", req.body.decision || "APPROVED", remarks || "Environmental & Land Use check approved.");
 
     auditService.logEvent({
         actor: req.user.officerId || req.user.email,
@@ -1837,6 +1947,28 @@ router.get("/property-tax/overview", requirePermission("tax.view"), (req, res) =
             currentStage: r.currentStage || "ASSESSMENT_REVIEW"
         }));
 
+    // Prepend live citizen applications awaiting Property Tax verification
+    const activeApps = applications.filter(a => a.status !== "COMPLETED" && a.status !== "REJECTED" && canAccessParcel(req.user, a.parcelId));
+    activeApps.forEach(a => {
+        if (a.verifications && a.verifications.propertyTax && a.verifications.propertyTax.status !== "APPROVED") {
+            workQueue.unshift({
+                applicationId: a.applicationId,
+                requestId: a.applicationId,
+                parcelId: a.parcelId,
+                surveyNo: a.surveyNumber || "145/2A",
+                propertyType: a.currentLandUse || "Residential",
+                taxDemand: 8500,
+                amountPaid: 8500,
+                outstandingAmount: 0,
+                task: `Citizen App: Property Tax Clearance (${a.type})`,
+                priority: "HIGH",
+                status: a.verifications.propertyTax.status || "PENDING",
+                currentStage: "TAX_CLEARANCE",
+                actionType: "VERIFY_TAX_CLEARANCE"
+            });
+        }
+    });
+
     const assignedParcels = authorizedRecords.map(r => ({
         parcelId: r.parcelId,
         surveyNumber: r.surveyNumber,
@@ -1957,6 +2089,9 @@ router.post("/property-tax/assessments/:assessmentId/verify", requirePermission(
     taxRecord.assessmentStatus = "VERIFIED";
     taxRecord.lastUpdated = new Date().toISOString().split("T")[0];
     taxRecord.updatedBy = req.user.officerId || req.user.name;
+
+    // Sync application verification stage
+    updateVerificationStage(req.user, taxRecord.parcelId, "propertyTax", req.body.decision || "APPROVED", remarks || "Tax assessment verified by Property Tax officer.");
 
     auditService.logEvent({
         actor: req.user.officerId || req.user.email,

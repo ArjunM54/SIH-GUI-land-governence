@@ -8,110 +8,806 @@
     <link rel="stylesheet" href="css/landProfile.css">
     <link rel="stylesheet" href="css/citizen.css">
 </head>
-<body class="dashboard-layout">
+<body class="citizen-body">
 
-    <header class="dashboard-nav">
-        <div class="logo">
-            <span class="logo-icon">🌐</span>
-            <span>LandGov Citizen Portal</span>
+    <!-- MOBILE HEADER TOGGLE -->
+    <div class="mobile-header">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span>🌐</span>
+            <span style="font-weight: 700; color: #38bdf8;">LandGov Citizen</span>
         </div>
-        <div style="display: flex; align-items: center;">
-            <div id="user-badge" class="user-profile-badge">
-                <span id="user-name">Citizen</span>
-                <span style="font-size: 0.75rem; background: #0284c7; padding: 0.15rem 0.5rem; border-radius: 4px; color: #fff;">Citizen</span>
-            </div>
-            <button class="logout-btn" onclick="handleLogout()">Logout</button>
-        </div>
-    </header>
+        <button class="menu-toggle-btn" onclick="toggleSidebar()">☰ Menu</button>
+    </div>
 
-    <main class="citizen-main">
+    <div class="citizen-portal-layout">
 
-        <div class="dashboard-header-panel">
-            <h1>Welcome, <span id="welcome-name">Citizen</span></h1>
-            <p style="color: #94a3b8; margin: 0;">Access your land parcels, track department applications, view property tax clearance, and explore the GIS land map.</p>
-        </div>
-
-        <div class="grid-2col">
-            <!-- MY LAND PARCELS -->
-            <div class="card-panel">
-                <div class="card-title">🗺️ My Registered Parcels</div>
-                <div id="my-parcels-container">
-                    <table class="table-custom">
-                        <thead>
-                            <tr>
-                                <th>Parcel ID</th>
-                                <th>Village / District</th>
-                                <th>Area (sq.m)</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="my-parcels-tbody">
-                            <!-- Populated dynamically by js/citizen.js -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- MY REQUESTS & TRACKING -->
-            <div class="card-panel">
-                <div class="card-title">📋 Application & Mutation Tracking</div>
-                <div id="citizen-requests-container">
-                    <table class="table-custom">
-                        <thead>
-                            <tr>
-                                <th>Request ID</th>
-                                <th>Parcel</th>
-                                <th>Department</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="requests-tbody">
-                            <!-- Populated dynamically -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- NEW REQUEST SUBMISSION -->
-        <div class="card-panel">
-            <div class="card-title">➕ Submit New Land Service Request</div>
-            <form id="new-request-form" onsubmit="submitNewRequest(event)" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 1rem; align-items: end;">
+        <!-- ================= CITIZEN SIDEBAR ================= -->
+        <aside id="citizen-sidebar" class="citizen-sidebar">
+            <div class="sidebar-header">
+                <span style="font-size: 1.5rem;">🌐</span>
                 <div>
-                    <label style="font-size: 0.82rem; color: #94a3b8; display: block; margin-bottom: 0.3rem;">Parcel ID</label>
-                    <input type="text" id="req-parcel-id" class="form-input" placeholder="e.g. LND-001" required>
+                    <div class="sidebar-title">LANDGOV</div>
+                    <div class="sidebar-subtitle">Citizen Portal</div>
                 </div>
-                <div>
-                    <label style="font-size: 0.82rem; color: #94a3b8; display: block; margin-bottom: 0.3rem;">Request Type</label>
-                    <select id="req-type" class="form-input">
-                        <option value="Mutation Request">RoR Ownership Mutation</option>
-                        <option value="Land Use Conversion">Land Use Conversion</option>
-                        <option value="Property Tax Verification">Property Tax Verification</option>
-                        <option value="Building Permission">Building Permission Request</option>
+            </div>
+
+            <div class="citizen-profile-card">
+                <div id="sidebar-user-name" class="citizen-name">Citizen Name</div>
+                <span id="sidebar-citizen-id" class="citizen-id-tag">CIT-2026-9081</span>
+            </div>
+
+            <ul class="nav-menu">
+                <!-- 🏠 DASHBOARD -->
+                <li class="nav-item">
+                    <a id="nav-dashboard" class="nav-link active" onclick="switchTab('dashboard')">
+                        <span class="nav-link-content"><span>🏠</span> Dashboard</span>
+                    </a>
+                </li>
+
+                <!-- 📋 MY APPLICATIONS -->
+                <li class="nav-item">
+                    <a id="nav-myapps" class="nav-link" onclick="switchTab('applications', 'my')">
+                        <span class="nav-link-content"><span>📋</span> My Applications</span>
+                    </a>
+                </li>
+
+                <!-- ➕ NEW APPLICATION -->
+                <li class="nav-item">
+                    <a id="nav-newapp" class="nav-link" onclick="switchTab('applications', 'submit')">
+                        <span class="nav-link-content"><span>➕</span> New Application</span>
+                    </a>
+                </li>
+
+                <!-- 🗺️ MY LAND -->
+                <li class="nav-item">
+                    <a id="nav-myland" class="nav-link" onclick="switchTab('myland')">
+                        <span class="nav-link-content"><span>🗺️</span> My Land</span>
+                    </a>
+                </li>
+
+                <!-- 📄 MY DOCUMENTS -->
+                <li class="nav-item">
+                    <a id="nav-documents" class="nav-link" onclick="switchTab('documents')">
+                        <span class="nav-link-content"><span>📄</span> My Documents</span>
+                    </a>
+                </li>
+
+                <!-- 🔔 NOTIFICATIONS -->
+                <li class="nav-item">
+                    <a id="nav-notifications" class="nav-link" onclick="switchTab('notifications')">
+                        <span class="nav-link-content"><span>🔔</span> Notifications</span>
+                        <span id="notif-badge-count" style="background: #ef4444; color: #fff; border-radius: 10px; padding: 0.1rem 0.4rem; font-size: 0.72rem; display: none;">0</span>
+                    </a>
+                </li>
+
+                <!-- 📜 APPLICATION HISTORY -->
+                <li class="nav-item">
+                    <a id="nav-history" class="nav-link" onclick="switchTab('history')">
+                        <span class="nav-link-content"><span>📜</span> Application History</span>
+                    </a>
+                </li>
+
+                <!-- 👤 MY PROFILE -->
+                <li class="nav-item">
+                    <a id="nav-profile" class="nav-link" onclick="switchTab('profile')">
+                        <span class="nav-link-content"><span>👤</span> My Profile</span>
+                    </a>
+                </li>
+
+                <!-- ⚙ SETTINGS -->
+                <li class="nav-item">
+                    <a id="nav-settings" class="nav-link" onclick="switchTab('settings')">
+                        <span class="nav-link-content"><span>⚙</span> Settings</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <button class="logout-btn-sidebar" onclick="handleLogout()">
+                    <span>🚪</span> Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- ================= MAIN CONTENT VIEWS ================= -->
+        <main class="citizen-content">
+
+            <!-- 🏠 SECTION: DASHBOARD -->
+            <section id="section-dashboard" class="tab-section">
+                <div class="dashboard-header-panel">
+                    <h1>Welcome, <span id="welcome-name">Citizen</span></h1>
+                    <p style="color: #94a3b8; margin: 0;">Access land services, submit applications, track 5-department verifications, and download documents.</p>
+                </div>
+
+                <!-- METRICS GRID -->
+                <div class="metrics-grid-4">
+                    <div class="metric-card">
+                        <div class="metric-icon">📋</div>
+                        <div>
+                            <div class="metric-label">Applications</div>
+                            <div id="metric-applications" class="metric-value">0</div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">⏳</div>
+                        <div>
+                            <div class="metric-label">Pending</div>
+                            <div id="metric-pending" class="metric-value">0</div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">✅</div>
+                        <div>
+                            <div class="metric-label">Approved</div>
+                            <div id="metric-approved" class="metric-value">0</div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">⚠️</div>
+                        <div>
+                            <div class="metric-label">Action Needed</div>
+                            <div id="metric-action-needed" class="metric-value">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-2col">
+                    <!-- RECENT APPLICATIONS -->
+                    <div class="card-panel">
+                        <div class="card-title">
+                            <span>📋 Recent Applications</span>
+                            <button class="action-btn" onclick="switchTab('applications', 'my')" style="font-size: 0.78rem;">View All</button>
+                        </div>
+                        <div id="recent-applications-container">
+                            <table class="table-custom">
+                                <thead>
+                                    <tr>
+                                        <th>Application ID</th>
+                                        <th>Service</th>
+                                        <th>Submitted Date</th>
+                                        <th>Current Status</th>
+                                        <th>Progress</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-applications-tbody">
+                                    <tr><td colspan="6" style="text-align: center; color: #94a3b8;">Loading applications...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- RECENT NOTIFICATIONS -->
+                    <div class="card-panel">
+                        <div class="card-title">
+                            <span>🔔 Recent Notifications</span>
+                            <button class="action-btn" onclick="switchTab('notifications')" style="font-size: 0.78rem;">View All</button>
+                        </div>
+                        <div id="recent-notifications-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <div style="color: #94a3b8; text-align: center; padding: 1rem;">Loading notifications...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MY PROPERTIES OVERVIEW -->
+                <div class="card-panel">
+                    <div class="card-title">
+                        <span>🗺️ My Registered Parcels Overview</span>
+                        <button class="action-btn" onclick="switchTab('myland')" style="font-size: 0.78rem;">Manage My Land</button>
+                    </div>
+                    <div id="dash-properties-container">
+                        <table class="table-custom">
+                            <thead>
+                                <tr>
+                                    <th>Parcel ID</th>
+                                    <th>Survey Number</th>
+                                    <th>Area</th>
+                                    <th>Land Use</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-properties-tbody">
+                                <tr><td colspan="5" style="text-align: center; color: #94a3b8;">Loading properties...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GIS MAP CARD -->
+                <div class="card-panel" style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+                    <h3 style="margin: 0 0 0.5rem 0; color: #38bdf8;">Interactive GIS Land Map</h3>
+                    <p style="color: #94a3b8; max-width: 600px; margin: 0 auto 1.25rem auto; font-size: 0.9rem;">
+                        View spatial boundaries, satellite overlays, and conflict analysis on the unified GIS map.
+                    </p>
+                    <a href="index.html#map-section" class="action-btn" style="display: inline-block; text-decoration: none; padding: 0.75rem 1.5rem;">
+                        Launch Interactive GIS Map 🗺️
+                    </a>
+                </div>
+            </section>
+
+            <!-- 🗺️ SECTION: MY LAND -->
+            <section id="section-myland" class="tab-section" style="display: none;">
+                <div class="dashboard-header-panel">
+                    <h1>🗺️ My Land</h1>
+                    <p style="color: #94a3b8; margin: 0;">Access and inspect your registered land parcels and detailed ownership records. Citizens only see properties legitimately associated with their account.</p>
+                </div>
+
+                <div id="myland-cards-container">
+                    <!-- Populated dynamically by citizen.js -->
+                </div>
+            </section>
+
+            <!-- 📄 SECTION: APPLICATIONS -->
+            <section id="section-applications" class="tab-section" style="display: none;">
+                <div class="dashboard-header-panel">
+                    <h1>📄 Citizen Applications</h1>
+                    <p style="color: #94a3b8; margin: 0;">Submit land-related applications and track real-time verification across all 5 government officer departments.</p>
+                </div>
+
+                <!-- APPLICATION SUB-TABS -->
+                <div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem;">
+                    <button id="app-tab-submit" class="action-btn" onclick="switchAppSubTab('submit')">➕ Submit Application</button>
+                    <button id="app-tab-my" class="secondary-btn" onclick="switchAppSubTab('my')">📋 My Applications</button>
+                    <button id="app-tab-track" class="secondary-btn" onclick="switchAppSubTab('track')">📊 Track Application Timeline</button>
+                </div>
+
+                <!-- SUB-TAB: SUBMIT APPLICATION -->
+                <div id="app-sub-submit" class="app-sub-section">
+                    <div class="card-panel">
+                        <div class="card-title">SUBMIT APPLICATION — What would you like to apply for?</div>
+                        <p style="color: #94a3b8; font-size: 0.88rem;">Select a land service appropriate for citizens below to launch the request workflow.</p>
+
+                        <div class="service-cards-grid">
+                            <!-- OWNER CHANGE CARD -->
+                            <div class="service-selection-card">
+                                <div>
+                                    <div class="service-card-icon">🔄</div>
+                                    <div class="service-card-title">Owner Change</div>
+                                    <div class="service-card-desc">Request change of property ownership. Requires 5-department government officer verifications.</div>
+                                </div>
+                                <button class="action-btn" onclick="openOwnerChangeModal()">[ Apply ]</button>
+                            </div>
+
+                            <!-- MUTATION REQUEST CARD -->
+                            <div class="service-selection-card">
+                                <div>
+                                    <div class="service-card-icon">📝</div>
+                                    <div class="service-card-title">Mutation Request</div>
+                                    <div class="service-card-desc">Update land records (RoR) following an eligible transaction or inheritance.</div>
+                                </div>
+                                <button class="action-btn" onclick="openServiceModal('Mutation Request')">[ Apply ]</button>
+                            </div>
+
+                            <!-- PROPERTY REGISTRATION CARD -->
+                            <div class="service-selection-card">
+                                <div>
+                                    <div class="service-card-icon">🏛️</div>
+                                    <div class="service-card-title">Property Registration</div>
+                                    <div class="service-card-desc">Submit registration-related deed requests and verify stamp duty status.</div>
+                                </div>
+                                <button class="action-btn" onclick="openServiceModal('Property Registration')">[ Apply ]</button>
+                            </div>
+
+                            <!-- LAND USE REQUEST CARD -->
+                            <div class="service-selection-card">
+                                <div>
+                                    <div class="service-card-icon">🗺️</div>
+                                    <div class="service-card-title">Land Use Request</div>
+                                    <div class="service-card-desc">Request land-use change, planning permission, or zoning classification enquiry.</div>
+                                </div>
+                                <button class="action-btn" onclick="openServiceModal('Land Use Request')">[ Apply ]</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUB-TAB: MY APPLICATIONS -->
+                <div id="app-sub-my" class="app-sub-section" style="display: none;">
+                    <div class="card-panel">
+                        <div class="card-title">📋 My Submitted Applications</div>
+                        <div id="my-applications-container">
+                            <table class="table-custom">
+                                <thead>
+                                    <tr>
+                                        <th>Application ID</th>
+                                        <th>Parcel</th>
+                                        <th>Service Type</th>
+                                        <th>Submitted Date</th>
+                                        <th>Overall Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="my-applications-tbody">
+                                    <tr><td colspan="6" style="text-align: center; color: #94a3b8;">Loading applications...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUB-TAB: TRACK APPLICATION -->
+                <div id="app-sub-track" class="app-sub-section" style="display: none;">
+                    <div class="card-panel">
+                        <div class="card-title">
+                            <span>🏛️ Multi-Officer Application Tracking Timeline</span>
+                            <select id="track-app-select" class="form-input" style="width: auto; padding: 0.35rem 0.75rem;" onchange="loadTrackingDetails(this.value)">
+                                <option value="">Select Application...</option>
+                            </select>
+                        </div>
+                        <div id="tracking-detail-container">
+                            <div style="text-align: center; color: #94a3b8; padding: 2rem;">Please select an application to view its 5-department verification timeline.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 🛎️ SECTION: SERVICES -->
+            <section id="section-services" class="tab-section" style="display: none;">
+                <div class="dashboard-header-panel">
+                    <h1>Government Land Services</h1>
+                    <p style="color: #94a3b8; margin: 0;">Access LandGov services and submit land-related requests from one place.</p>
+                </div>
+
+                <div class="grid-2col" style="margin-bottom: 1.5rem;">
+                    <!-- SERVICE 1: PROPERTY REGISTRATION -->
+                    <div class="card-panel">
+                        <div class="card-title">🏛️ Property Registration</div>
+                        <p style="color: #94a3b8; font-size: 0.88rem; line-height: 1.5;">
+                            View registration details, deed numbers, stamp duty payment status, and submit registration-related requests.
+                        </p>
+                        <div id="service-reg-details" style="background: #0f172a; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #334155;">
+                            <div style="font-size: 0.85rem; color: #cbd5e1;">Loading registration data...</div>
+                        </div>
+                        <button class="action-btn" onclick="openServiceModal('Property Registration')">Submit Registration Request</button>
+                    </div>
+
+                    <!-- SERVICE 2: MUTATION REQUEST -->
+                    <div class="card-panel">
+                        <div class="card-title">📝 Mutation Request</div>
+                        <p style="color: #94a3b8; font-size: 0.88rem; line-height: 1.5;">
+                            Request an update to land records (RoR) following a legally recognized ownership or property transaction.
+                        </p>
+                        <div id="service-mut-details" style="background: #0f172a; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #334155;">
+                            <div style="font-size: 0.85rem; color: #cbd5e1;">Loading mutation status...</div>
+                        </div>
+                        <button class="action-btn" onclick="openServiceModal('Mutation Request')">Submit Mutation Request</button>
+                    </div>
+
+                    <!-- SERVICE 3: LAND USE REQUEST -->
+                    <div class="card-panel">
+                        <div class="card-title">🗺️ Land Use Request</div>
+                        <p style="color: #94a3b8; font-size: 0.88rem; line-height: 1.5;">
+                            Submit requests for land-use conversion, zoning classification enquiry, or planning permission. Routed to Land Use & Planning Officers.
+                        </p>
+                        <div id="service-lu-details" style="background: #0f172a; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #334155;">
+                            <div style="font-size: 0.85rem; color: #cbd5e1;">Loading land use records...</div>
+                        </div>
+                        <button class="action-btn" onclick="openServiceModal('Land Use Request')">Submit Land Use Request</button>
+                    </div>
+
+                    <!-- SERVICE 4: PROPERTY TAX SERVICES -->
+                    <div class="card-panel">
+                        <div class="card-title">💰 Property Tax Services</div>
+                        <p style="color: #94a3b8; font-size: 0.88rem; line-height: 1.5;">
+                            View property tax assessments, payment history, outstanding amounts, and download tax clearance receipts.
+                        </p>
+                        <div id="service-tax-details" style="background: #0f172a; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #334155;">
+                            <div style="font-size: 0.85rem; color: #cbd5e1;">Loading property tax details...</div>
+                        </div>
+                        <button class="action-btn" onclick="switchTab('tax')">Access Property Tax Portal</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 📑 SECTION: DOCUMENTS -->
+            <section id="section-documents" class="tab-section" style="display: none;">
+                <div class="dashboard-header-panel">
+                    <h1>📑 My Documents</h1>
+                    <p style="color: #94a3b8; margin: 0;">View, download, and verify digital land certificates, RoR titles, tax receipts, and issued documents.</p>
+                </div>
+
+                <div class="card-panel">
+                    <div class="card-title">
+                        <span>Documents Repository</span>
+                        <span style="font-size: 0.8rem; color: #94a3b8;">Filtered for authenticated citizen</span>
+                    </div>
+
+                    <!-- DOCUMENT CATEGORY FILTERS -->
+                    <div id="doc-category-filters" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
+                        <button class="action-btn doc-filter-btn active" onclick="filterDocsByCategory('All', this)" style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">All Documents</button>
+                        <button class="secondary-btn doc-filter-btn" onclick="filterDocsByCategory('Ownership Documents', this)" style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">Ownership Documents</button>
+                        <button class="secondary-btn doc-filter-btn" onclick="filterDocsByCategory('Registration Documents', this)" style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">Registration Documents</button>
+                        <button class="secondary-btn doc-filter-btn" onclick="filterDocsByCategory('Tax Documents', this)" style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">Tax Documents</button>
+                        <button class="secondary-btn doc-filter-btn" onclick="filterDocsByCategory('Application Documents', this)" style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">Application Documents</button>
+                        <button class="secondary-btn doc-filter-btn" onclick="filterDocsByCategory('Issued Documents', this)" style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">Issued Documents</button>
+                    </div>
+
+                    <div id="documents-table-container">
+                        <table class="table-custom">
+                            <thead>
+                                <tr>
+                                    <th>Document Name</th>
+                                    <th>Category</th>
+                                    <th>Related Property</th>
+                                    <th>Doc Number</th>
+                                    <th>Uploaded/Issued Date</th>
+                                    <th>Verification Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="documents-tbody">
+                                <tr><td colspan="7" style="text-align: center; color: #94a3b8;">Loading documents...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 💰 SECTION: PROPERTY TAX -->
+            <section id="section-tax" class="tab-section" style="display: none;">
+                <div class="dashboard-header-panel">
+                    <h1>💰 Property Tax Portal</h1>
+                    <p style="color: #94a3b8; margin: 0;">Quick access to view property tax assessments, outstanding dues, payment status, and download tax receipts.</p>
+                </div>
+
+                <div class="card-panel">
+                    <div class="card-title">Property Tax Details</div>
+                    <div id="tax-cards-container">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 🔔 SECTION: NOTIFICATIONS -->
+            <section id="section-notifications" class="tab-section" style="display: none;">
+                <div class="dashboard-header-panel">
+                    <h1>🔔 Notifications & Alerts</h1>
+                    <p style="color: #94a3b8; margin: 0;">Real-time alerts regarding application progress, officer approvals, document requests, and system updates.</p>
+                </div>
+
+                <div class="card-panel">
+                    <div class="card-title">
+                        <span>Notifications Feed</span>
+                        <button class="secondary-btn" onclick="markAllNotificationsRead()" style="font-size: 0.78rem;">Mark All as Read</button>
+                    </div>
+                    <div id="notifications-feed-container" style="display: flex; flex-direction: column; gap: 0.85rem;">
+                        <div style="text-align: center; color: #94a3b8; padding: 2rem;">Loading notifications...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 👤 SECTION: MY PROFILE -->
+            <section id="section-profile" class="tab-section" style="display: none;">
+                <div class="dashboard-header-panel">
+                    <h1>👤 My Profile</h1>
+                    <p style="color: #94a3b8; margin: 0;">View citizen credentials and update contact details. Citizen ID, Role, and Privileges are strictly managed by administrative policy.</p>
+                </div>
+
+                <div class="grid-2col">
+                    <div class="card-panel">
+                        <div class="card-title">Citizen Identity Details</div>
+                        <table class="table-custom">
+                            <tbody>
+                                <tr><th style="width: 35%;">Full Name</th><td id="prof-name">Hari Prem</td></tr>
+                                <tr><th>Citizen ID</th><td><span id="prof-id" class="citizen-id-tag">CIT-2026-9081</span></td></tr>
+                                <tr><th>Email Address</th><td id="prof-email">citizen@landgov.gov</td></tr>
+                                <tr><th>Mobile Number</th><td id="prof-mobile">6383120790</td></tr>
+                                <tr><th>Residential Address</th><td id="prof-address">145/2A, Main Road, Coimbatore</td></tr>
+                                <tr><th>Account Status</th><td><span class="status-tag tag-approved">Active</span></td></tr>
+                                <tr><th>User Role</th><td id="prof-role" style="text-transform: uppercase; font-weight: 600; color: #38bdf8;">Citizen</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="card-panel">
+                        <div class="card-title">Update Contact Information</div>
+                        <form id="profile-update-form" onsubmit="handleProfileUpdate(event)">
+                            <div class="form-group">
+                                <label class="form-label">Full Name</label>
+                                <input type="text" id="edit-name" class="form-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Mobile Number</label>
+                                <input type="text" id="edit-mobile" class="form-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Residential Address</label>
+                                <textarea id="edit-address" class="form-input" rows="3" required></textarea>
+                            </div>
+                            <div style="font-size: 0.78rem; color: #94a3b8; margin-bottom: 1rem;">
+                                Note: You cannot modify Role, Citizen ID, or Admin privileges.
+                            </div>
+                            <button type="submit" class="action-btn" style="width: 100%; padding: 0.75rem;">Save Profile Updates</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ❓ SECTION: HELP & SUPPORT -->
+            <section id="section-help" class="tab-section" style="display: none;">
+                <div class="dashboard-header-panel">
+                    <h1>❓ Help & Support</h1>
+                    <p style="color: #94a3b8; margin: 0;">Frequently Asked Questions, tracking guidance, and citizen assistance.</p>
+                </div>
+
+                <div class="grid-2col">
+                    <div class="card-panel">
+                        <div class="card-title">Frequently Asked Questions</div>
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div style="background: #0f172a; padding: 1rem; border-radius: 8px; border: 1px solid #334155;">
+                                <strong style="color: #38bdf8; display: block; margin-bottom: 0.3rem;">Q: How do I submit an owner-change request?</strong>
+                                <span style="font-size: 0.85rem; color: #cbd5e1;">Navigate to Applications → Submit Application → Owner Change. Provide parcel details, new owner information, supporting documents, and submit.</span>
+                            </div>
+
+                            <div style="background: #0f172a; padding: 1rem; border-radius: 8px; border: 1px solid #334155;">
+                                <strong style="color: #38bdf8; display: block; margin-bottom: 0.3rem;">Q: How long does verification take?</strong>
+                                <span style="font-size: 0.85rem; color: #cbd5e1;">Applications undergo verification across 5 government officer departments (Cadastral, RoR, Registration, Land Use, Property Tax). Typically completed within 3 to 7 working days.</span>
+                            </div>
+
+                            <div style="background: #0f172a; padding: 1rem; border-radius: 8px; border: 1px solid #334155;">
+                                <strong style="color: #38bdf8; display: block; margin-bottom: 0.3rem;">Q: Why are multiple officers reviewing my request?</strong>
+                                <span style="font-size: 0.85rem; color: #cbd5e1;">LandGov enforces multi-departmental governance to prevent fraudulent land transfers. All 5 departments must verify legal title, survey boundaries, deeds, zoning, and tax clearance.</span>
+                            </div>
+
+                            <div style="background: #0f172a; padding: 1rem; border-radius: 8px; border: 1px solid #334155;">
+                                <strong style="color: #38bdf8; display: block; margin-bottom: 0.3rem;">Q: How can I track my application status?</strong>
+                                <span style="font-size: 0.85rem; color: #cbd5e1;">Go to Applications → Track Application to view the step-by-step 5-department verification timeline.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-panel">
+                        <div class="card-title">Contact Support / Report an Issue</div>
+                        <form id="support-form" onsubmit="handleSupportSubmit(event)">
+                            <div class="form-group">
+                                <label class="form-label">Subject / Issue Type</label>
+                                <select id="support-subject" class="form-input">
+                                    <option value="Application Inquiry">Application Inquiry</option>
+                                    <option value="Land Record Dispute">Land Record Dispute</option>
+                                    <option value="Property Tax Inquiry">Property Tax Inquiry</option>
+                                    <option value="Technical Issue">Technical Support</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Parcel ID (Optional)</label>
+                                <input type="text" id="support-parcel" class="form-input" placeholder="e.g. LND-001">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Message / Details</label>
+                                <textarea id="support-message" class="form-input" rows="4" placeholder="Describe your issue or query..." required></textarea>
+                            </div>
+                            <button type="submit" class="action-btn" style="width: 100%; padding: 0.75rem;">Submit Ticket to Support</button>
+                        </form>
+                    </div>
+                </div>
+            <!-- 📜 SECTION: APPLICATION HISTORY -->
+            <section id="section-history" class="tab-section" style="display: none;">
+                <div class="dashboard-header-panel">
+                    <h1>📜 Application History</h1>
+                    <p style="color: #94a3b8; margin: 0;">Complete historical log of all past completed, approved, and archived land applications.</p>
+                </div>
+
+                <div class="card-panel">
+                    <div class="card-title">
+                        <span>History Log</span>
+                        <span style="font-size: 0.8rem; color: #94a3b8;">All historical submissions</span>
+                    </div>
+                    <div id="history-applications-container">
+                        <table class="table-custom">
+                            <thead>
+                                <tr>
+                                    <th>Application ID</th>
+                                    <th>Service Type</th>
+                                    <th>Property</th>
+                                    <th>Submission Date</th>
+                                    <th>Final Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-applications-tbody">
+                                <tr><td colspan="6" style="text-align: center; color: #94a3b8;">Loading application history...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ⚙ SECTION: SETTINGS -->
+            <section id="section-settings" class="tab-section" style="display: none;">
+                <div class="dashboard-header-panel">
+                    <h1>⚙ Portal Settings</h1>
+                    <p style="color: #94a3b8; margin: 0;">Manage your account preferences, notification alerts, and security settings.</p>
+                </div>
+
+                <div class="grid-2col">
+                    <div class="card-panel">
+                        <div class="card-title">🔔 Notification Preferences</div>
+                        <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+                            <label style="display: flex; align-items: center; gap: 0.75rem; color: #cbd5e1; font-size: 0.9rem;">
+                                <input type="checkbox" checked style="width: 18px; height: 18px;">
+                                Email alerts on officer verification decisions
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.75rem; color: #cbd5e1; font-size: 0.9rem;">
+                                <input type="checkbox" checked style="width: 18px; height: 18px;">
+                                Notifications when additional documents are requested
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.75rem; color: #cbd5e1; font-size: 0.9rem;">
+                                <input type="checkbox" checked style="width: 18px; height: 18px;">
+                                Property tax assessment updates
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="card-panel">
+                        <div class="card-title">🔒 Security & Authentication</div>
+                        <div style="margin-top: 1rem;">
+                            <div style="font-size: 0.88rem; color: #94a3b8; margin-bottom: 0.75rem;">Account Authentication Mode: JWT Bearer Session</div>
+                            <button class="secondary-btn" onclick="alert('Password reset link sent to your registered email.')">Change Password</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ================= MODALS ================= -->
+
+    <!-- OWNER CHANGE MODAL -->
+    <div id="owner-change-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 style="margin: 0; color: #38bdf8;">🔄 Owner Change Application</h3>
+                <button class="close-modal-btn" onclick="closeModal('owner-change-modal')">×</button>
+            </div>
+            <form id="owner-change-form" onsubmit="handleOwnerChangeSubmit(event)">
+                <div class="form-group">
+                    <label class="form-label">Select Property / Parcel ID *</label>
+                    <select id="oc-parcel-id" class="form-input" required onchange="populateCurrentOwner(this.value)">
+                        <option value="">Select your property...</option>
                     </select>
                 </div>
-                <div>
-                    <label style="font-size: 0.82rem; color: #94a3b8; display: block; margin-bottom: 0.3rem;">Target Department</label>
-                    <select id="req-dept" class="form-input">
-                        <option value="Land Records Department">Land Records Department</option>
-                        <option value="Cadastral & Survey Department">Cadastral & Survey Department</option>
-                        <option value="Registration Department">Registration Department</option>
-                        <option value="Land Use & Planning Department">Land Use & Planning Department</option>
-                        <option value="Property Tax & Municipal Department">Property Tax & Municipal Department</option>
+                <div class="form-group">
+                    <label class="form-label">Current Owner</label>
+                    <input type="text" id="oc-current-owner" class="form-input" readonly placeholder="Existing registered owner">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">New Owner Full Name *</label>
+                    <input type="text" id="oc-new-owner" class="form-input" placeholder="Enter new owner full name" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Relationship / Transaction Type *</label>
+                    <select id="oc-relationship" class="form-input" required>
+                        <option value="Sale Agreement">Sale Agreement / Deed Purchase</option>
+                        <option value="Inheritance">Inheritance / Succession</option>
+                        <option value="Gift Deed">Gift Deed</option>
+                        <option value="Partition">Family Partition</option>
                     </select>
                 </div>
-                <button type="submit" class="action-btn" style="padding: 0.75rem 1.25rem;">Submit Request</button>
+                <div class="form-group">
+                    <label class="form-label">Reason for Transfer *</label>
+                    <textarea id="oc-reason" class="form-input" rows="2" placeholder="State reason for ownership change request..." required></textarea>
+                </div>
+                <div class="form-group" style="background: #0f172a; padding: 1rem; border-radius: 8px; border: 1px solid #334155; margin-bottom: 1rem;">
+                    <label class="form-label" style="font-weight: 600; color: #38bdf8; margin-bottom: 0.5rem; display: block;">
+                        📁 Required Documents (Mapped to Reviewing Officer Departments)
+                    </label>
+                    <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-bottom: 0.25rem;">
+                                <span><strong>1. Registered Sale Deed / Transfer Instrument</strong> *</span>
+                                <span class="status-tag tag-review" style="font-size: 0.7rem;">Target: Registration & RoR</span>
+                            </div>
+                            <input type="file" id="oc-doc-saleDeed" class="form-input" accept=".pdf,.png,.jpg" style="padding: 0.35rem; font-size: 0.82rem;">
+                        </div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-bottom: 0.25rem;">
+                                <span><strong>2. Government Identity Proof</strong> (Aadhaar/PAN/Passport)</span>
+                                <span class="status-tag tag-review" style="font-size: 0.7rem;">Target: Registration</span>
+                            </div>
+                            <input type="file" id="oc-doc-idProof" class="form-input" accept=".pdf,.png,.jpg" style="padding: 0.35rem; font-size: 0.82rem;">
+                        </div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-bottom: 0.25rem;">
+                                <span><strong>3. Previous Record of Rights (RoR) / Title Copy</strong></span>
+                                <span class="status-tag tag-review" style="font-size: 0.7rem;">Target: Land Records & Cadastral</span>
+                            </div>
+                            <input type="file" id="oc-doc-previousRoR" class="form-input" accept=".pdf,.png,.jpg" style="padding: 0.35rem; font-size: 0.82rem;">
+                        </div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-bottom: 0.25rem;">
+                                <span><strong>4. Survey / Cadastral Boundary Sketch</strong></span>
+                                <span class="status-tag tag-review" style="font-size: 0.7rem;">Target: Cadastral & Survey</span>
+                            </div>
+                            <input type="file" id="oc-doc-surveyDoc" class="form-input" accept=".pdf,.png,.jpg" style="padding: 0.35rem; font-size: 0.82rem;">
+                        </div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-bottom: 0.25rem;">
+                                <span><strong>5. Land Use & Zoning Compliance Proof</strong></span>
+                                <span class="status-tag tag-review" style="font-size: 0.7rem;">Target: Land Use & Planning</span>
+                            </div>
+                            <input type="file" id="oc-doc-landUseDoc" class="form-input" accept=".pdf,.png,.jpg" style="padding: 0.35rem; font-size: 0.82rem;">
+                        </div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-bottom: 0.25rem;">
+                                <span><strong>6. Property Tax Clearance Receipt</strong></span>
+                                <span class="status-tag tag-review" style="font-size: 0.7rem;">Target: Property Tax & Municipal</span>
+                            </div>
+                            <input type="file" id="oc-doc-taxReceipt" class="form-input" accept=".pdf,.png,.jpg" style="padding: 0.35rem; font-size: 0.82rem;">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group" style="display: flex; gap: 0.5rem; align-items: flex-start; margin-top: 1rem;">
+                    <input type="checkbox" id="oc-declaration" required style="margin-top: 0.2rem;">
+                    <label for="oc-declaration" style="font-size: 0.8rem; color: #cbd5e1;">
+                        I declare that all information provided is accurate and true. I understand this request must be verified by all 5 government officer departments before ownership is updated.
+                    </label>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="secondary-btn" onclick="closeModal('owner-change-modal')">Cancel</button>
+                    <button type="submit" class="action-btn">Submit Owner Change Application</button>
+                </div>
             </form>
         </div>
+    </div>
 
-        <!-- GIS MAP LINK -->
-        <div class="card-panel" style="text-align: center; padding: 2rem;">
-            <h3 style="margin-top: 0;">Interactive GIS Land Map</h3>
-            <p style="color: #94a3b8;">Explore full GIS spatial boundaries, satellite layers, and conflict resolution across all 5 departments.</p>
-            <a href="index.html#map-section" class="primary-btn" style="display: inline-block; text-decoration: none; padding: 0.75rem 1.5rem;">Launch Interactive GIS Map</a>
+    <!-- GENERIC SERVICE REQUEST MODAL -->
+    <div id="service-request-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="service-modal-title" style="margin: 0; color: #38bdf8;">🛎️ Submit Service Request</h3>
+                <button class="close-modal-btn" onclick="closeModal('service-request-modal')">×</button>
+            </div>
+            <form id="service-request-form" onsubmit="handleGenericServiceSubmit(event)">
+                <input type="hidden" id="srv-type">
+                <div class="form-group">
+                    <label class="form-label">Target Parcel ID *</label>
+                    <select id="srv-parcel-id" class="form-input" required>
+                        <option value="">Select parcel...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Service Request Details / Reason *</label>
+                    <textarea id="srv-reason" class="form-input" rows="3" placeholder="Provide details of your request..." required></textarea>
+                </div>
+                <div id="srv-extra-fields"></div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="secondary-btn" onclick="closeModal('service-request-modal')">Cancel</button>
+                    <button type="submit" class="action-btn">Submit Request</button>
+                </div>
+            </form>
         </div>
+    </div>
 
-    </main>
+    <!-- RESUBMIT DOCUMENT MODAL -->
+    <div id="upload-doc-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 style="margin: 0; color: #38bdf8;">📤 Upload Requested Document</h3>
+                <button class="close-modal-btn" onclick="closeModal('upload-doc-modal')">×</button>
+            </div>
+            <form id="upload-doc-form" onsubmit="handleResubmitDocSubmit(event)">
+                <input type="hidden" id="resubmit-app-id">
+                <input type="hidden" id="resubmit-dept-key">
+                <div class="form-group">
+                    <label class="form-label">Application Reference ID</label>
+                    <input type="text" id="resubmit-app-display" class="form-input" readonly>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Document Title / File Name *</label>
+                    <input type="text" id="resubmit-doc-name" class="form-input" placeholder="e.g. Updated_Sale_Deed.pdf" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Select Document File *</label>
+                    <input type="file" id="resubmit-file" class="form-input" style="padding: 0.4rem;" required>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="secondary-btn" onclick="closeModal('upload-doc-modal')">Cancel</button>
+                    <button type="submit" class="action-btn">Upload & Resubmit Document</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- SCRIPTS -->
     <script src="js/firebase-config.js"></script>

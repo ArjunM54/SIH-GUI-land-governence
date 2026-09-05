@@ -149,7 +149,7 @@ router.post("/login", (req, res) => {
         auditService.logEvent({
             actor: user.email || user.officerId,
             target: user.uid,
-            action: "LOGIN_SUCCESS",
+            action: user.role === "citizen" ? "CITIZEN_LOGIN" : "LOGIN_SUCCESS",
             result: "SUCCESS",
             details: { role: user.role, officerType: user.officerType }
         });

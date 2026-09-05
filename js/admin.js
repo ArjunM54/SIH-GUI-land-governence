@@ -247,9 +247,21 @@ async function handleSavePermissions(event) {
 }
 
 async function handleLogout() {
-    await window.logoutUser();
-    window.AuthManager.clearSession();
-    window.location.href = "login.html";
+    try {
+        if (typeof window.logoutUser === "function") {
+            await window.logoutUser();
+        }
+    } catch (e) {
+        console.warn("Backend logout request ignored:", e);
+    } finally {
+        if (window.AuthManager && typeof window.AuthManager.clearSession === "function") {
+            window.AuthManager.clearSession();
+        } else {
+            sessionStorage.clear();
+            localStorage.clear();
+        }
+        window.location.href = "login.html";
+    }
 }
 
 window.openCreateOfficerModal = openCreateOfficerModal;

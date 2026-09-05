@@ -222,7 +222,7 @@ function setupOfficerSidebar() {
             </ul>
         `;
     } else {
-        const info = window.OFFICER_TYPES_INFO[officerType] || { title: "Department Officer" };
+        const info = (window.OFFICER_TYPES_INFO && window.OFFICER_TYPES_INFO[officerType]) || { title: "Department Officer", department: "Department", badgeClass: "badge-cadastral" };
         navContainer.innerHTML = `
             <div class="nav-section-title">DASHBOARD</div>
             <ul class="nav-menu">
@@ -283,7 +283,7 @@ function setupOfficerHeader() {
         badge.textContent = "Cadastral & Survey";
         badge.className = "dept-badge badge-cadastral";
     } else {
-        const info = window.OFFICER_TYPES_INFO[officerType] || { title: "Department Officer", department: "Department", badgeClass: "badge-cadastral" };
+        const info = (window.OFFICER_TYPES_INFO && window.OFFICER_TYPES_INFO[officerType]) || { title: "Department Officer", department: "Department", badgeClass: "badge-cadastral" };
         document.getElementById("officer-id-tag").textContent = currentOfficer.officerId || info.defaultOfficerId || "OFF-001";
         document.getElementById("officer-name").textContent = currentOfficer.name || "Officer";
         document.getElementById("officer-dept").textContent = currentOfficer.department || info.department;
@@ -331,10 +331,143 @@ async function loadOfficerDashboard() {
             } else {
                 renderLegacyDepartmentTable(currentOfficer.officerType, res);
             }
+
+            // Load department-assigned attached PDF documents queue
+            await loadOfficerDepartmentDocuments();
         }
     } catch (e) {
         console.error("Error loading officer dashboard:", e);
         alert(e.message || "Failed to load officer data.");
+    }
+}
+
+/* --- DEPARTMENT DOCUMENT REVIEW & Attached PDF Inspection ENGINE --- */
+
+async function loadOfficerDepartmentDocuments() {
+    const container = document.getElementById("officer-doc-queue-container");
+    const countBadge = document.getElementById("dept-docs-count");
+    if (!container) return;
+
+    try {
+        const res = await window.API.getOfficerDepartmentDocuments();
+        if (res && res.success && Array.isArray(res.documents)) {
+            if (countBadge) countBadge.textContent = `${res.documents.length} Documents`;
+            renderOfficerDocumentQueue(res.documents);
+        } else {
+            container.innerHTML = `<div style="padding: 1.5rem; text-align: center; color: #94a3b8;">No pending documents assigned to your department queue.</div>`;
+        }
+    } catch (err) {
+        console.error("Error loading department documents queue:", err);
+        container.innerHTML = `<div style="padding: 1.5rem; text-align: center; color: #94a3b8;">No pending documents found for this department.</div>`;
+    }
+}
+
+function renderOfficerDocumentQueue(docs = []) {
+    const container = document.getElementById("officer-doc-queue-container");
+    if (!container) return;
+
+    if (docs.length === 0) {
+        container.innerHTML = `
+            <div style="padding: 2rem; text-align: center; color: #94a3b8;">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">📂</div>
+                No pending documents awaiting review in your department queue.
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = `
+        <table class="govt-table">
+            <thead>
+                <tr>
+                    <th>Doc ID</th>
+                    <th>Application / Parcel</th>
+                    <th>Document Title</th>
+                    <th>Type</th>
+                    <th>Uploaded By</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${docs.map(doc => {
+                    const statusClass = doc.verificationStatus === "VERIFIED" ? "tag-approved" : (doc.verificationStatus === "REJECTED" ? "tag-rejected" : "tag-pending");
+                    return `
+                        <tr>
+                            <td><strong>${doc.documentId}</strong></td>
+                            <td>
+                                <div><strong>${doc.applicationId || 'N/A'}</strong></div>
+                                <div style="font-size: 0.75rem; color: #94a3b8;">Parcel: ${doc.parcelId}</div>
+                            </td>
+                            <td>
+                                <div><strong>${doc.title || doc.documentType}</strong></div>
+                                <div style="font-size: 0.75rem; color: #64748b;">${doc.originalFileName || doc.fileName || 'document.pdf'}</div>
+                            </td>
+                            <td><span class="status-tag" style="background: rgba(56,189,248,0.15); color:#38bdf8;">${doc.documentType}</span></td>
+                            <td>${doc.uploadedBy || 'Citizen'}</td>
+                            <td><span class="${statusClass}">${doc.verificationStatus || 'PENDING'}</span></td>
+                            <td>
+                                <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                                    <button class="btn-govt-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="openPdfViewer('${doc.documentId}', '${doc.title || doc.documentType}')">👁 View PDF</button>
+                                    <button class="btn-govt-primary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: #10b981;" onclick="handleDocumentVerifyAction('${doc.documentId}', '${doc.applicationId || doc.parcelId}', 'VERIFIED')">✓ Accept & Verify</button>
+                                    <button class="btn-govt-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; border-color: #ef4444; color: #fca5a5;" onclick="handleDocumentVerifyAction('${doc.documentId}', '${doc.applicationId || doc.parcelId}', 'REJECTED')">❌ Reject</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function openPdfViewer(documentId, title = "PDF Document") {
+    const modal = document.getElementById("pdf-viewer-modal");
+    const frame = document.getElementById("pdf-viewer-frame");
+    const titleEl = document.getElementById("pdf-viewer-title");
+    if (!modal || !frame) return;
+
+    const token = window.AuthManager ? window.AuthManager.getToken() : "";
+    if (titleEl) titleEl.textContent = `📄 Viewing Document: ${title || documentId}`;
+
+    // Set iframe src to PDF streaming endpoint
+    frame.src = `/api/officer/documents/${documentId}/view?token=${encodeURIComponent(token)}`;
+    modal.style.display = "flex";
+}
+
+function closePdfViewer() {
+    const modal = document.getElementById("pdf-viewer-modal");
+    const frame = document.getElementById("pdf-viewer-frame");
+    if (frame) frame.src = "about:blank";
+    if (modal) modal.style.display = "none";
+}
+
+async function handleDocumentVerifyAction(docId, targetAppOrParcel, decision) {
+    const remarks = prompt(`Enter officer verification notes/remarks for ${decision} action:`, `${decision === 'VERIFIED' ? 'Document inspected and verified by officer.' : 'Document rejected due to discrepancies.'}`);
+    if (remarks === null) return;
+
+    try {
+        const officerType = currentOfficer ? (currentOfficer.officerType || "cadastral_officer") : "cadastral_officer";
+        const deptMap = {
+            cadastral_officer: "cadastral",
+            land_records_officer: "ror",
+            registration_officer: "registration",
+            land_use_officer: "landUse",
+            property_tax_officer: "propertyTax"
+        };
+        const deptKey = deptMap[officerType] || "cadastral";
+
+        // Update stage status on backend
+        const res = await window.API.updateVerificationStage(targetAppOrParcel, deptKey, decision, remarks);
+        if (res && res.success) {
+            alert(`✓ Action Recorded: ${res.message || 'Document and department stage updated successfully.'}`);
+            await loadOfficerDashboard();
+        } else {
+            alert(`Operation failed: ${(res && res.message) || 'Error updating verification stage.'}`);
+        }
+    } catch (err) {
+        console.error("Error verifying document:", err);
+        alert(err.message || "Server error while verifying document.");
     }
 }
 
@@ -393,7 +526,7 @@ function renderWorkQueue(workQueue = []) {
     const headerTitle = document.getElementById("work-queue-card-title");
     const casesTitle = document.getElementById("cases-card-title");
 
-    if (headerTitle) headerTitle.textContent = "📋 PENDING CADASTRAL WORK";
+    if (headerTitle) headerTitle.textContent = "📋 PENDING CADASTRAL WORK & CITIZEN APPLICATIONS";
     if (casesTitle) casesTitle.textContent = "📁 ACTIVE CADASTRAL CASES";
     const countBadge = document.getElementById("work-queue-count");
     if (countBadge) countBadge.textContent = `${workQueue.length} items`;
@@ -409,29 +542,35 @@ function renderWorkQueue(workQueue = []) {
         <table class="table-govt">
             <thead>
                 <tr>
-                    <th>Parcel ID</th>
+                    <th>Application / Parcel ID</th>
                     <th>Survey No</th>
                     <th>Village</th>
                     <th>Area</th>
-                    <th>Task</th>
+                    <th>Task Description</th>
                     <th>Priority</th>
                     <th>Status</th>
                     <th>Action</th>
                 </tr>
             </thead>
             <tbody>
-                ${workQueue.map(item => `
+                ${workQueue.map(item => {
+                    const isCitizenApp = !!item.applicationId;
+                    const idDisplay = isCitizenApp 
+                        ? `<span class="badge-app" style="background:#2563eb; color:#fff; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:0.85rem; display:inline-block;">📄 ${item.applicationId}</span><br><small style="color:#94a3b8;">Parcel: ${item.parcelId}</small>`
+                        : `<strong>${item.parcelId}</strong>`;
+                    return `
                     <tr>
-                        <td><strong>${item.parcelId}</strong></td>
+                        <td>${idDisplay}</td>
                         <td>${item.surveyNo || 'N/A'}</td>
                         <td>${item.village || 'Demo Village'}</td>
                         <td>${item.area || 'N/A'}</td>
                         <td>${item.task}</td>
                         <td><span class="priority-${(item.priority || 'medium').toLowerCase()}">${item.priority || 'MEDIUM'}</span></td>
-                        <td><span class="status-tag ${(item.status || '').toLowerCase().includes('verified') ? 'status-verified' : 'status-pending'}">${item.status}</span></td>
+                        <td><span class="status-tag ${(item.status || '').toLowerCase().includes('verified') || (item.status || '').toLowerCase() === 'approved' ? 'status-verified' : 'status-pending'}">${item.status}</span></td>
                         <td><button class="btn-govt-primary" onclick="openParcelWorkspace('${item.parcelId}')">Review</button></td>
                     </tr>
-                `).join('')}
+                    `;
+                }).join('')}
             </tbody>
         </table>
     `;
@@ -488,7 +627,7 @@ function renderRoRWorkQueue(workQueue = []) {
     const headerTitle = document.getElementById("work-queue-card-title");
     const casesTitle = document.getElementById("cases-card-title");
 
-    if (headerTitle) headerTitle.textContent = "📋 PENDING LAND RECORD WORK";
+    if (headerTitle) headerTitle.textContent = "📋 PENDING LAND RECORD WORK & CITIZEN APPLICATIONS";
     if (casesTitle) casesTitle.textContent = "📁 ACTIVE RoR CASES";
     const countBadge = document.getElementById("work-queue-count");
     if (countBadge) countBadge.textContent = `${workQueue.length} items`;
@@ -504,27 +643,35 @@ function renderRoRWorkQueue(workQueue = []) {
         <table class="table-govt">
             <thead>
                 <tr>
-                    <th>Parcel</th>
+                    <th>Application / Parcel ID</th>
                     <th>Survey No</th>
                     <th>Current Owner</th>
-                    <th>Task</th>
+                    <th>Proposed Owner</th>
+                    <th>Task Description</th>
                     <th>Priority</th>
                     <th>Status</th>
                     <th>Action</th>
                 </tr>
             </thead>
             <tbody>
-                ${workQueue.map(item => `
+                ${workQueue.map(item => {
+                    const isCitizenApp = !!item.applicationId;
+                    const idDisplay = isCitizenApp 
+                        ? `<span class="badge-app" style="background:#2563eb; color:#fff; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:0.85rem; display:inline-block;">📄 ${item.applicationId}</span><br><small style="color:#94a3b8;">Parcel: ${item.parcelId}</small>`
+                        : `<strong>${item.parcelId}</strong>`;
+                    return `
                     <tr>
-                        <td><strong>${item.parcelId}</strong></td>
+                        <td>${idDisplay}</td>
                         <td>${item.surveyNo || 'SUR-101'}</td>
                         <td>${item.owner || 'N/A'}</td>
+                        <td>${item.proposedOwner || 'N/A'}</td>
                         <td>${item.task}</td>
                         <td><span class="priority-${(item.priority || 'medium').toLowerCase()}">${item.priority}</span></td>
-                        <td><span class="status-tag ${(item.status || '').toLowerCase().includes('verified') ? 'status-verified' : 'status-pending'}">${item.status}</span></td>
+                        <td><span class="status-tag ${(item.status || '').toLowerCase().includes('verified') || (item.status || '').toLowerCase() === 'approved' ? 'status-verified' : 'status-pending'}">${item.status}</span></td>
                         <td><button class="btn-govt-primary" onclick="openRoRParcelWorkspace('${item.parcelId}')">Review</button></td>
                     </tr>
-                `).join('')}
+                    `;
+                }).join('')}
             </tbody>
         </table>
     `;
@@ -583,7 +730,7 @@ function renderRegistrationWorkQueue(workQueue = []) {
     const headerTitle = document.getElementById("work-queue-card-title");
     const casesTitle = document.getElementById("cases-card-title");
 
-    if (headerTitle) headerTitle.textContent = "📋 PENDING REGISTRATION WORK";
+    if (headerTitle) headerTitle.textContent = "📋 PENDING REGISTRATION WORK & CITIZEN APPLICATIONS";
     if (casesTitle) casesTitle.textContent = "📁 ACTIVE REGISTRATION CASES";
     const countBadge = document.getElementById("work-queue-count");
     if (countBadge) countBadge.textContent = `${workQueue.length} items`;
@@ -599,7 +746,7 @@ function renderRegistrationWorkQueue(workQueue = []) {
         <table class="table-govt">
             <thead>
                 <tr>
-                    <th>Registration ID</th>
+                    <th>Application / Reg ID</th>
                     <th>Parcel</th>
                     <th>Survey No</th>
                     <th>Current Owner</th>
@@ -611,19 +758,25 @@ function renderRegistrationWorkQueue(workQueue = []) {
                 </tr>
             </thead>
             <tbody>
-                ${workQueue.map(item => `
+                ${workQueue.map(item => {
+                    const isCitizenApp = !!item.applicationId;
+                    const idDisplay = isCitizenApp 
+                        ? `<span class="badge-app" style="background:#2563eb; color:#fff; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:0.85rem; display:inline-block;">📄 ${item.applicationId}</span>`
+                        : `<strong>${item.registrationId || item.parcelId}</strong>`;
+                    return `
                     <tr>
-                        <td><strong>${item.registrationId}</strong></td>
+                        <td>${idDisplay}</td>
                         <td>${item.parcelId}</td>
                         <td>${item.surveyNo || 'SUR-101'}</td>
-                        <td>${item.currentOwner}</td>
-                        <td>${item.proposedOwner}</td>
-                        <td>${item.type}</td>
+                        <td>${item.currentOwner || 'N/A'}</td>
+                        <td>${item.proposedOwner || 'N/A'}</td>
+                        <td>${item.type || 'Transfer'}</td>
                         <td><span class="priority-${(item.priority || 'medium').toLowerCase()}">${item.priority}</span></td>
                         <td><span class="status-tag ${(item.status || '').toLowerCase() === 'approved' ? 'status-verified' : 'status-pending'}">${item.status}</span></td>
                         <td><button class="btn-govt-primary" onclick="openRegistrationCaseWorkspace('${item.parcelId}')">Review</button></td>
                     </tr>
-                `).join('')}
+                    `;
+                }).join('')}
             </tbody>
         </table>
     `;
@@ -2497,7 +2650,7 @@ function renderLandUseWorkQueue(workQueue = []) {
     const countBadge = document.getElementById("work-queue-count");
     const casesTitle = document.getElementById("cases-card-title");
 
-    if (headerTitle) headerTitle.textContent = "📋 PENDING LAND USE & PLANNING WORK";
+    if (headerTitle) headerTitle.textContent = "📋 PENDING LAND USE & CITIZEN APPLICATIONS";
     if (countBadge) countBadge.textContent = `${workQueue.length} items`;
     if (casesTitle) casesTitle.textContent = "📁 ACTIVE PLANNING CASES";
 
@@ -2512,7 +2665,7 @@ function renderLandUseWorkQueue(workQueue = []) {
         <table class="table-govt">
             <thead>
                 <tr>
-                    <th>Request ID</th>
+                    <th>Application / Request ID</th>
                     <th>Parcel</th>
                     <th>Survey No</th>
                     <th>Current Use</th>
@@ -2524,21 +2677,27 @@ function renderLandUseWorkQueue(workQueue = []) {
                 </tr>
             </thead>
             <tbody>
-                ${workQueue.map(w => `
+                ${workQueue.map(w => {
+                    const isCitizenApp = !!w.applicationId;
+                    const idDisplay = isCitizenApp 
+                        ? `<span class="badge-app" style="background:#2563eb; color:#fff; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:0.85rem; display:inline-block;">📄 ${w.applicationId}</span>`
+                        : `<strong>${w.requestId || w.conversionId}</strong>`;
+                    return `
                     <tr>
-                        <td><strong>${w.requestId}</strong></td>
+                        <td>${idDisplay}</td>
                         <td><span class="badge-parcel">${w.parcelId}</span></td>
                         <td>${w.surveyNo || 'SUR-101'}</td>
                         <td><span class="status-tag status-pending">${w.currentUse}</span></td>
                         <td><span class="status-tag status-review">${w.requestedUse}</span></td>
                         <td>${w.zone}</td>
                         <td><span class="priority-${(w.priority || 'high').toLowerCase()}">${w.priority}</span></td>
-                        <td><span class="status-tag status-review">${w.status}</span></td>
+                        <td><span class="status-tag ${(w.status || '').toLowerCase() === 'approved' ? 'status-verified' : 'status-review'}">${w.status}</span></td>
                         <td>
                             <button class="btn-govt-primary" onclick="openLandUseParcelWorkspace('${w.parcelId}')">Review</button>
                         </td>
                     </tr>
-                `).join('')}
+                    `;
+                }).join('')}
             </tbody>
         </table>
     `;
@@ -3089,7 +3248,7 @@ function renderPropertyTaxWorkQueue(workQueue = []) {
     const countBadge = document.getElementById("work-queue-count");
     const casesTitle = document.getElementById("cases-card-title");
 
-    if (headerTitle) headerTitle.textContent = "📋 PENDING PROPERTY TAX WORK";
+    if (headerTitle) headerTitle.textContent = "📋 PENDING PROPERTY TAX & CITIZEN APPLICATIONS";
     if (countBadge) countBadge.textContent = `${workQueue.length} items`;
     if (casesTitle) casesTitle.textContent = "📁 ACTIVE TAX CASES";
 
@@ -3104,7 +3263,7 @@ function renderPropertyTaxWorkQueue(workQueue = []) {
         <table class="table-govt">
             <thead>
                 <tr>
-                    <th>Request ID</th>
+                    <th>Application / Request ID</th>
                     <th>Parcel</th>
                     <th>Survey No</th>
                     <th>Property Type</th>
@@ -3117,9 +3276,14 @@ function renderPropertyTaxWorkQueue(workQueue = []) {
                 </tr>
             </thead>
             <tbody>
-                ${workQueue.map(w => `
+                ${workQueue.map(w => {
+                    const isCitizenApp = !!w.applicationId;
+                    const idDisplay = isCitizenApp 
+                        ? `<span class="badge-app" style="background:#2563eb; color:#fff; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:0.85rem; display:inline-block;">📄 ${w.applicationId}</span>`
+                        : `<strong>${w.requestId || w.assessmentId}</strong>`;
+                    return `
                     <tr>
-                        <td><strong>${w.requestId}</strong></td>
+                        <td>${idDisplay}</td>
                         <td><span class="badge-parcel">${w.parcelId}</span></td>
                         <td>${w.surveyNo || 'SUR-101'}</td>
                         <td>${w.propertyType}</td>
@@ -3127,12 +3291,13 @@ function renderPropertyTaxWorkQueue(workQueue = []) {
                         <td>₹ ${(w.amountPaid || 0).toLocaleString()}</td>
                         <td><span class="${w.outstandingAmount > 0 ? 'priority-high' : 'status-tag status-verified'}">₹ ${(w.outstandingAmount || 0).toLocaleString()}</span></td>
                         <td><span class="priority-${(w.priority || 'high').toLowerCase()}">${w.priority}</span></td>
-                        <td><span class="status-tag ${(w.status || '').toLowerCase() === 'cleared' ? 'status-verified' : 'status-pending'}">${w.status}</span></td>
+                        <td><span class="status-tag ${(w.status || '').toLowerCase() === 'cleared' || (w.status || '').toLowerCase() === 'approved' ? 'status-verified' : 'status-pending'}">${w.status}</span></td>
                         <td>
                             <button class="btn-govt-primary" onclick="openPropertyTaxParcelWorkspace('${w.parcelId}')">Review</button>
                         </td>
                     </tr>
-                `).join('')}
+                    `;
+                }).join('')}
             </tbody>
         </table>
     `;
@@ -3570,4 +3735,10 @@ window.handleRejectConversionSubmit = handleRejectConversionSubmit;
 window.openRequestLuInfoModal = openRequestLuInfoModal;
 window.handleRequestLuInfoSubmit = handleRequestLuInfoSubmit;
 window.handleLogout = handleLogout;
+
+window.openPdfViewer = openPdfViewer;
+window.closePdfViewer = closePdfViewer;
+window.loadOfficerDepartmentDocuments = loadOfficerDepartmentDocuments;
+window.handleDocumentVerifyAction = handleDocumentVerifyAction;
+
 

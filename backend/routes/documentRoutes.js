@@ -12,8 +12,13 @@ const {
     getDocumentById,
     getDocumentsByParcelId,
     getDocumentsByType,
+    getDocumentsByApplicationId,
+    getDocumentsForDepartment,
+    verifyDocumentRecord,
     VALID_DOCUMENT_TYPES
 } = require("../services/documentService");
+
+const { getDocumentRequirementsForType } = require("../config/documentRequirements");
 
 const {
     processDocumentUpload,
@@ -21,6 +26,7 @@ const {
 } = require("../services/documentUploadService");
 
 const { getLandProfile } = require("../data/landProfile");
+const { getApplicationById } = require("../services/applicationService");
 const { requireAuth } = require("../middleware/authMiddleware");
 const { canAccessParcel } = require("../services/parcelAccessService");
 const { filterDocumentData } = require("../services/accessControlService");
@@ -32,6 +38,179 @@ const upload = multer({
     storage,
     limits: {
         fileSize: 10 * 1024 * 1024 // 10 MB limit
+    }
+});
+
+/**
+ * GET /api/documents/requirements/:appType
+ * Returns required document metadata schema for application type
+ */
+router.get("/requirements/:appType", (req, res) => {
+    try {
+        const { appType } = req.params;
+        const requirements = getDocumentRequirementsForType(appType);
+        return res.json({
+            success: true,
+            appType: appType.toUpperCase(),
+            requirements
+        });
+    } catch (error) {
+        console.error("[Document API] Error getting requirements:", error);
+        return res.status(500).json({ success: false, message: "Error fetching requirements." });
+    }
+});
+
+/**
+ * GET /api/documents/application/:applicationId
+ * Fetch all documents associated with a specific application ID
+ */
+router.get("/application/:applicationId", requireAuth, (req, res) => {
+    try {
+        const { applicationId } = req.params;
+        const app = getApplicationById(applicationId);
+        if (!app) {
+            return res.status(404).json({ success: false, message: `Application ${applicationId} not found.` });
+        }
+
+        const docs = getDocumentsByApplicationId(applicationId);
+        return res.json({
+            success: true,
+            applicationId,
+            count: docs.length,
+            documents: docs
+        });
+    } catch (error) {
+        console.error("[Document API] Error getting application docs:", error);
+        return res.status(500).json({ success: false, message: "Error fetching application documents." });
+    }
+});
+
+/**
+ * POST /api/documents/application/:applicationId/upload-requirement
+ * Upload/resubmit a specific document requirement for an existing application
+ */
+router.post("/application/:applicationId/upload-requirement", requireAuth, (req, res, next) => {
+    upload.single("file")(req, res, (err) => {
+        if (err) {
+            return res.status(400).json({ success: false, message: err.message || "Upload error." });
+        }
+        next();
+    });
+}, async (req, res) => {
+    try {
+        const { applicationId } = req.params;
+        const { reqKey, docType } = req.body;
+        const fileObject = req.file;
+
+        const app = getApplicationById(applicationId);
+        if (!app) {
+            return res.status(404).json({ success: false, message: `Application ${applicationId} not found.` });
+        }
+
+        const requirements = getDocumentRequirementsForType(app.type);
+        const reqConfig = requirements.find(r => r.key === reqKey) || {
+            key: reqKey || "custom",
+            title: reqKey || "Document",
+            docType: docType || "SUPPORTING_DOC",
+            responsibleDepartments: ["cadastral", "ror", "registration", "landUse", "propertyTax"]
+        };
+
+        const result = await processDocumentUpload({
+            parcelId: app.parcelId,
+            docType: reqConfig.docType || docType || "OTHER",
+            title: `${reqConfig.title} - Resubmission`,
+            applicationId: app.applicationId,
+            reqKey: reqConfig.key,
+            responsibleDepartments: reqConfig.responsibleDepartments,
+            uploadedBy: req.user.email || req.user.uid
+        }, fileObject);
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        auditService.logEvent({
+            actor: req.user.email || req.user.officerId,
+            target: applicationId,
+            action: "RESUBMIT_DOCUMENT_REQUIREMENT",
+            result: "SUCCESS",
+            details: { reqKey, documentId: result.document?.documentId }
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: `Document '${reqConfig.title}' uploaded/updated successfully.`,
+            document: result.document
+        });
+    } catch (error) {
+        console.error("[Document API] Error uploading requirement:", error);
+        return res.status(500).json({ success: false, message: "Error uploading requirement." });
+    }
+});
+
+/**
+ * GET /api/documents/view/:documentId
+ * Stream PDF/Document inline for viewing in browser iframe/viewer modal
+ */
+router.get("/view/:documentId", requireAuth, (req, res) => {
+    try {
+        const { documentId } = req.params;
+        const doc = getDocumentById(documentId);
+
+        if (!doc) {
+            return res.status(404).json({ success: false, message: `Document '${documentId}' not found.` });
+        }
+
+        const filePath = resolveStoredFilePath(doc.fileName || doc.filePath);
+        if (!filePath) {
+            return res.status(404).json({ success: false, message: "Physical document file not found." });
+        }
+
+        const mimeType = doc.mimeType || (filePath.endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream');
+        res.setHeader("Content-Type", mimeType);
+        res.setHeader("Content-Disposition", `inline; filename="${doc.fileName || 'document.pdf'}"`);
+
+        return res.sendFile(filePath);
+    } catch (error) {
+        console.error("[Document API] Error streaming document view:", error);
+        return res.status(500).json({ success: false, message: "Error streaming document." });
+    }
+});
+
+/**
+ * POST /api/documents/:documentId/verify
+ * Allows officer to approve or reject a specific document assigned to their department
+ */
+router.post("/:documentId/verify", requireAuth, (req, res) => {
+    try {
+        const { documentId } = req.params;
+        const { status, remarks } = req.body; // status: 'VERIFIED' or 'REJECTED'
+
+        if (!['VERIFIED', 'REJECTED'].includes(status)) {
+            return res.status(400).json({ success: false, message: "Status must be 'VERIFIED' or 'REJECTED'." });
+        }
+
+        const updatedDoc = verifyDocumentRecord(documentId, req.user, status, remarks);
+        if (!updatedDoc) {
+            return res.status(404).json({ success: false, message: `Document '${documentId}' not found.` });
+        }
+
+        auditService.logEvent({
+            actor: req.user.officerId || req.user.email,
+            target: documentId,
+            action: "VERIFY_DOCUMENT",
+            result: "SUCCESS",
+            details: { status, remarks }
+        });
+
+        return res.json({
+            success: true,
+            message: `Document ${status.toLowerCase()} successfully by ${req.user.name || req.user.role}.`,
+            document: updatedDoc
+        });
+    } catch (error) {
+        console.error("[Document API] Error verifying document:", error);
+        return res.status(500).json({ success: false, message: error.message || "Error verifying document." });
     }
 });
 
@@ -305,7 +484,7 @@ router.get("/:documentId/file", requireAuth, (req, res) => {
             });
         }
 
-        const filePath = resolveStoredFilePath(doc);
+        const filePath = resolveStoredFilePath(doc.fileName || doc.filePath);
         if (!filePath) {
             return res.status(404).json({
                 success: false,

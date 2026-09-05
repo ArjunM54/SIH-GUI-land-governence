@@ -64,6 +64,23 @@ API RESPONSE & SECURITY AUDIT LOGGING (auditService)
 ### 1. Citizen (`role = citizen`)
 - Self-registration via `login.html` (automatically assigns `role = citizen`).
 - Access: My Land Overview, Search Parcel, Filtered Land Profile, Application Tracking, Property Tax records, interactive GIS map.
+- **Updated Citizen Sidebar Navigation**:
+  - 🏠 **Dashboard**: Overview counters, recent applications, recent notifications, registered parcels, and GIS map access.
+  - 🗺️ **My Land**: Integrated property profiles and title ownership records (`My Land` → `Land Profile`). *Note: Redundant standalone Ownership pages have been removed.*
+  - 📄 **Applications**:
+    - `Submit Application`: Citizen service selection cards (Owner Change, Mutation Request, Property Registration, Land Use Request).
+    - `My Applications`: List of active and historical submitted requests.
+    - `Track Application`: Real-time 5-department officer verification timeline tracker with progress bars and officer inspection remarks.
+  - 🛎️ **Government Land Services**:
+    - `Property Registration`: View registration details, deed numbers, and submit deed registration requests.
+    - `Mutation Request`: Submit RoR title updates following legal transactions or succession.
+    - `Land Use Request`: Form for land-use conversion, zoning classification, and site plan submissions.
+    - `Property Tax Services`: Tax assessments, dues clearance, and tax dispute applications.
+  - 📑 **Documents**: Categorized document repository (*Ownership*, *Registration*, *Tax*, *Application*, *Issued Documents*).
+  - 💰 **Property Tax**: Dedicated quick-access portal for tax dues and payment receipts.
+  - 🔔 **Notifications**: Real-time alerts for application status, 5-officer approvals/rejections, and document updates.
+  - 👤 **My Profile**: View identity details and update contact information (Role, Citizen ID, and privileges strictly locked).
+  - ❓ **Help & Support**: FAQs and support ticket submit desk.
 - Parcel Access: Restricted strictly to assigned parcels (`assignedParcels`).
 
 ### 2. Five Government Officer Types (`role = officer`)
