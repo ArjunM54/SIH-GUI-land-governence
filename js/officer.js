@@ -789,6 +789,7 @@ async function handleCreateDepartmentRequestSubmit(event) {
 
     try {
         const parcelId = document.getElementById("deptreq-parcel-id").value;
+        const surveyNumber = document.getElementById("deptreq-survey-no") ? document.getElementById("deptreq-survey-no").value : "";
         const toDepartment = document.getElementById("deptreq-to-dept").value;
         const requestType = document.getElementById("deptreq-type").value;
         const requiredWork = document.getElementById("deptreq-work").value;
@@ -798,6 +799,7 @@ async function handleCreateDepartmentRequestSubmit(event) {
 
         const payload = {
             parcelId,
+            surveyNumber,
             toDepartment,
             requestType,
             requiredWork,

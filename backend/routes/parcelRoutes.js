@@ -16,19 +16,29 @@ const auditService = require("../services/auditService");
  */
 router.get("/", requireAuth, (req, res) => {
     const userParcels = filterParcelsForUser(req.user, parcels);
+    const { getIntegratedLandProfile } = require("../data/landProfile");
+
+    const enrichedParcels = userParcels.map(p => {
+        const integrated = getIntegratedLandProfile(p.id);
+        return {
+            ...p,
+            governanceStatus: integrated ? integrated.governance.overallStatus : "VERIFIED",
+            departmentStatuses: integrated ? integrated.governance.departmentStatuses : {}
+        };
+    });
 
     auditService.logEvent({
         actor: req.user.email || req.user.officerId,
         target: "PARCEL_LIST",
         action: "VIEW_PARCELS",
         result: "SUCCESS",
-        details: { returnedCount: userParcels.length }
+        details: { returnedCount: enrichedParcels.length }
     });
 
     res.json({
         success: true,
-        count: userParcels.length,
-        data: userParcels
+        count: enrichedParcels.length,
+        data: enrichedParcels
     });
 });
 

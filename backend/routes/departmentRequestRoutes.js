@@ -528,6 +528,36 @@ router.put("/:requestId/complete", (req, res) => {
             notes: `Result: ${responseObj.result}. Remarks: ${responseObj.remarks}`
         });
 
+        // Update departmental record status for this parcel
+        const pId = (request.parcelId || "").toLowerCase();
+        const targetDeptStr = (request.to?.department || "").toLowerCase();
+
+        if (targetDeptStr.includes("cadastral") || targetDeptStr.includes("survey")) {
+            const cadastralData = require("../data/cadastral");
+            const item = cadastralData.find(c => (c.parcelId || "").toLowerCase() === pId);
+            if (item) { item.boundaryStatus = "Verified"; item.surveyStatus = "Verified"; }
+        }
+        if (targetDeptStr.includes("records") || targetDeptStr.includes("ror")) {
+            const rorData = require("../data/ror");
+            const item = rorData.find(r => (r.parcelId || "").toLowerCase() === pId);
+            if (item) { item.rorStatus = "VERIFIED"; item.ownershipStatus = "Verified"; item.mutationStatus = "Updated"; }
+        }
+        if (targetDeptStr.includes("registration")) {
+            const registrationData = require("../data/registration");
+            const item = registrationData.find(r => (r.parcelId || "").toLowerCase() === pId);
+            if (item) { item.status = "APPROVED"; item.deedStatus = "VERIFIED"; }
+        }
+        if (targetDeptStr.includes("land use") || targetDeptStr.includes("planning")) {
+            const landUseData = require("../data/landuse");
+            const item = landUseData.find(l => (l.parcelId || "").toLowerCase() === pId);
+            if (item) { item.zoningStatus = "COMPATIBLE"; item.status = "APPROVED"; }
+        }
+        if (targetDeptStr.includes("tax") || targetDeptStr.includes("municipal")) {
+            const propertyTaxData = require("../data/PropertyTax");
+            const item = propertyTaxData.find(t => (t.parcelId || "").toLowerCase() === pId);
+            if (item) { item.taxClearanceStatus = "CLEARED"; item.outstandingAmount = 0; item.status = "CLEARED"; }
+        }
+
         // Audit Trail Event
         auditService.logEvent({
             actor: officerId,

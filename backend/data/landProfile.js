@@ -258,39 +258,51 @@ function getIntegratedLandProfile(parcelId) {
         });
     }
 
+    // Check completed department requests for this parcel
+    const { getRequestsByParcel } = require("./departmentRequests");
+    const deptReqs = getRequestsByParcel(parcelId) || [];
+    const completedReqs = deptReqs.filter(r => r.status === "COMPLETED" && ["VERIFIED", "APPROVED", "CLEARED", "CONFIRMED"].includes((r.response?.result || "").toUpperCase()));
+
+    const isDeptReqCompleted = (deptKeyword) => {
+        return completedReqs.some(r => {
+            const dept = (r.to?.department || "").toLowerCase();
+            return dept.includes(deptKeyword.toLowerCase());
+        });
+    };
+
     // Department Verification Statuses
-    const cadastralStatus = (raw.cadastral?.boundaryStatus === "Verified" && raw.cadastral?.surveyStatus === "Verified")
+    const cadastralStatus = (isDeptReqCompleted("cadastral") || isDeptReqCompleted("survey") || ((raw.cadastral?.boundaryStatus || "").toLowerCase() === "verified" && (raw.cadastral?.surveyStatus || "").toLowerCase() === "verified") || (raw.cadastral?.boundaryStatus || "").toLowerCase() === "verified")
         ? "VERIFIED"
         : (raw.cadastral?.conflicts?.length > 0 ? "CONFLICT" : "REVIEW REQUIRED");
 
-    const rorStatus = (raw.ror?.rorStatus === "VERIFIED" || (raw.ror?.ownershipStatus === "Verified" && raw.ror?.mutationStatus === "Updated" && !raw.ror?.disputes?.length))
+    const rorStatus = (isDeptReqCompleted("records") || isDeptReqCompleted("ror") || (raw.ror?.rorStatus || "").toUpperCase() === "VERIFIED" || (raw.ror?.ownershipStatus || "").toLowerCase() === "verified")
         ? "VERIFIED"
         : (raw.ror?.disputes?.length > 0 ? "CONFLICT" : "REVIEW REQUIRED");
 
-    const registrationStatus = (raw.registration?.status === "APPROVED" || raw.registration?.deedStatus === "VERIFIED")
+    const registrationStatus = (isDeptReqCompleted("registration") || (raw.registration?.status || "").toUpperCase() === "APPROVED" || (raw.registration?.deedStatus || "").toUpperCase() === "VERIFIED")
         ? "VERIFIED"
-        : (["CANCELLED", "REJECTED"].includes(raw.registration?.status) ? "CONFLICT" : "REVIEW REQUIRED");
+        : (["CANCELLED", "REJECTED"].includes((raw.registration?.status || "").toUpperCase()) ? "CONFLICT" : "REVIEW REQUIRED");
 
-    const landUseStatus = (raw.landUse?.zoningStatus === "COMPATIBLE" || raw.landUse?.status === "APPROVED")
+    const landUseStatus = (isDeptReqCompleted("land use") || isDeptReqCompleted("planning") || (raw.landUse?.zoningStatus || "").toUpperCase() === "COMPATIBLE" || (raw.landUse?.status || "").toUpperCase() === "APPROVED")
         ? "VERIFIED"
-        : (raw.landUse?.zoningStatus === "INCOMPATIBLE" ? "CONFLICT" : "REVIEW REQUIRED");
+        : ((raw.landUse?.zoningStatus || "").toUpperCase() === "INCOMPATIBLE" ? "CONFLICT" : "REVIEW REQUIRED");
 
-    const taxStatus = (raw.propertyTax?.taxClearanceStatus === "CLEARED" && (raw.propertyTax?.outstandingAmount || 0) === 0)
+    const taxStatus = (isDeptReqCompleted("tax") || isDeptReqCompleted("municipal") || ((raw.propertyTax?.taxClearanceStatus || "").toUpperCase() === "CLEARED" && (raw.propertyTax?.outstandingAmount || 0) === 0) || (raw.propertyTax?.status || "").toUpperCase() === "CLEARED")
         ? "VERIFIED"
-        : ((raw.propertyTax?.outstandingAmount || 0) > 0 ? "REVIEW REQUIRED" : (raw.propertyTax?.assessmentStatus === "DISPUTED" ? "CONFLICT" : "REVIEW REQUIRED"));
+        : ((raw.propertyTax?.outstandingAmount || 0) > 0 ? "REVIEW REQUIRED" : ((raw.propertyTax?.assessmentStatus || "").toUpperCase() === "DISPUTED" ? "CONFLICT" : "REVIEW REQUIRED"));
 
-    const buildingStatus = (raw.buildingPermission?.buildingPermissionStatus === "Approved" && raw.buildingPermission?.validityStatus === "Valid")
+    const buildingStatus = (isDeptReqCompleted("building") || (raw.buildingPermission?.buildingPermissionStatus || "").toLowerCase() === "approved")
         ? "VERIFIED"
-        : (raw.buildingPermission ? (["Rejected", "Expired"].includes(raw.buildingPermission.buildingPermissionStatus) ? "CONFLICT" : "REVIEW REQUIRED") : "NOT AVAILABLE");
+        : (raw.buildingPermission ? (["rejected", "expired"].includes((raw.buildingPermission.buildingPermissionStatus || "").toLowerCase()) ? "CONFLICT" : "REVIEW REQUIRED") : "NOT AVAILABLE");
 
-    const restrictionsStatus = (raw.restrictions?.restrictionStatus === "Clear" || (!raw.restrictions?.waterBodyRestriction && !raw.restrictions?.governmentAcquisition && !raw.restrictions?.environmentalRestriction && !raw.restrictions?.roadWideningRestriction))
+    const restrictionsStatus = (isDeptReqCompleted("restriction") || (raw.restrictions?.restrictionStatus || "").toLowerCase() === "clear" || (!raw.restrictions?.waterBodyRestriction && !raw.restrictions?.governmentAcquisition && !raw.restrictions?.environmentalRestriction && !raw.restrictions?.roadWideningRestriction))
         ? "CLEAR"
-        : (raw.restrictions?.riskLevel === "High" ? "RESTRICTED" : "RESTRICTED");
+        : ((raw.restrictions?.riskLevel || "").toLowerCase() === "high" ? "RESTRICTED" : "RESTRICTED");
 
     // Overall Status Calculation
     let overallGovernanceStatus = "VERIFIED";
-    const hasCriticalConflict = allConflicts.some(c => c.severity === "HIGH" || c.status === "CONFLICT");
-    const hasPendingReview = [cadastralStatus, rorStatus, registrationStatus, landUseStatus, taxStatus, buildingStatus].includes("REVIEW REQUIRED") || (raw.propertyTax?.outstandingAmount || 0) > 0;
+    const hasCriticalConflict = allConflicts.some(c => (c.severity || "").toUpperCase() === "HIGH" || (c.status || "").toUpperCase() === "CONFLICT");
+    const hasPendingReview = [cadastralStatus, rorStatus, registrationStatus, landUseStatus, taxStatus].includes("REVIEW REQUIRED");
 
     if (hasCriticalConflict) {
         overallGovernanceStatus = "CONFLICT DETECTED";

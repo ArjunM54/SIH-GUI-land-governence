@@ -2550,8 +2550,8 @@ function showUploadDocumentModal(parcelId) {
             <div id="upload-feedback-box"></div>
 
             <div class="upload-form-group">
-                <label class="upload-form-label">Parcel ID</label>
-                <input type="text" id="upload-parcel-id" class="upload-form-input" value="${targetParcelId}" readonly>
+                <label class="upload-form-label">Parcel ID *</label>
+                <input type="text" id="upload-parcel-id" class="upload-form-input" value="${targetParcelId}">
             </div>
 
             <div class="upload-form-group">

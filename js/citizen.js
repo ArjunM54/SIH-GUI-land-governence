@@ -39,11 +39,22 @@ async function loadCitizenParcels() {
         if (userParcels.length > 0) {
             userParcels.forEach(p => {
                 const parcelId = p.id || p.parcelId;
+                const status = p.governanceStatus || p.status || "VERIFIED";
+                let statusBadge = "";
+                if (status === "REVIEW REQUIRED") {
+                    statusBadge = `<span style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 4px 10px; border-radius: 4px; font-weight: 600; font-size: 0.8rem; display: inline-block;">REVIEW REQUIRED</span>`;
+                } else if (status === "CONFLICT DETECTED") {
+                    statusBadge = `<span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 4px 10px; border-radius: 4px; font-weight: 600; font-size: 0.8rem; display: inline-block;">CONFLICT</span>`;
+                } else {
+                    statusBadge = `<span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 4px 10px; border-radius: 4px; font-weight: 600; font-size: 0.8rem; display: inline-block;">VERIFIED</span>`;
+                }
+
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
                     <td><strong>${parcelId}</strong></td>
                     <td>${p.village || p.district || 'Central'} / ${p.district || 'District'}</td>
-                    <td>${p.areaSqMeters ? p.areaSqMeters.toLocaleString() : '4,500'}</td>
+                    <td>${p.areaSqMeters ? p.areaSqMeters.toLocaleString() + ' sq.m' : (p.area || '4,500 sq.m')}</td>
+                    <td>${statusBadge}</td>
                     <td>
                         <button class="action-btn" onclick="viewParcelProfile('${parcelId}')">
                             View Land Profile
@@ -53,11 +64,11 @@ async function loadCitizenParcels() {
                 tbody.appendChild(tr);
             });
         } else {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94a3b8;">No registered parcels found.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No registered parcels found.</td></tr>`;
         }
     } catch (e) {
         console.error("Error loading citizen parcels:", e);
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #ef4444;">Unable to load parcels. Please check server.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #ef4444;">Unable to load parcels. Please check server.</td></tr>`;
     }
 }
 
