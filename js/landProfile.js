@@ -2742,85 +2742,116 @@ function renderOverviewPane(profile, overallStatus, deptStatuses, conflicts) {
     const building = profile.buildingPermission || profile.building || {};
     const restrictions = profile.restrictions || {};
     const documents = Array.isArray(profile.documents) ? profile.documents : [];
+    const pId = parcel.id || profile.parcelId || "LND-001";
 
     const getStatusTag = (status) => {
         if (status === "VERIFIED" || status === "CLEAR") return `<span class="status-badge-verified">✓ ${status}</span>`;
         if (status === "CONFLICT") return `<span class="status-badge-conflict">❌ CONFLICT</span>`;
-        if (status === "NOT AVAILABLE") return `<span style="background:#e2e8f0; color:#475569; padding:2px 6px; border-radius:3px; font-size:10px; font-weight:700;">NOT AVAILABLE</span>`;
+        if (status === "NOT AVAILABLE" || !status) return `<span style="background:#e2e8f0; color:#475569; padding:2px 6px; border-radius:3px; font-size:10px; font-weight:700;">NOT AVAILABLE</span>`;
         return `<span class="status-badge-review">⚠️ REVIEW REQUIRED</span>`;
     };
 
     const hasOutstandingTax = (propertyTax.outstandingAmount || 0) > 0;
 
+    setTimeout(() => {
+        if (typeof loadOverviewDepartmentRequests === "function") {
+            loadOverviewDepartmentRequests(pId);
+        }
+    }, 50);
+
     return `
-        <div class="govt-card-widget" style="border: 2px solid #0b1d3a;">
-            <div class="govt-card-header" style="background:#0b1d3a; color:#ffffff;">
-                <span>🏛️ INTEGRATED GOVERNANCE STATUS</span>
+        <!-- 15. QUICK ACTIONS -->
+        <div class="govt-card-widget" style="margin-bottom: 1rem;">
+            <div class="govt-card-header">⚡ QUICK ACTIONS</div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; padding: 10px;">
+                <button class="btn-govt-secondary" onclick="switchWorkspaceTab('gismap')">🗺️ View GIS</button>
+                <button class="btn-govt-primary" onclick="openCreateDepartmentRequestModal('${pId}')">📤 Department Request</button>
+                <button class="btn-govt-secondary" onclick="switchWorkspaceTab('documents')">📁 View Documents (${documents.length})</button>
+                <button class="btn-govt-secondary" onclick="switchWorkspaceTab('conflicts')">⚠️ View Conflicts (${conflicts.length})</button>
+                <button class="btn-govt-secondary" onclick="switchWorkspaceTab('timeline')">📜 View Timeline</button>
+            </div>
+        </div>
+
+        <!-- 12. OVERALL GOVERNANCE STATUS & 11. DEPARTMENT VERIFICATION -->
+        <div class="govt-card-widget" style="border: 2px solid #0b1d3a; margin-bottom: 1rem;">
+            <div class="govt-card-header" style="background:#0b1d3a; color:#ffffff; display:flex; justify-content:space-between; align-items:center;">
+                <span>🏛️ OVERALL GOVERNANCE STATUS</span>
                 <span class="${overallStatus === 'VERIFIED' ? 'status-badge-verified' : (overallStatus === 'CONFLICT DETECTED' ? 'status-badge-conflict' : 'status-badge-review')}">${overallStatus}</span>
             </div>
             
-            <div class="govt-grid-3col" style="margin-bottom: 12px;">
-                <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center;">
-                    <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">CADASTRAL</div>
-                    ${getStatusTag(deptStatuses.cadastral)}
+            <div style="padding: 12px;">
+                <div style="font-size:11px; font-weight:700; color:#475569; text-transform:uppercase; margin-bottom:8px;">DEPARTMENT VERIFICATION STATUS</div>
+                <div class="govt-grid-3col" style="margin-bottom: 12px;">
+                    <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center;">
+                        <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">CADASTRAL</div>
+                        ${getStatusTag(deptStatuses.cadastral)}
+                    </div>
+                    <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center;">
+                        <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">RoR / OWNERSHIP</div>
+                        ${getStatusTag(deptStatuses.ror)}
+                    </div>
+                    <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center;">
+                        <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">REGISTRATION</div>
+                        ${getStatusTag(deptStatuses.registration)}
+                    </div>
+                    <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center;">
+                        <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">LAND USE</div>
+                        ${getStatusTag(deptStatuses.landUse)}
+                    </div>
+                    <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center;">
+                        <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">PROPERTY TAX</div>
+                        ${getStatusTag(deptStatuses.propertyTax)}
+                    </div>
+                    <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center;">
+                        <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">BUILDING & MUNICIPAL</div>
+                        ${getStatusTag(deptStatuses.building)}
+                    </div>
+                    <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center; grid-column: span 3;">
+                        <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">RESTRICTIONS</div>
+                        ${getStatusTag(deptStatuses.restrictions)}
+                    </div>
                 </div>
-                <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center;">
-                    <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">RoR / OWNERSHIP</div>
-                    ${getStatusTag(deptStatuses.ror)}
-                </div>
-                <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center;">
-                    <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">REGISTRATION</div>
-                    ${getStatusTag(deptStatuses.registration)}
-                </div>
-                <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center;">
-                    <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">LAND USE</div>
-                    ${getStatusTag(deptStatuses.landUse)}
-                </div>
-                <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center;">
-                    <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">PROPERTY TAX</div>
-                    ${getStatusTag(deptStatuses.propertyTax)}
-                </div>
-                <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center;">
-                    <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">BUILDING & MUNICIPAL</div>
-                    ${getStatusTag(deptStatuses.building)}
-                </div>
-                <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center; grid-column: span 3;">
-                    <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">RESTRICTIONS</div>
-                    ${getStatusTag(deptStatuses.restrictions)}
-                </div>
-            </div>
 
-            <div style="background:#f1f5f9; border-left:4px solid #0b1d3a; padding:8px 12px; font-size:12px; color:#334155;">
-                <strong>Governance Summary:</strong> ${profile.governance?.summary || (overallStatus === 'VERIFIED' ? 'All departmental land records are verified and synchronized.' : 'Administrative review required for pending department verifications or outstanding dues.')}
+                <div style="background:#f1f5f9; border-left:4px solid #0b1d3a; padding:8px 12px; font-size:12px; color:#334155;">
+                    <strong>Governance Summary:</strong> ${profile.governance?.summary || (overallStatus === 'VERIFIED' ? 'All departmental land records are verified and synchronized.' : 'Administrative review required for pending department verifications or outstanding dues.')}
+                </div>
             </div>
         </div>
 
         ${hasOutstandingTax ? `
-            <div class="outstanding-tax-banner">
+            <div class="outstanding-tax-banner" style="margin-bottom: 1rem;">
                 <div>⚠️ <strong>OUTSTANDING PROPERTY TAX DUES DETECTED</strong></div>
                 <div>Amount Pending: <strong>₹${(propertyTax.outstandingAmount || 0).toLocaleString()}</strong></div>
             </div>
         ` : ''}
 
+        <!-- SUMMARIES GRID -->
         <div class="govt-grid-2col">
+            <!-- 4. PARCEL SUMMARY -->
             <div class="govt-card-widget">
-                <div class="govt-card-header">📍 PARCEL INFORMATION</div>
-                ${profileRow("Parcel ID", parcel.id || profile.parcelId)}
-                ${profileRow("Survey Number", parcel.surveyNumber || cadastral.surveyNumber)}
-                ${profileRow("Area", parcel.area || cadastral.area)}
-                ${profileRow("District", parcel.district || "Coimbatore")}
+                <div class="govt-card-header">📍 PARCEL SUMMARY</div>
+                ${profileRow("Parcel ID", pId)}
+                ${profileRow("Survey Number", parcel.surveyNumber || cadastral.surveyNumber || "SUR-101")}
+                ${profileRow("Area", parcel.area || cadastral.area || "2,400 sq.ft")}
+                ${profileRow("Land Type", parcel.landType || cadastral.landType || "Residential")}
+                ${profileRow("Current Land Use", parcel.landUse || landUse.currentLandUse || "Residential")}
+                ${profileRow("District", parcel.district || cadastral.district || "Coimbatore")}
                 ${profileRow("Taluk", cadastral.taluk || "Coimbatore South")}
-                ${profileRow("Village", parcel.village || "Demo Village")}
-                ${profileRow("Land Type", parcel.landType || cadastral.landType)}
-                ${profileRow("Current Land Use", parcel.landUse || landUse.currentLandUse)}
+                ${profileRow("Village", parcel.village || cadastral.village || "Demo Village")}
+                ${profileRow("GIS Availability", cadastral.geometryStatus || "Active Polygon Available")}
+                ${profileRow("Boundary Status", cadastral.boundaryStatus || "Verified")}
+                <div class="source-attribution-footer">
+                    <span>Source: Cadastral Department</span>
+                    <span>Verified By: ${cadastral.surveyOfficer || 'OFF-CAD-001'}</span>
+                </div>
             </div>
 
+            <!-- 5. OWNER SUMMARY -->
             <div class="govt-card-widget">
-                <div class="govt-card-header">👤 OWNER & RECORD OF RIGHTS</div>
+                <div class="govt-card-header">👤 OWNER SUMMARY</div>
                 ${profileRow("Current Owner", ror.rightsHolder || ror.ownerName || parcel.owner)}
                 ${profileRow("Ownership Type", ror.ownershipType || "Individual")}
-                ${profileRow("Ownership Share", ror.ownershipShare || "100%")}
-                ${profileRow("RoR Record Status", ror.rorStatus || "VERIFIED")}
+                ${profileRow("RoR Status", ror.rorStatus || "VERIFIED")}
                 ${profileRow("Mutation Status", ror.mutationStatus || "Updated")}
                 <div class="source-attribution-footer">
                     <span>Source: RoR Department</span>
@@ -2828,57 +2859,163 @@ function renderOverviewPane(profile, overallStatus, deptStatuses, conflicts) {
                 </div>
             </div>
 
+            <!-- 6. REGISTRATION SUMMARY -->
             <div class="govt-card-widget">
-                <div class="govt-card-header">📜 PROPERTY REGISTRATION</div>
+                <div class="govt-card-header">📜 REGISTRATION SUMMARY</div>
+                ${profileRow("Registration ID", registration.registrationId || registration.documentNumber || "REG-2026-045")}
+                ${profileRow("Latest Transaction", registration.transactionType || registration.documentType || "Sale Deed")}
+                ${profileRow("Registration Date", registration.registrationDate || registration.submissionDate || "2026-09-03")}
                 ${profileRow("Registration Status", registration.status || "APPROVED")}
-                ${profileRow("Document Number", registration.documentNumber || "DOC-REG-2026-045")}
-                ${profileRow("Document Type", registration.documentType || "Sale Deed")}
-                ${profileRow("Stamp Duty Status", registration.stampDutyStatus || "VERIFIED")}
-                ${profileRow("Encumbrance Status", registration.encumbranceStatus || "CLEAR")}
                 <div class="source-attribution-footer">
                     <span>Source: Sub-Registrar Office</span>
                     <span>Verified By: ${registration.updatedBy || 'OFF-REG-001'}</span>
                 </div>
             </div>
 
+            <!-- 7. LAND USE SUMMARY -->
             <div class="govt-card-widget">
-                <div class="govt-card-header">🏘️ LAND USE & ZONING</div>
+                <div class="govt-card-header">🏘️ LAND USE SUMMARY</div>
                 ${profileRow("Current Land Use", landUse.currentLandUse || parcel.landUse)}
-                ${profileRow("Planning Zone", landUse.currentZone || landUse.zoningName)}
+                ${profileRow("Master Plan Zone", landUse.masterPlanStatus || landUse.currentZone || "Approved Plan")}
                 ${profileRow("Zoning Status", landUse.zoningStatus || "COMPATIBLE")}
-                ${profileRow("Master Plan Zone", landUse.masterPlanStatus || "Approved Plan")}
-                ${profileRow("Environmental Status", landUse.environmentalStatus || "CLEAR")}
+                ${profileRow("Conversion Status", landUse.conversionStatus || "Approved / Developable")}
+                ${profileRow("Planning Status", landUse.developmentStatus || landUse.status || "Approved")}
                 <div class="source-attribution-footer">
                     <span>Source: Land Use Department</span>
                     <span>Verified By: ${landUse.updatedBy || 'OFF-LU-001'}</span>
                 </div>
             </div>
 
+            <!-- 8. TAX SUMMARY -->
             <div class="govt-card-widget">
-                <div class="govt-card-header">💰 PROPERTY TAX & MUNICIPAL DUES</div>
-                ${profileRow("Assessment Status", propertyTax.assessmentStatus || "VERIFIED")}
-                ${profileRow("Outstanding Amount", hasOutstandingTax ? `<span style="color:#dc2626; font-weight:800;">₹${(propertyTax.outstandingAmount).toLocaleString()} (OUTSTANDING)</span>` : '₹0 (CLEARED)')}
-                ${profileRow("Tax Status", propertyTax.paymentStatus || propertyTax.taxClearanceStatus)}
-                ${profileRow("Annual Demand", `₹${(propertyTax.annualTax || propertyTax.taxDemand || 0).toLocaleString()}`)}
+                <div class="govt-card-header">💰 TAX SUMMARY</div>
+                ${profileRow("Assessment ID", propertyTax.assessmentId || propertyTax.requestId || "PTX-2026-001")}
+                ${profileRow("Tax Year", propertyTax.taxYear || "2026-2027")}
+                ${profileRow("Tax Demand", formatCurrency(propertyTax.taxDemand || propertyTax.annualTax || 12500))}
+                ${profileRow("Tax Paid", formatCurrency(propertyTax.amountPaid !== undefined ? propertyTax.amountPaid : 12500))}
+                ${profileRow("Outstanding", hasOutstandingTax ? `<span style="color:#dc2626; font-weight:800;">₹${(propertyTax.outstandingAmount).toLocaleString()}</span>` : '₹0 (CLEARED)')}
+                ${profileRow("Payment Status", propertyTax.paymentStatus || "Paid")}
+                ${profileRow("Tax Clearance", propertyTax.taxClearanceStatus || "CLEARED")}
                 <div class="source-attribution-footer">
                     <span>Source: Property Tax Department</span>
                     <span>Verified By: ${propertyTax.assignedOfficer || 'OFF-TAX-001'}</span>
                 </div>
             </div>
 
+            <!-- 9. BUILDING SUMMARY -->
             <div class="govt-card-widget">
-                <div class="govt-card-header">🏗️ BUILDING & MUNICIPAL PERMISSION</div>
+                <div class="govt-card-header">🏗️ BUILDING SUMMARY</div>
+                ${profileRow("Municipal Property ID", propertyTax.municipalPropertyId || building.municipalPropertyId || "MUN-PROP-001")}
+                ${profileRow("Building Type", building.approvedBuildingType || "Residential Structure")}
+                ${profileRow("Built-up Area", building.maximumBuiltUpArea || propertyTax.builtUpArea || "4,000 sq.ft")}
+                ${profileRow("Floors", building.maximumFloors || propertyTax.numberOfFloors || 2)}
                 ${profileRow("Building Permission", building.buildingPermissionStatus || "Approved")}
-                ${profileRow("Approved Type", building.approvedBuildingType || "Residential Structure")}
-                ${profileRow("Permission Status", building.validityStatus || "Valid")}
-                ${profileRow("Municipal Record Status", building.documentStatus || "Verified")}
+                ${profileRow("Building Status", building.validityStatus || building.documentStatus || "Valid")}
                 <div class="source-attribution-footer">
                     <span>Source: Municipal Administration</span>
                     <span>Verified By: OFF-MUN-001</span>
                 </div>
             </div>
+
+            <!-- 10. RESTRICTIONS SUMMARY -->
+            <div class="govt-card-widget" style="grid-column: span 2;">
+                <div class="govt-card-header">🚧 RESTRICTIONS SUMMARY</div>
+                <div class="govt-grid-2col">
+                    <div>
+                        ${profileRow("Court Restriction", restrictions.courtRestriction ? '<span style="color:#dc2626; font-weight:700;">RESTRICTION PRESENT</span>' : '<span style="color:#10b981; font-weight:700;">CLEAR</span>')}
+                        ${profileRow("Government Acquisition", restrictions.governmentAcquisition ? '<span style="color:#dc2626; font-weight:700;">RESTRICTION PRESENT</span>' : '<span style="color:#10b981; font-weight:700;">CLEAR</span>')}
+                        ${profileRow("Environmental Restriction", restrictions.environmentalRestriction ? '<span style="color:#dc2626; font-weight:700;">RESTRICTION PRESENT</span>' : '<span style="color:#10b981; font-weight:700;">CLEAR</span>')}
+                        ${profileRow("Forest Restriction", restrictions.forestRestriction ? '<span style="color:#dc2626; font-weight:700;">RESTRICTION PRESENT</span>' : '<span style="color:#10b981; font-weight:700;">CLEAR</span>')}
+                    </div>
+                    <div>
+                        ${profileRow("Water Body Restriction", restrictions.waterBodyRestriction ? '<span style="color:#dc2626; font-weight:700;">RESTRICTION PRESENT</span>' : '<span style="color:#10b981; font-weight:700;">CLEAR</span>')}
+                        ${profileRow("Heritage Restriction", restrictions.heritageRestriction ? '<span style="color:#dc2626; font-weight:700;">RESTRICTION PRESENT</span>' : '<span style="color:#10b981; font-weight:700;">CLEAR</span>')}
+                        ${profileRow("Development Restriction", restrictions.developmentRestriction ? '<span style="color:#dc2626; font-weight:700;">RESTRICTION PRESENT</span>' : '<span style="color:#10b981; font-weight:700;">CLEAR</span>')}
+                    </div>
+                </div>
+                <div class="source-attribution-footer">
+                    <span>Source: Restrictions Registry</span>
+                    <span>Verified By: ${restrictions.updatedBy || 'OFF-REG-001'}</span>
+                </div>
+            </div>
+
+            <!-- 14. DEPARTMENT REQUESTS -->
+            <div class="govt-card-widget" style="grid-column: span 2;">
+                <div class="govt-card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>📤 DEPARTMENT REQUESTS</span>
+                    <button class="btn-govt-primary" style="padding: 2px 8px; font-size: 11px;" onclick="openCreateDepartmentRequestModal('${pId}')">+ Department Request</button>
+                </div>
+                <div id="overview-dept-requests-container" style="padding: 8px;">
+                    <div class="governance-loading">
+                        <div class="loading-spinner-small"></div>
+                        <span>Loading department requests...</span>
+                    </div>
+                </div>
+            </div>
         </div>
     `;
+}
+
+async function loadOverviewDepartmentRequests(parcelId) {
+    const container = document.getElementById("overview-dept-requests-container");
+    if (!container) return;
+    try {
+        const token = window.AuthManager ? window.AuthManager.getToken() : "";
+        const res = await fetch(`http://localhost:5000/api/department-requests?parcelId=${parcelId}`, {
+            headers: {
+                "Content-Type": "application/json",
+                ...(token ? { "Authorization": `Bearer ${token}` } : {})
+            }
+        });
+        if (!res.ok) throw new Error("Failed to fetch requests");
+        const result = await res.json();
+        const requests = (result.data || result.requests || []).filter(r => r.parcelId === parcelId);
+
+        if (!requests || requests.length === 0) {
+            container.innerHTML = `<div style="color: #64748b; font-size: 12px; padding: 8px; text-align: center;">No department requests for this parcel.</div>`;
+            return;
+        }
+
+        let html = `
+            <table class="govt-table-compact" style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                <thead>
+                    <tr style="background: #f1f5f9; text-align: left;">
+                        <th style="padding: 6px; border: 1px solid #cbd5e1;">Request ID</th>
+                        <th style="padding: 6px; border: 1px solid #cbd5e1;">From</th>
+                        <th style="padding: 6px; border: 1px solid #cbd5e1;">To</th>
+                        <th style="padding: 6px; border: 1px solid #cbd5e1;">Work</th>
+                        <th style="padding: 6px; border: 1px solid #cbd5e1;">Status</th>
+                        <th style="padding: 6px; border: 1px solid #cbd5e1;">Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        requests.forEach(r => {
+            const dateStr = r.createdAt ? r.createdAt.substring(0, 10) : '2026-09-05';
+            const fromDept = r.from?.department || r.fromDepartment || 'Department';
+            const toDept = r.to?.department || r.toDepartment || 'Department';
+            const work = r.requiredWork || r.requestType || 'Verification';
+            const statusClass = r.status === 'COMPLETED' ? 'status-badge-verified' : (r.status === 'PENDING' ? 'status-badge-review' : 'status-badge-conflict');
+
+            html += `
+                <tr>
+                    <td style="padding: 6px; border: 1px solid #cbd5e1;"><strong>${r.requestId}</strong></td>
+                    <td style="padding: 6px; border: 1px solid #cbd5e1;">${fromDept}</td>
+                    <td style="padding: 6px; border: 1px solid #cbd5e1;">→ ${toDept}</td>
+                    <td style="padding: 6px; border: 1px solid #cbd5e1;">${work}</td>
+                    <td style="padding: 6px; border: 1px solid #cbd5e1;"><span class="${statusClass}">${r.status}</span></td>
+                    <td style="padding: 6px; border: 1px solid #cbd5e1;">${dateStr}</td>
+                </tr>
+            `;
+        });
+
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+    } catch (e) {
+        console.error("Error loading overview department requests:", e);
+        container.innerHTML = `<div style="color: #64748b; font-size: 12px; padding: 8px;">No department requests for this parcel.</div>`;
+    }
 }
 
 function renderGisMapPane(profile) {
@@ -3539,6 +3676,275 @@ window.loadParcelDepartmentRequestsInProfile = loadParcelDepartmentRequestsInPro
 window.initIntegratedWorkspaceMap = initIntegratedWorkspaceMap;
 window.profileRow = profileRow;
 window.formatCurrency = formatCurrency;
+
+/* =========================================================
+   GLOBAL DEPARTMENT REQUEST MODAL HELPERS
+   ========================================================= */
+
+window.closeModal = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = "none";
+};
+
+document.addEventListener("click", function(e) {
+    if (e.target && e.target.classList && e.target.classList.contains("modal-overlay")) {
+        e.target.style.display = "none";
+    }
+});
+
+const GLOBAL_DEPARTMENT_WORK_OPTIONS = {
+    "Cadastral & Survey Department": [
+        { value: "VERIFY_BOUNDARY", label: "VERIFY BOUNDARY (Boundary Verification)" },
+        { value: "FIELD_SURVEY", label: "FIELD SURVEY (Demarcation Survey)" },
+        { value: "SUBDIVISION_CHECK", label: "SUBDIVISION CHECK (Subdivision Assessment)" }
+    ],
+    "Land Records Department": [
+        { value: "VERIFY_CURRENT_OWNER", label: "VERIFY CURRENT OWNER (Ownership Verification)" },
+        { value: "MUTATION_RECORD_CHECK", label: "MUTATION RECORD CHECK (Patta/RoR Verification)" },
+        { value: "DISPUTE_CLEARANCE", label: "DISPUTE CLEARANCE (Title Objection Check)" }
+    ],
+    "Registration Department": [
+        { value: "VERIFY_DEED_AUTHENTICITY", label: "VERIFY DEED AUTHENTICITY (Encumbrance Check)" },
+        { value: "STAMP_DUTY_CLEARANCE", label: "STAMP DUTY CLEARANCE (Challan Verification)" },
+        { value: "PREVIOUS_TITLE_SEARCH", label: "PREVIOUS TITLE SEARCH (Chain of Title)" }
+    ],
+    "Land Use & Planning Department": [
+        { value: "ZONING_CLEARANCE", label: "ZONING CLEARANCE (Master Plan Zoning Check)" },
+        { value: "NOC_LAND_USE_CHANGE", label: "NOC LAND USE CHANGE (Conversion Eligibility)" },
+        { value: "SETBACK_COMPLIANCE", label: "SETBACK COMPLIANCE (Road Access / Setback)" }
+    ],
+    "Property Tax & Municipal Department": [
+        { value: "PROPERTY_TAX_CLEARANCE", label: "PROPERTY TAX CLEARANCE (Dues Check)" },
+        { value: "MUNICIPAL_ASSESSMENT_VERIFY", label: "MUNICIPAL ASSESSMENT VERIFY (Built-up Area)" },
+        { value: "UTILITY_NOC", label: "UTILITY NOC (Water/Sewer Connection Status)" }
+    ]
+};
+
+window.handleTargetDeptChange = function(targetDept) {
+    const workSelect = document.getElementById("deptreq-work");
+    if (!workSelect) return;
+
+    workSelect.innerHTML = `<option value="">Select Required Work...</option>`;
+    let matchedOptions = GLOBAL_DEPARTMENT_WORK_OPTIONS[targetDept];
+    if (!matchedOptions) {
+        const lower = (targetDept || "").toLowerCase();
+        for (const [key, options] of Object.entries(GLOBAL_DEPARTMENT_WORK_OPTIONS)) {
+            if (key.toLowerCase().includes(lower) || lower.includes(key.toLowerCase())) {
+                matchedOptions = options;
+                break;
+            }
+        }
+    }
+    const options = matchedOptions || [];
+    options.forEach(opt => {
+        const el = document.createElement("option");
+        el.value = opt.value;
+        el.textContent = opt.label;
+        workSelect.appendChild(el);
+    });
+};
+
+window.openCreateDepartmentRequestModal = function(parcelId, defaultToDept = "", defaultWork = "") {
+    let modal = document.getElementById("modal-department-request");
+    if (!modal) {
+        createGlobalDepartmentRequestModalHTML();
+        modal = document.getElementById("modal-department-request");
+    }
+
+    const user = (typeof currentOfficer !== 'undefined' && currentOfficer) ? currentOfficer : (typeof currentUser !== 'undefined' && currentUser ? currentUser : (window.AuthManager ? window.AuthManager.getUser() : null));
+    const userName = user ? (user.name || user.email || 'Citizen / Applicant') : 'Citizen';
+    const userId = user ? (user.officerId || user.uid || 'CIT-001') : 'CIT-001';
+    const userDept = user ? (user.department || 'Citizen Applicant Portal') : 'Citizen Applicant Portal';
+
+    const pId = parcelId || "LND-001";
+    if (document.getElementById("deptreq-parcel-id")) {
+        document.getElementById("deptreq-parcel-id").value = pId;
+    }
+    if (document.getElementById("deptreq-survey-no")) {
+        const profile = window.selectedLandProfile || {};
+        const surNo = (profile.parcel?.surveyNumber || profile.cadastral?.surveyNumber || "SUR-101");
+        document.getElementById("deptreq-survey-no").value = surNo;
+    }
+    if (document.getElementById("deptreq-from-officer")) {
+        document.getElementById("deptreq-from-officer").value = `${userName} (${userId})`;
+    }
+    if (document.getElementById("deptreq-from-dept")) {
+        document.getElementById("deptreq-from-dept").value = userDept;
+    }
+
+    const toDeptSelect = document.getElementById("deptreq-to-dept");
+    if (toDeptSelect) {
+        if (defaultToDept) {
+            toDeptSelect.value = defaultToDept;
+            window.handleTargetDeptChange(defaultToDept);
+            if (defaultWork && document.getElementById("deptreq-work")) {
+                document.getElementById("deptreq-work").value = defaultWork;
+            }
+        } else {
+            toDeptSelect.value = "";
+            if (document.getElementById("deptreq-work")) {
+                document.getElementById("deptreq-work").innerHTML = `<option value="">Select Target Department First...</option>`;
+            }
+        }
+    }
+
+    if (document.getElementById("deptreq-reason")) document.getElementById("deptreq-reason").value = "";
+    if (document.getElementById("deptreq-expected")) document.getElementById("deptreq-expected").value = "";
+    if (document.getElementById("deptreq-priority")) document.getElementById("deptreq-priority").value = "NORMAL";
+
+    if (modal) modal.style.display = "flex";
+};
+
+window.handleCreateDepartmentRequestSubmit = async function(event) {
+    event.preventDefault();
+    const btn = document.getElementById("btn-submit-dept-req");
+    if (btn) btn.disabled = true;
+
+    try {
+        const user = (typeof currentOfficer !== 'undefined' && currentOfficer) ? currentOfficer : (typeof currentUser !== 'undefined' && currentUser ? currentUser : (window.AuthManager ? window.AuthManager.getUser() : null));
+        const userName = user ? (user.name || user.email || 'Citizen') : 'Citizen';
+        const userId = user ? (user.officerId || user.uid || 'CIT-001') : 'CIT-001';
+        const userDept = user ? (user.department || 'Citizen Applicant Portal') : 'Citizen Applicant Portal';
+
+        const parcelId = document.getElementById("deptreq-parcel-id").value;
+        const surveyNumber = document.getElementById("deptreq-survey-no") ? document.getElementById("deptreq-survey-no").value : "";
+        const toDepartment = document.getElementById("deptreq-to-dept").value;
+        const requestType = document.getElementById("deptreq-type").value;
+        const requiredWork = document.getElementById("deptreq-work").value;
+        const priority = document.getElementById("deptreq-priority").value;
+        const reason = document.getElementById("deptreq-reason").value;
+        const expectedResponse = document.getElementById("deptreq-expected").value;
+
+        const payload = {
+            parcelId,
+            surveyNumber,
+            toDepartment,
+            requestType,
+            requiredWork,
+            priority,
+            reason,
+            expectedResponse,
+            fromOfficerId: userId,
+            fromOfficerName: userName,
+            fromDepartment: userDept
+        };
+
+        const res = await window.createDepartmentRequest(payload);
+        if (res && res.success) {
+            alert("Department action request submitted successfully.");
+            window.closeModal("modal-department-request");
+            if (typeof loadOfficerDashboard === "function") loadOfficerDashboard();
+            if (typeof loadCitizenRequests === "function") loadCitizenRequests();
+            if (typeof loadOverviewDepartmentRequests === "function") loadOverviewDepartmentRequests(parcelId);
+            if (document.getElementById("generic-records-container") && typeof loadAndRenderDepartmentRequestsTab === "function") {
+                loadAndRenderDepartmentRequestsTab(document.getElementById("generic-records-container"));
+            }
+        } else {
+            alert((res && res.message) || "Failed to create department request.");
+        }
+    } catch (e) {
+        alert(e.message || "Failed to send request.");
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+};
+
+function createGlobalDepartmentRequestModalHTML() {
+    if (document.getElementById("modal-department-request")) return;
+    const div = document.createElement("div");
+    div.id = "modal-department-request";
+    div.className = "modal-overlay";
+    div.style.display = "none";
+    div.innerHTML = `
+        <div class="modal-card" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>📤 REQUEST DEPARTMENT ACTION</h3>
+                <button class="close-modal-btn" onclick="closeModal('modal-department-request')">×</button>
+            </div>
+            <form onsubmit="handleCreateDepartmentRequestSubmit(event)">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <div class="form-group">
+                        <label>Parcel ID *</label>
+                        <input type="text" id="deptreq-parcel-id" class="form-input" placeholder="Enter Parcel ID (e.g. LND-001)" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Survey Number *</label>
+                        <input type="text" id="deptreq-survey-no" class="form-input" placeholder="Enter Survey Number (e.g. SUR-101)" required>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <div class="form-group">
+                        <label>Requested From</label>
+                        <input type="text" id="deptreq-from-officer" class="form-input" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>From Department</label>
+                        <input type="text" id="deptreq-from-dept" class="form-input" readonly>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <div class="form-group">
+                        <label>Request To (Department) *</label>
+                        <select id="deptreq-to-dept" class="form-input" onchange="handleTargetDeptChange(this.value)" required>
+                            <option value="">Select Target Department...</option>
+                            <option value="Cadastral & Survey Department">Cadastral & Survey Department</option>
+                            <option value="Land Records Department">Land Records / RoR Department</option>
+                            <option value="Registration Department">Registration Department</option>
+                            <option value="Land Use & Planning Department">Land Use & Planning Department</option>
+                            <option value="Property Tax & Municipal Department">Property Tax & Municipal Department</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Request Type *</label>
+                        <select id="deptreq-type" class="form-input" required>
+                            <option value="VERIFY">VERIFY (Verify Information)</option>
+                            <option value="PROVIDE_INFORMATION">PROVIDE INFORMATION (Provide Data)</option>
+                            <option value="CLEARANCE">CLEARANCE (Provide Clearance)</option>
+                            <option value="CONFIRM">CONFIRM (Confirm Record Status)</option>
+                            <option value="REVIEW">REVIEW (Review Dispute/Conflict)</option>
+                            <option value="CORRECTION_REQUEST">CORRECTION REQUEST (Request Record Correction)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <div class="form-group">
+                        <label>Required Work *</label>
+                        <select id="deptreq-work" class="form-input" required>
+                            <option value="">Select Target Department First...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Priority *</label>
+                        <select id="deptreq-priority" class="form-input" required>
+                            <option value="NORMAL">NORMAL (Standard Processing - 3 Days)</option>
+                            <option value="HIGH">HIGH (Priority Processing - 2 Days)</option>
+                            <option value="URGENT">URGENT (Immediate Processing - 1 Day)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Reason for Request *</label>
+                    <textarea id="deptreq-reason" class="form-input" rows="3" placeholder="Specify statutory or verification reason for department request..." required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Expected Response / Remarks (Optional)</label>
+                    <input type="text" id="deptreq-expected" class="form-input" placeholder="e.g. Boundary verification report, tax clearance certificate, owner ledger copy...">
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn-govt-secondary" onclick="closeModal('modal-department-request')">Cancel</button>
+                    <button type="submit" class="btn-govt-primary" id="btn-submit-dept-req">Send Request</button>
+                </div>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(div);
+}
 
 
 
