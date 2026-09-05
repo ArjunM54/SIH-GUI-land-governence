@@ -35,22 +35,22 @@ const registrationData = [
         registrationFee: 38000,
         paymentReference: "PAY-STAMP-2026-8891",
         paymentDate: "2026-09-01",
-        status: "PENDING",
-        currentStage: "TAX_CLEARANCE",
+        status: "APPROVED",
+        currentStage: "COMPLETED",
         checklist: {
             cadastral: "VERIFIED",
             ror: "VERIFIED",
             deed: "VERIFIED",
             stampDuty: "VERIFIED",
             encumbrance: "CLEAR",
-            taxClearance: "PENDING",
+            taxClearance: "CLEARED",
             landUse: "VERIFIED",
             restrictions: "CLEAR"
         },
         deedStatus: "VERIFIED",
         stampDutyStatus: "VERIFIED",
         encumbranceStatus: "CLEAR",
-        taxClearanceStatus: "PENDING",
+        taxClearanceStatus: "CLEARED",
         landUseStatus: "VERIFIED",
         restrictionStatus: "CLEAR",
         lastUpdated: "2026-09-03",
@@ -75,18 +75,7 @@ const registrationData = [
                 status: "Completed"
             }
         ],
-        requests: [
-            {
-                requestId: "REQ-TAX-001",
-                toDepartment: "Property Tax & Municipal Department",
-                fromDepartment: "Registration Department",
-                parcelId: "LND-001",
-                request: "Verify property tax clearance before registration REG-2026-045.",
-                priority: "HIGH",
-                status: "PENDING",
-                createdAt: "2026-09-03T10:00:00Z"
-            }
-        ]
+        requests: []
     },
     {
         registrationId: "REG-2026-002",

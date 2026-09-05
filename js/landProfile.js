@@ -13,14 +13,13 @@
    1. OPEN COMPLETE LAND PROFILE
    ========================================================= */
 
+/* =========================================================
+   1. OPEN INTEGRATED LAND PARCEL WORKSPACE
+   ========================================================= */
+
 async function openCompleteLandProfile(parcelId) {
+    console.log("Opening Integrated Land Parcel Workspace:", parcelId);
 
-    console.log(
-        "Opening complete land profile:",
-        parcelId
-    );
-
-    /* Track active parcel for stale-request protection */
     window.activeLandProfileParcelId = parcelId;
     if (typeof closeAuditModal === "function") {
         closeAuditModal();
@@ -28,53 +27,46 @@ async function openCompleteLandProfile(parcelId) {
 
     createLandProfilePanel();
 
+    const panel = document.getElementById("land-profile-panel");
+    panel.classList.add("integrated-workspace", "active");
 
-
-    const panel =
-        document.getElementById(
-            "land-profile-panel"
-        );
-
-
-    const content =
-        document.getElementById(
-            "land-profile-content"
-        );
-
-
-    const parcelTitle =
-        document.getElementById(
-            "land-profile-parcel-id"
-        );
-
-
-    parcelTitle.textContent =
-        parcelId;
-
-
-    panel.classList.add("active");
-
-
-    /* Loading */
-
-    content.innerHTML = `
-
-        <div class="land-profile-loading">
-
-            <div class="loading-spinner"></div>
-
-            <p>
-                Loading complete land information...
-            </p>
-
+    panel.innerHTML = `
+        <div class="integrated-header">
+            <div class="govt-branding-row">
+                <div class="govt-brand-title">
+                    <span class="govt-emblem">🏛️</span>
+                    <div>
+                        <div class="govt-main-heading">LANDGOV</div>
+                        <div class="govt-sub-heading">INTEGRATED LAND PROFILE</div>
+                    </div>
+                </div>
+                <div class="workspace-actions-group">
+                    <button class="btn-govt-print" onclick="printIntegratedLandProfile()">🖨️ PRINT LAND PROFILE</button>
+                    <button class="btn-govt-close" onclick="closeLandProfile()">✕ CLOSE</button>
+                </div>
+            </div>
+            <div class="header-metadata-grid">
+                <div class="meta-field-item">
+                    <span class="meta-field-label">Parcel ID</span>
+                    <span class="meta-field-value">${parcelId}</span>
+                </div>
+                <div class="meta-field-item">
+                    <span class="meta-field-label">Loading Status</span>
+                    <span class="meta-field-value">Fetching Department Records...</span>
+                </div>
+            </div>
         </div>
-
+        <div class="integrated-workspace-body">
+            <div class="land-profile-loading">
+                <div class="loading-spinner"></div>
+                <p>Loading integrated land profile across all departments...</p>
+            </div>
+        </div>
     `;
-
 
     try {
         const token = window.AuthManager ? window.AuthManager.getToken() : "";
-        const response = await fetch(`http://localhost:5000/api/land-profile/${parcelId}`, {
+        const response = await fetch(`http://localhost:5000/api/parcels/${parcelId}/integrated-profile`, {
             headers: {
                 "Content-Type": "application/json",
                 ...(token ? { "Authorization": `Bearer ${token}` } : {})
@@ -82,210 +74,225 @@ async function openCompleteLandProfile(parcelId) {
         });
 
         if (!response.ok) {
-            let errMsg = "Unable to load land profile. Please try again.";
-            if (response.status === 401) {
-                errMsg = "Your session has expired. Please login again.";
-            } else if (response.status === 403) {
-                errMsg = "You are not authorized to view this parcel.";
-            } else if (response.status === 404) {
-                errMsg = "Land profile not found.";
-            }
+            let errMsg = "Unable to load integrated land profile. Please try again.";
+            if (response.status === 401) errMsg = "Your session has expired. Please login again.";
+            else if (response.status === 403) errMsg = "You are not authorized to view this parcel.";
+            else if (response.status === 404) errMsg = "Parcel integrated profile not found.";
             throw new Error(errMsg);
         }
 
         const result = await response.json();
-
-        if (!result.success) {
-            throw new Error(result.message || "Land profile not found");
-        }
+        if (!result.success) throw new Error(result.message || "Parcel not found");
 
         const landProfile = result.data || result;
         window.selectedLandProfile = landProfile;
 
-        console.log("Complete land profile received:", landProfile);
-
-        /* Check for stale request before rendering */
-        if (window.activeLandProfileParcelId !== parcelId) {
-            console.log("Ignored stale land profile response for parcel:", parcelId);
-            return;
-        }
-
-        renderLandProfile(landProfile);
-
-        /* Asynchronous background updates if functions exist */
-        if (typeof window.fetchGovernanceStatus === "function") {
-            window.fetchGovernanceStatus(parcelId);
-        }
-        if (typeof window.fetchParcelDocuments === "function") {
-            window.fetchParcelDocuments(parcelId);
-        }
-    }
-
-    catch (error) {
-
         if (window.activeLandProfileParcelId !== parcelId) return;
 
-        console.error(
-            "Land profile error:",
-            error
-        );
+        renderLandProfile(landProfile);
+    } catch (error) {
+        if (window.activeLandProfileParcelId !== parcelId) return;
+        console.error("Integrated land profile error:", error);
 
-
-        content.innerHTML = `
-
-            <div class="land-profile-error">
-
-                <h3>
-                    Unable to load land information
-                </h3>
-
-                <p>
-                    ${error.message}
-                </p>
-
+        panel.innerHTML = `
+            <div class="integrated-header">
+                <div class="govt-branding-row">
+                    <div class="govt-brand-title">
+                        <span class="govt-emblem">🏛️</span>
+                        <div>
+                            <div class="govt-main-heading">LANDGOV</div>
+                            <div class="govt-sub-heading">INTEGRATED LAND PROFILE</div>
+                        </div>
+                    </div>
+                    <div class="workspace-actions-group">
+                        <button class="btn-govt-close" onclick="closeLandProfile()">✕ CLOSE</button>
+                    </div>
+                </div>
             </div>
-
+            <div class="integrated-workspace-body">
+                <div class="land-profile-error">
+                    <h3>Unable to load land profile</h3>
+                    <p>${error.message}</p>
+                </div>
+            </div>
         `;
-
     }
-
 }
-
 
 /* =========================================================
    2. CREATE PANEL
    ========================================================= */
 
 function createLandProfilePanel() {
+    if (document.getElementById("land-profile-panel")) return;
 
-    if (
-        document.getElementById(
-            "land-profile-panel"
-        )
-    ) {
-
-        return;
-
-    }
-
-
-    const panel =
-        document.createElement("div");
-
-
-    panel.id =
-        "land-profile-panel";
-
-
-    panel.innerHTML = `
-
-        <div class="land-profile-header">
-
-            <div>
-
-                <div class="land-profile-title">
-
-                    Complete Land Profile
-
-                </div>
-
-                <div
-                    id="land-profile-parcel-id"
-                    class="land-profile-subtitle"
-                >
-                    Select a parcel
-                </div>
-
-            </div>
-
-
-            <button
-                class="land-profile-close"
-                onclick="closeLandProfile()"
-            >
-
-                ×
-
-            </button>
-
-        </div>
-
-
-        <div
-            id="land-profile-content"
-            class="land-profile-content"
-        >
-
-            <div class="land-profile-empty">
-
-                Click a parcel to view
-                complete land information.
-
-            </div>
-
-        </div>
-
-    `;
-
-
-    document.body.appendChild(
-        panel
-    );
-
+    const panel = document.createElement("div");
+    panel.id = "land-profile-panel";
+    document.body.appendChild(panel);
 }
 
-
 /* =========================================================
-   3. RENDER COMPLETE PROFILE
+   3. RENDER INTEGRATED WORKSPACE
    ========================================================= */
 
-function renderLandProfile(
-    profile
-) {
+function renderLandProfile(profile) {
+    const panel = document.getElementById("land-profile-panel");
+    if (!panel) return;
+    panel.classList.add("integrated-workspace", "active");
 
-    const content =
-        document.getElementById(
-            "land-profile-content"
-        );
+    const parcel = profile.parcel || {};
+    const cadastral = profile.cadastral || {};
+    const ror = profile.ror || profile.ownership || {};
+    const landUse = profile.landUse || {};
+    const registration = profile.registration || {};
+    const propertyTax = profile.propertyTax || profile.tax || {};
+    const building = profile.buildingPermission || profile.building || {};
+    const restrictions = profile.restrictions || {};
+    const utilities = profile.utilities || {};
+    const documents = Array.isArray(profile.documents) ? profile.documents : [];
+    const conflicts = Array.isArray(profile.conflicts) ? profile.conflicts : [];
+    const timeline = Array.isArray(profile.timeline) ? profile.timeline : [];
+    const auditLogs = Array.isArray(profile.audit) ? profile.audit : [];
+    const gov = profile.governance || {};
 
+    const overallStatus = gov.overallStatus || "VERIFIED";
+    let overallBadgeClass = "status-badge-verified";
+    if (overallStatus === "REVIEW REQUIRED") overallBadgeClass = "status-badge-review";
+    if (overallStatus === "CONFLICT DETECTED") overallBadgeClass = "status-badge-conflict";
 
-    const parcel =
-        profile.parcel || {};
+    const deptStatuses = gov.departmentStatuses || {
+        cadastral: cadastral.boundaryStatus === "Verified" ? "VERIFIED" : "REVIEW REQUIRED",
+        ror: ror.rorStatus === "VERIFIED" ? "VERIFIED" : "REVIEW REQUIRED",
+        registration: registration.status === "APPROVED" ? "VERIFIED" : "REVIEW REQUIRED",
+        landUse: landUse.zoningStatus === "COMPATIBLE" ? "VERIFIED" : "REVIEW REQUIRED",
+        propertyTax: (propertyTax.outstandingAmount || 0) === 0 ? "VERIFIED" : "REVIEW REQUIRED",
+        building: building.buildingPermissionStatus === "Approved" ? "VERIFIED" : "NOT AVAILABLE",
+        restrictions: restrictions.restrictionStatus === "Clear" ? "CLEAR" : "RESTRICTED"
+    };
 
+    panel.innerHTML = `
+        <div class="integrated-header">
+            <div class="govt-branding-row">
+                <div class="govt-brand-title">
+                    <span class="govt-emblem">🏛️</span>
+                    <div>
+                        <div class="govt-main-heading">LANDGOV</div>
+                        <div class="govt-sub-heading">INTEGRATED LAND PROFILE</div>
+                    </div>
+                </div>
+                <div class="workspace-actions-group">
+                    <button class="btn-govt-print" onclick="printIntegratedLandProfile()">🖨️ PRINT LAND PROFILE</button>
+                    <button class="btn-govt-close" onclick="closeLandProfile()">✕ CLOSE</button>
+                </div>
+            </div>
 
-    const cadastral =
-        profile.cadastral || {};
+            <div class="header-metadata-grid">
+                <div class="meta-field-item">
+                    <span class="meta-field-label">Parcel ID</span>
+                    <span class="meta-field-value">${parcel.id || profile.parcelId}</span>
+                </div>
+                <div class="meta-field-item">
+                    <span class="meta-field-label">Survey Number</span>
+                    <span class="meta-field-value">${parcel.surveyNumber || cadastral.surveyNumber || "SUR-101"}</span>
+                </div>
+                <div class="meta-field-item">
+                    <span class="meta-field-label">Location</span>
+                    <span class="meta-field-value">${parcel.village || "Demo Village"}, ${parcel.district || "Coimbatore"}</span>
+                </div>
+                <div class="meta-field-item">
+                    <span class="meta-field-label">Overall Governance Status</span>
+                    <div><span class="${overallBadgeClass}">${overallStatus}</span></div>
+                </div>
+            </div>
+        </div>
 
+        <div class="workspace-submeta-bar">
+            <span><strong>Last Updated:</strong> ${gov.lastUpdated || "2026-09-03"}</span>
+            <span><strong>Data Sources:</strong> Cadastral, RoR, Registration, Land Use, Property Tax, Municipal</span>
+            <span><strong>Verification Status:</strong> ${overallStatus === "VERIFIED" ? "✓ All Department Records Synchronized" : "⚠️ Administrative Review Required"}</span>
+        </div>
 
-    const ror =
-        profile.ror || {};
+        <div class="workspace-nav-tabs" id="workspace-nav-tabs">
+            <button class="workspace-tab-btn active" onclick="switchWorkspaceTab('overview')">OVERVIEW</button>
+            <button class="workspace-tab-btn" onclick="switchWorkspaceTab('gismap')">GIS MAP</button>
+            <button class="workspace-tab-btn" onclick="switchWorkspaceTab('ownership')">OWNERSHIP / RoR</button>
+            <button class="workspace-tab-btn" onclick="switchWorkspaceTab('registration')">REGISTRATION</button>
+            <button class="workspace-tab-btn" onclick="switchWorkspaceTab('landuse')">LAND USE</button>
+            <button class="workspace-tab-btn" onclick="switchWorkspaceTab('tax')">PROPERTY TAX</button>
+            <button class="workspace-tab-btn" onclick="switchWorkspaceTab('building')">BUILDING & MUNICIPAL</button>
+            <button class="workspace-tab-btn" onclick="switchWorkspaceTab('restrictions')">RESTRICTIONS</button>
+            <button class="workspace-tab-btn" onclick="switchWorkspaceTab('documents')">DOCUMENTS (${documents.length})</button>
+            <button class="workspace-tab-btn" onclick="switchWorkspaceTab('conflicts')">CONFLICTS (${conflicts.length})</button>
+            <button class="workspace-tab-btn" onclick="switchWorkspaceTab('timeline')">TIMELINE</button>
+            <button class="workspace-tab-btn" onclick="switchWorkspaceTab('audit')">AUDIT</button>
+        </div>
 
+        <div class="integrated-workspace-body" id="integrated-workspace-body">
+            <div class="tab-pane-content active" id="tab-pane-overview">
+                ${renderOverviewPane(profile, overallStatus, deptStatuses, conflicts)}
+            </div>
 
-    const landUse =
-        profile.landUse || {};
+            <div class="tab-pane-content" id="tab-pane-gismap">
+                ${renderGisMapPane(profile)}
+            </div>
 
+            <div class="tab-pane-content" id="tab-pane-ownership">
+                ${renderOwnershipPane(profile)}
+            </div>
 
-    const registration =
-        profile.registration || {};
+            <div class="tab-pane-content" id="tab-pane-registration">
+                ${renderRegistrationPane(profile)}
+            </div>
 
+            <div class="tab-pane-content" id="tab-pane-landuse">
+                ${renderLandUsePane(profile)}
+            </div>
 
-    const propertyTax =
-        profile.propertyTax || {};
+            <div class="tab-pane-content" id="tab-pane-tax">
+                ${renderPropertyTaxPane(profile)}
+            </div>
 
+            <div class="tab-pane-content" id="tab-pane-building">
+                ${renderBuildingMunicipalPane(profile)}
+            </div>
 
-    const building =
-        profile.buildingPermission || {};
+            <div class="tab-pane-content" id="tab-pane-restrictions">
+                ${renderRestrictionsPane(profile)}
+            </div>
 
+            <div class="tab-pane-content" id="tab-pane-documents">
+                ${renderDocumentsPane(profile)}
+            </div>
 
-    const restrictions =
-        profile.restrictions || {};
+            <div class="tab-pane-content" id="tab-pane-conflicts">
+                ${renderConflictsPane(profile)}
+            </div>
 
+            <div class="tab-pane-content" id="tab-pane-timeline">
+                ${renderTimelinePane(profile)}
+            </div>
 
-    const utilities =
-        profile.utilities || {};
+            <div class="tab-pane-content" id="tab-pane-audit">
+                ${renderAuditPane(profile)}
+            </div>
+        </div>
+    `;
 
+    initIntegratedWorkspaceMap(parcel);
+}
 
-    content.innerHTML = `
+function renderOverviewPane(profile, overallStatus, deptStatuses, conflicts) {
+    const parcel = profile.parcel || {};
+    const cadastral = profile.cadastral || {};
+    const ror = profile.ror || profile.ownership || {};
+    const landUse = profile.landUse || {};
+    const registration = profile.registration || {};
+    const propertyTax = profile.propertyTax || profile.tax || {};
+    const building = profile.buildingPermission || profile.building || {};
+    const restrictions = profile.restrictions || {};
+    const utilities = profile.utilities || {};
+
+    return `
 
         <!-- =================================================
              0. GOVERNANCE STATUS CONTAINER
@@ -2681,5 +2688,770 @@ window.closeDocumentModal = closeDocumentModal;
 window.showUploadDocumentModal = showUploadDocumentModal;
 window.closeUploadDocumentModal = closeUploadDocumentModal;
 window.handleUploadDocumentSubmit = handleUploadDocumentSubmit;
+
+/* =========================================================
+   PHASE 12 — INTEGRATED LAND PARCEL WORKSPACE PANE RENDERERS
+   ========================================================= */
+
+window.switchWorkspaceTab = function(tabId) {
+    const tabs = document.querySelectorAll('.workspace-tab-btn');
+    tabs.forEach(btn => btn.classList.remove('active'));
+
+    const activeBtn = Array.from(tabs).find(b => b.getAttribute('onclick')?.includes(`'${tabId}'`));
+    if (activeBtn) activeBtn.classList.add('active');
+
+    const panes = document.querySelectorAll('.tab-pane-content');
+    panes.forEach(p => p.classList.remove('active'));
+
+    const activePane = document.getElementById(`tab-pane-${tabId}`);
+    if (activePane) activePane.classList.add('active');
+
+    if (tabId === 'gismap' && window.integratedMap) {
+        setTimeout(() => { window.integratedMap.invalidateSize(); }, 150);
+    }
+};
+
+window.printIntegratedLandProfile = function() {
+    window.print();
+};
+
+window.closeLandProfile = function() {
+    const panel = document.getElementById("land-profile-panel");
+    if (panel) {
+        panel.classList.remove("active", "integrated-workspace");
+    }
+    if (window.integratedMap) {
+        window.integratedMap.remove();
+        window.integratedMap = null;
+    }
+};
+
+function renderOverviewPane(profile, overallStatus, deptStatuses, conflicts) {
+    const parcel = profile.parcel || {};
+    const cadastral = profile.cadastral || {};
+    const ror = profile.ror || profile.ownership || {};
+    const landUse = profile.landUse || {};
+    const registration = profile.registration || {};
+    const propertyTax = profile.propertyTax || profile.tax || {};
+    const building = profile.buildingPermission || profile.building || {};
+    const restrictions = profile.restrictions || {};
+    const documents = Array.isArray(profile.documents) ? profile.documents : [];
+
+    const getStatusTag = (status) => {
+        if (status === "VERIFIED" || status === "CLEAR") return `<span class="status-badge-verified">✓ ${status}</span>`;
+        if (status === "CONFLICT") return `<span class="status-badge-conflict">❌ CONFLICT</span>`;
+        if (status === "NOT AVAILABLE") return `<span style="background:#e2e8f0; color:#475569; padding:2px 6px; border-radius:3px; font-size:10px; font-weight:700;">NOT AVAILABLE</span>`;
+        return `<span class="status-badge-review">⚠️ REVIEW REQUIRED</span>`;
+    };
+
+    const hasOutstandingTax = (propertyTax.outstandingAmount || 0) > 0;
+
+    return `
+        <div class="govt-card-widget" style="border: 2px solid #0b1d3a;">
+            <div class="govt-card-header" style="background:#0b1d3a; color:#ffffff;">
+                <span>🏛️ INTEGRATED GOVERNANCE STATUS</span>
+                <span class="${overallStatus === 'VERIFIED' ? 'status-badge-verified' : (overallStatus === 'CONFLICT DETECTED' ? 'status-badge-conflict' : 'status-badge-review')}">${overallStatus}</span>
+            </div>
+            
+            <div class="govt-grid-3col" style="margin-bottom: 12px;">
+                <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center;">
+                    <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">CADASTRAL</div>
+                    ${getStatusTag(deptStatuses.cadastral)}
+                </div>
+                <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center;">
+                    <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">RoR / OWNERSHIP</div>
+                    ${getStatusTag(deptStatuses.ror)}
+                </div>
+                <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center;">
+                    <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">REGISTRATION</div>
+                    ${getStatusTag(deptStatuses.registration)}
+                </div>
+                <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center;">
+                    <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">LAND USE</div>
+                    ${getStatusTag(deptStatuses.landUse)}
+                </div>
+                <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center;">
+                    <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">PROPERTY TAX</div>
+                    ${getStatusTag(deptStatuses.propertyTax)}
+                </div>
+                <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center;">
+                    <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">BUILDING & MUNICIPAL</div>
+                    ${getStatusTag(deptStatuses.building)}
+                </div>
+                <div style="background:#f8fafc; padding:8px; border:1px solid #cbd5e1; text-align:center; grid-column: span 3;">
+                    <div style="font-size:10px; font-weight:700; color:#64748b; margin-bottom:4px;">RESTRICTIONS</div>
+                    ${getStatusTag(deptStatuses.restrictions)}
+                </div>
+            </div>
+
+            <div style="background:#f1f5f9; border-left:4px solid #0b1d3a; padding:8px 12px; font-size:12px; color:#334155;">
+                <strong>Governance Summary:</strong> ${profile.governance?.summary || (overallStatus === 'VERIFIED' ? 'All departmental land records are verified and synchronized.' : 'Administrative review required for pending department verifications or outstanding dues.')}
+            </div>
+        </div>
+
+        ${hasOutstandingTax ? `
+            <div class="outstanding-tax-banner">
+                <div>⚠️ <strong>OUTSTANDING PROPERTY TAX DUES DETECTED</strong></div>
+                <div>Amount Pending: <strong>₹${(propertyTax.outstandingAmount || 0).toLocaleString()}</strong></div>
+            </div>
+        ` : ''}
+
+        <div class="govt-grid-2col">
+            <div class="govt-card-widget">
+                <div class="govt-card-header">📍 PARCEL INFORMATION</div>
+                ${profileRow("Parcel ID", parcel.id || profile.parcelId)}
+                ${profileRow("Survey Number", parcel.surveyNumber || cadastral.surveyNumber)}
+                ${profileRow("Area", parcel.area || cadastral.area)}
+                ${profileRow("District", parcel.district || "Coimbatore")}
+                ${profileRow("Taluk", cadastral.taluk || "Coimbatore South")}
+                ${profileRow("Village", parcel.village || "Demo Village")}
+                ${profileRow("Land Type", parcel.landType || cadastral.landType)}
+                ${profileRow("Current Land Use", parcel.landUse || landUse.currentLandUse)}
+            </div>
+
+            <div class="govt-card-widget">
+                <div class="govt-card-header">👤 OWNER & RECORD OF RIGHTS</div>
+                ${profileRow("Current Owner", ror.rightsHolder || ror.ownerName || parcel.owner)}
+                ${profileRow("Ownership Type", ror.ownershipType || "Individual")}
+                ${profileRow("Ownership Share", ror.ownershipShare || "100%")}
+                ${profileRow("RoR Record Status", ror.rorStatus || "VERIFIED")}
+                ${profileRow("Mutation Status", ror.mutationStatus || "Updated")}
+                <div class="source-attribution-footer">
+                    <span>Source: RoR Department</span>
+                    <span>Verified By: ${ror.updatedBy || 'OFF-ROR-001'}</span>
+                </div>
+            </div>
+
+            <div class="govt-card-widget">
+                <div class="govt-card-header">📜 PROPERTY REGISTRATION</div>
+                ${profileRow("Registration Status", registration.status || "APPROVED")}
+                ${profileRow("Document Number", registration.documentNumber || "DOC-REG-2026-045")}
+                ${profileRow("Document Type", registration.documentType || "Sale Deed")}
+                ${profileRow("Stamp Duty Status", registration.stampDutyStatus || "VERIFIED")}
+                ${profileRow("Encumbrance Status", registration.encumbranceStatus || "CLEAR")}
+                <div class="source-attribution-footer">
+                    <span>Source: Sub-Registrar Office</span>
+                    <span>Verified By: ${registration.updatedBy || 'OFF-REG-001'}</span>
+                </div>
+            </div>
+
+            <div class="govt-card-widget">
+                <div class="govt-card-header">🏘️ LAND USE & ZONING</div>
+                ${profileRow("Current Land Use", landUse.currentLandUse || parcel.landUse)}
+                ${profileRow("Planning Zone", landUse.currentZone || landUse.zoningName)}
+                ${profileRow("Zoning Status", landUse.zoningStatus || "COMPATIBLE")}
+                ${profileRow("Master Plan Zone", landUse.masterPlanStatus || "Approved Plan")}
+                ${profileRow("Environmental Status", landUse.environmentalStatus || "CLEAR")}
+                <div class="source-attribution-footer">
+                    <span>Source: Land Use Department</span>
+                    <span>Verified By: ${landUse.updatedBy || 'OFF-LU-001'}</span>
+                </div>
+            </div>
+
+            <div class="govt-card-widget">
+                <div class="govt-card-header">💰 PROPERTY TAX & MUNICIPAL DUES</div>
+                ${profileRow("Assessment Status", propertyTax.assessmentStatus || "VERIFIED")}
+                ${profileRow("Outstanding Amount", hasOutstandingTax ? `<span style="color:#dc2626; font-weight:800;">₹${(propertyTax.outstandingAmount).toLocaleString()} (OUTSTANDING)</span>` : '₹0 (CLEARED)')}
+                ${profileRow("Tax Status", propertyTax.paymentStatus || propertyTax.taxClearanceStatus)}
+                ${profileRow("Annual Demand", `₹${(propertyTax.annualTax || propertyTax.taxDemand || 0).toLocaleString()}`)}
+                <div class="source-attribution-footer">
+                    <span>Source: Property Tax Department</span>
+                    <span>Verified By: ${propertyTax.assignedOfficer || 'OFF-TAX-001'}</span>
+                </div>
+            </div>
+
+            <div class="govt-card-widget">
+                <div class="govt-card-header">🏗️ BUILDING & MUNICIPAL PERMISSION</div>
+                ${profileRow("Building Permission", building.buildingPermissionStatus || "Approved")}
+                ${profileRow("Approved Type", building.approvedBuildingType || "Residential Structure")}
+                ${profileRow("Permission Status", building.validityStatus || "Valid")}
+                ${profileRow("Municipal Record Status", building.documentStatus || "Verified")}
+                <div class="source-attribution-footer">
+                    <span>Source: Municipal Administration</span>
+                    <span>Verified By: OFF-MUN-001</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderGisMapPane(profile) {
+    const parcel = profile.parcel || {};
+    return `
+        <div class="govt-grid-2col">
+            <div class="govt-card-widget" style="margin-bottom:0;">
+                <div class="govt-card-header">🗺️ GEOSPATIAL PARCEL BOUNDARY MAP</div>
+                <div id="workspace-leaflet-map" style="height:420px; width:100%; border:1px solid #cbd5e1; border-radius:3px;"></div>
+            </div>
+            <div class="govt-card-widget" style="margin-bottom:0;">
+                <div class="govt-card-header">📍 SPATIAL & BOUNDARY DETAILS</div>
+                ${profileRow("Parcel ID", parcel.id || profile.parcelId)}
+                ${profileRow("Survey Number", parcel.surveyNumber)}
+                ${profileRow("Land Use", parcel.landUse)}
+                ${profileRow("Planning Zone", profile.landUse?.currentZone || "Residential Zone")}
+                ${profileRow("North Boundary", profile.cadastral?.northBoundary || "Public Road (12m width)")}
+                ${profileRow("South Boundary", profile.cadastral?.southBoundary || "Adjacent Parcel")}
+                ${profileRow("East Boundary", profile.cadastral?.eastBoundary || "Drainage / Pathway")}
+                ${profileRow("West Boundary", profile.cadastral?.westBoundary || "Government Land")}
+                ${profileRow("Road Access", profile.landUse?.roadWidth || "30 ft Bitumen Road")}
+                ${profileRow("Restrictions", profile.restrictions?.restrictionStatus || "Clear")}
+                <div style="margin-top:12px; text-align:center;">
+                    <button class="btn-govt-print" style="margin:0 auto;" onclick="switchWorkspaceTab('overview')">← Return to Land Profile Overview</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderOwnershipPane(profile) {
+    const ror = profile.ror || profile.ownership || {};
+    const history = Array.isArray(ror.ownershipHistory) ? ror.ownershipHistory : [];
+    return `
+        <div class="govt-card-widget">
+            <div class="govt-card-header">👤 RECORD OF RIGHTS (RoR) & OWNERSHIP RECORD</div>
+            <div class="govt-grid-2col">
+                <div>
+                    ${profileRow("Rights Holder / Owner", ror.rightsHolder || ror.ownerName || profile.parcel?.owner)}
+                    ${profileRow("Ownership Type", ror.ownershipType || "Individual")}
+                    ${profileRow("Ownership Share", ror.ownershipShare || "100%")}
+                    ${profileRow("Possession Status", ror.possessionStatus || "Self")}
+                    ${profileRow("Tenure Type", ror.tenureType || "Freehold")}
+                </div>
+                <div>
+                    ${profileRow("RoR Record Number", ror.recordNumber || "ROR-2026-001")}
+                    ${profileRow("RoR Status", ror.rorStatus || "VERIFIED")}
+                    ${profileRow("Mutation Status", ror.mutationStatus || "Updated")}
+                    ${profileRow("Last Updated", ror.lastUpdated || "2026-08-15")}
+                    ${profileRow("Verified By", ror.updatedBy || "OFF-ROR-001")}
+                </div>
+            </div>
+            <div class="source-attribution-footer">
+                <span>Source: RoR Department</span>
+                <span>Verified By: ${ror.updatedBy || 'OFF-ROR-001'}</span>
+                <span>Last Updated: ${ror.lastUpdated || '2026-08-15'}</span>
+            </div>
+        </div>
+
+        <div class="govt-card-widget">
+            <div class="govt-card-header">📜 HISTORICAL OWNERSHIP RECORD</div>
+            ${history.length > 0 ? `
+                <table class="govt-table-compact">
+                    <thead>
+                        <tr>
+                            <th>Date / Year</th>
+                            <th>Owner Name</th>
+                            <th>Ownership Type</th>
+                            <th>Supporting Document</th>
+                            <th>Mutation Number</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${history.map(h => `
+                            <tr>
+                                <td>${h.date || h.year || '-'}</td>
+                                <td><strong>${h.owner}</strong></td>
+                                <td>${h.ownershipType || 'Individual'}</td>
+                                <td>${h.document || '-'}</td>
+                                <td>${h.mutationNumber || '-'}</td>
+                                <td><span class="status-badge-verified">${h.status || 'Completed'}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            ` : '<div style="padding:10px; color:#64748b;">No historical mutations recorded.</div>'}
+        </div>
+    `;
+}
+
+function renderRegistrationPane(profile) {
+    const reg = profile.registration || {};
+    const history = Array.isArray(reg.transactionHistory) ? reg.transactionHistory : [];
+    return `
+        <div class="govt-card-widget">
+            <div class="govt-card-header">📜 SUB-REGISTRAR OFFICE PROPERTY REGISTRATION</div>
+            <div class="govt-grid-2col">
+                <div>
+                    ${profileRow("Registration ID", reg.registrationId || "REG-2026-045")}
+                    ${profileRow("Document Number", reg.documentNumber || "DOC-REG-2026-045")}
+                    ${profileRow("Document Type", reg.documentType || "Sale Deed")}
+                    ${profileRow("Transaction Type", reg.transactionType || "Sale")}
+                    ${profileRow("Seller Name", reg.seller || "Ramesh Kumar")}
+                    ${profileRow("Buyer / Current Owner", reg.buyer || reg.currentOwner || profile.parcel?.owner)}
+                </div>
+                <div>
+                    ${profileRow("Registration Date", reg.registrationDate || "2026-09-03")}
+                    ${profileRow("Registration Office", reg.registrationOffice || "Sub-Registrar Office #1")}
+                    ${profileRow("Consideration Amount", `₹${(reg.considerationAmount || 0).toLocaleString()}`)}
+                    ${profileRow("Stamp Duty Status", reg.stampDutyStatus || "VERIFIED")}
+                    ${profileRow("Encumbrance Status", reg.encumbranceStatus || "CLEAR")}
+                    ${profileRow("Registration Status", reg.status || "APPROVED")}
+                </div>
+            </div>
+            <div class="source-attribution-footer">
+                <span>Source: Registration Department (Sub-Registrar Office)</span>
+                <span>Verified By: ${reg.updatedBy || 'OFF-REG-001'}</span>
+            </div>
+        </div>
+
+        <div class="govt-card-widget">
+            <div class="govt-card-header">📋 TRANSACTION HISTORY</div>
+            ${history.length > 0 ? `
+                <table class="govt-table-compact">
+                    <thead>
+                        <tr>
+                            <th>Year</th>
+                            <th>Transaction Type</th>
+                            <th>Seller</th>
+                            <th>Buyer</th>
+                            <th>Document Reference</th>
+                            <th>Consideration (₹)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${history.map(t => `
+                            <tr>
+                                <td>${t.year}</td>
+                                <td>${t.type}</td>
+                                <td>${t.seller}</td>
+                                <td><strong>${t.buyer}</strong></td>
+                                <td>${t.docRef}</td>
+                                <td>₹${(t.consideration || 0).toLocaleString()}</td>
+                                <td><span class="status-badge-verified">${t.status}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            ` : '<div style="padding:10px; color:#64748b;">No previous transaction history records.</div>'}
+        </div>
+    `;
+}
+
+function renderLandUsePane(profile) {
+    const lu = profile.landUse || {};
+    return `
+        <div class="govt-card-widget">
+            <div class="govt-card-header">🏘️ ZONING & MASTER PLAN COMPLIANCE</div>
+            <div class="govt-grid-2col">
+                <div>
+                    ${profileRow("Current Land Use", lu.currentLandUse || profile.parcel?.landUse)}
+                    ${profileRow("Master Plan Zone", lu.currentZone || lu.zoningName || "Residential Zone")}
+                    ${profileRow("Zone Code", lu.zoningCode || "AGRI-PROTECT-01")}
+                    ${profileRow("Zoning Status", lu.zoningStatus || "COMPATIBLE")}
+                    ${profileRow("Development Intensity (FAR)", lu.developmentIntensity || "Medium (FAR 1.5)")}
+                </div>
+                <div>
+                    ${profileRow("Environmental Status", lu.environmentalStatus || "CLEAR")}
+                    ${profileRow("Road Access Width", lu.roadWidth || "30 ft Bitumen Road")}
+                    ${profileRow("Road Surface Type", lu.roadType || "Paved Bitumen Road")}
+                    ${profileRow("Restriction Status", lu.restrictionStatus || "CLEAR")}
+                    ${profileRow("Master Plan Period", lu.masterPlanStatus || "Approved Plan 2026-2035")}
+                </div>
+            </div>
+            ${profileRow("Development Setbacks", lu.setbackRequirement || "Front: 10 ft, Side: 5 ft, Rear: 10 ft")}
+            ${profileRow("Development Restriction", lu.developmentRestriction || "Standard setback regulations apply.")}
+            <div class="source-attribution-footer">
+                <span>Source: Land Use & Planning Department</span>
+                <span>Verified By: ${lu.assignedOfficer || 'OFF-LU-001'}</span>
+            </div>
+        </div>
+    `;
+}
+
+function renderPropertyTaxPane(profile) {
+    const tax = profile.propertyTax || profile.tax || {};
+    const history = Array.isArray(tax.taxHistory) ? tax.taxHistory : [];
+    const outstanding = tax.outstandingAmount || 0;
+
+    return `
+        ${outstanding > 0 ? `
+            <div class="outstanding-tax-banner">
+                <div>⚠️ <strong>OUTSTANDING PROPERTY TAX DUES DETECTED</strong></div>
+                <div>Total Outstanding: <strong>₹${outstanding.toLocaleString()}</strong></div>
+            </div>
+        ` : ''}
+
+        <div class="govt-card-widget">
+            <div class="govt-card-header">💰 MUNICIPAL PROPERTY TAX ASSESSMENT</div>
+            <div class="govt-grid-2col">
+                <div>
+                    ${profileRow("Assessment ID", tax.assessmentId || tax.requestId || "PTX-2026-001")}
+                    ${profileRow("Tax Assessment Year", tax.taxYear || "2026-2027")}
+                    ${profileRow("Property Classification", tax.propertyType || "Residential")}
+                    ${profileRow("Land Area", tax.landArea || profile.parcel?.area)}
+                    ${profileRow("Built-up Area", tax.builtUpArea || "4,000 sq.ft")}
+                </div>
+                <div>
+                    ${profileRow("Annual Tax Demand", `₹${(tax.annualTax || tax.taxDemand || 0).toLocaleString()}`)}
+                    ${profileRow("Amount Paid", `₹${(tax.amountPaid || 0).toLocaleString()}`)}
+                    ${profileRow("Outstanding Amount", outstanding > 0 ? `<span style="color:#dc2626; font-weight:800;">₹${outstanding.toLocaleString()} (OUTSTANDING)</span>` : '₹0')}
+                    ${profileRow("Penalty Amount", `₹${(tax.penalty || 0).toLocaleString()}`)}
+                    ${profileRow("Payment Status", tax.paymentStatus || "Paid")}
+                    ${profileRow("Tax Clearance Status", tax.taxClearanceStatus || "CLEARED")}
+                </div>
+            </div>
+            <div class="source-attribution-footer">
+                <span>Source: Property Tax & Municipal Department</span>
+                <span>Verified By: ${tax.assignedOfficer || 'OFF-TAX-001'}</span>
+            </div>
+        </div>
+
+        <div class="govt-card-widget">
+            <div class="govt-card-header">📋 TAX ASSESSMENT HISTORY</div>
+            ${history.length > 0 ? `
+                <table class="govt-table-compact">
+                    <thead>
+                        <tr>
+                            <th>Assessment Year</th>
+                            <th>Demand (₹)</th>
+                            <th>Paid (₹)</th>
+                            <th>Outstanding (₹)</th>
+                            <th>Payment Reference</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${history.map(h => `
+                            <tr>
+                                <td>${h.year}</td>
+                                <td>₹${(h.demand || 0).toLocaleString()}</td>
+                                <td>₹${(h.paid || 0).toLocaleString()}</td>
+                                <td>₹${(h.outstanding || 0).toLocaleString()}</td>
+                                <td>${h.paymentRef || '-'}</td>
+                                <td><span class="${h.outstanding === 0 ? 'status-badge-verified' : 'status-badge-review'}">${h.status}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            ` : '<div style="padding:10px; color:#64748b;">No tax payment history.</div>'}
+        </div>
+    `;
+}
+
+function renderBuildingMunicipalPane(profile) {
+    const bp = profile.buildingPermission || profile.building || {};
+    const util = profile.utilities || {};
+
+    const formatAvailable = (val) => {
+        if (!val || val.available === false || String(val).toLowerCase().includes('not available')) {
+            return `<span style="color:#dc2626; font-weight:700;">NOT AVAILABLE</span>`;
+        }
+        return `<span style="color:#16a34a; font-weight:700;">VERIFIED DATA (AVAILABLE)</span>`;
+    };
+
+    return `
+        <div class="govt-card-widget">
+            <div class="govt-card-header">🏗️ BUILDING PERMISSION & APPROVALS</div>
+            <div class="govt-grid-2col">
+                <div>
+                    ${profileRow("Application Number", bp.applicationNumber || "BP-2026-001")}
+                    ${profileRow("Building Permission Status", bp.buildingPermissionStatus || "Approved")}
+                    ${profileRow("Permission Type", bp.permissionType || "Residential Construction")}
+                    ${profileRow("Approved Building Type", bp.approvedBuildingType || "Residential Building")}
+                </div>
+                <div>
+                    ${profileRow("Maximum Approved Floors", bp.maximumFloors || 2)}
+                    ${profileRow("Maximum Built-up Area", bp.maximumBuiltUpArea || "4,000 sq.ft")}
+                    ${profileRow("Approval Authority", bp.approvalAuthority || "Local Planning Authority")}
+                    ${profileRow("Validity Status", bp.validityStatus || "Valid")}
+                </div>
+            </div>
+            <div class="source-attribution-footer">
+                <span>Source: Local Planning Authority & Municipal Administration</span>
+                <span>Last Checked: ${bp.lastUpdated || '2026-08-15'}</span>
+            </div>
+        </div>
+
+        <div class="govt-card-widget">
+            <div class="govt-card-header">💧 MUNICIPAL INFRASTRUCTURE & UTILITIES STATUS</div>
+            <div class="govt-grid-2col">
+                <div>
+                    ${profileRow("Water Connection", formatAvailable(util.water))}
+                    ${profileRow("Electricity Grid", formatAvailable(util.electricity))}
+                </div>
+                <div>
+                    ${profileRow("Sewerage Line", formatAvailable(util.sewerage))}
+                    ${profileRow("Public Road Access", formatAvailable(util.road))}
+                </div>
+            </div>
+            <div class="source-attribution-footer">
+                <span>Source: Municipal Works & Infrastructure Department</span>
+            </div>
+        </div>
+    `;
+}
+
+function renderRestrictionsPane(profile) {
+    const rest = profile.restrictions || {};
+
+    return `
+        <div class="govt-card-widget">
+            <div class="govt-card-header">🚧 REGULATORY RESTRICTIONS MATRIX</div>
+            <table class="govt-table-compact">
+                <thead>
+                    <tr>
+                        <th>Restriction Type</th>
+                        <th>Applicability</th>
+                        <th>Status</th>
+                        <th>Source Authority</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Court Restriction / Litigation</td>
+                        <td>${rest.courtRestriction ? 'ACTIVE' : 'NONE'}</td>
+                        <td><span class="${rest.courtRestriction ? 'status-badge-conflict' : 'status-badge-verified'}">${rest.courtRestriction ? 'RESTRICTED' : 'CLEAR'}</span></td>
+                        <td>Judicial Records</td>
+                    </tr>
+                    <tr>
+                        <td>Government Land Acquisition</td>
+                        <td>${rest.governmentAcquisition ? 'ACTIVE NOTICE' : 'NONE'}</td>
+                        <td><span class="${rest.governmentAcquisition ? 'status-badge-conflict' : 'status-badge-verified'}">${rest.governmentAcquisition ? 'ACQUISITION NOTICE' : 'CLEAR'}</span></td>
+                        <td>Revenue Department</td>
+                    </tr>
+                    <tr>
+                        <td>Environmental Protection Zone</td>
+                        <td>${rest.environmentalRestriction ? 'ACTIVE' : 'NONE'}</td>
+                        <td><span class="${rest.environmentalRestriction ? 'status-badge-review' : 'status-badge-verified'}">${rest.environmentalRestriction ? 'ENVIRONMENTAL CLEARANCE REQUIRED' : 'CLEAR'}</span></td>
+                        <td>Forest & Environment Dept</td>
+                    </tr>
+                    <tr>
+                        <td>Water Body Buffer Zone</td>
+                        <td>${rest.waterBodyRestriction ? 'BUFFER RESTRICTION' : 'NONE'}</td>
+                        <td><span class="${rest.waterBodyRestriction ? 'status-badge-conflict' : 'status-badge-verified'}">${rest.waterBodyRestriction ? 'BUFFER ZONE RESTRICTION' : 'CLEAR'}</span></td>
+                        <td>Public Works Dept (PWD)</td>
+                    </tr>
+                    <tr>
+                        <td>Heritage Zone Conservation</td>
+                        <td>${rest.heritageRestriction ? 'HERITAGE ZONE' : 'NONE'}</td>
+                        <td><span class="${rest.heritageRestriction ? 'status-badge-review' : 'status-badge-verified'}">${rest.heritageRestriction ? 'CONSERVATION RULES APPLY' : 'CLEAR'}</span></td>
+                        <td>Archaeological & Planning Board</td>
+                    </tr>
+                    <tr>
+                        <td>Road Widening Setback</td>
+                        <td>${rest.roadWideningRestriction ? 'ROAD SETBACK APPLICABLE' : 'NONE'}</td>
+                        <td><span class="${rest.roadWideningRestriction ? 'status-badge-review' : 'status-badge-verified'}">${rest.roadWideningRestriction ? 'SETBACK REQUIRED' : 'CLEAR'}</span></td>
+                        <td>Highways & Urban Planning</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="margin-top:12px; font-size:12px; color:#475569;">
+                <strong>Remarks:</strong> ${rest.remarks || "No regulatory land restrictions recorded."}
+            </div>
+            <div class="source-attribution-footer">
+                <span>Source: State Revenue & GIS Planning Authorities</span>
+                <span>Last Checked: ${rest.lastChecked || '2026-08-15'}</span>
+            </div>
+        </div>
+    `;
+}
+
+function renderDocumentsPane(profile) {
+    const docs = Array.isArray(profile.documents) ? profile.documents : [];
+    return `
+        <div class="govt-card-widget">
+            <div class="govt-card-header">
+                <span>📁 UNIFIED DEPARTMENT DOCUMENT REPOSITORY</span>
+                <button type="button" class="btn-govt-print" style="font-size:11px;" onclick="showUploadDocumentModal('${profile.parcel?.id || profile.parcelId}')">+ Upload Evidence</button>
+            </div>
+            ${docs.length > 0 ? `
+                <table class="govt-table-compact">
+                    <thead>
+                        <tr>
+                            <th>Document ID</th>
+                            <th>Document Type</th>
+                            <th>Department</th>
+                            <th>Title / Reference</th>
+                            <th>Issue Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${docs.map(d => `
+                            <tr>
+                                <td><strong>${d.documentId}</strong></td>
+                                <td>${d.documentType}</td>
+                                <td>${d.issuingDepartment || 'Department Record'}</td>
+                                <td>${d.title || d.documentNumber}</td>
+                                <td>${d.issueDate || '2026-01-15'}</td>
+                                <td><span class="status-badge-verified">${d.status || 'AVAILABLE'}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            ` : '<div style="padding:14px; color:#64748b;">No documents uploaded for this parcel.</div>'}
+        </div>
+    `;
+}
+
+function renderConflictsPane(profile) {
+    const conflicts = Array.isArray(profile.conflicts) ? profile.conflicts : [];
+    const hasOwnerMismatch = conflicts.some(c => c.category === 'OWNERSHIP' || (c.title && c.title.toLowerCase().includes('owner')));
+
+    return `
+        ${hasOwnerMismatch ? `
+            <div style="background:#fee2e2; border:1px solid #fca5a5; border-left:4px solid #dc2626; padding:12px; border-radius:3px; margin-bottom:12px;">
+                <div style="color:#991b1b; font-weight:800; font-size:14px; margin-bottom:4px;">🚨 HIGH PRIORITY — OWNER MISMATCH DETECTED</div>
+                <div style="font-size:12px; color:#7f1d1d; line-height:1.4;">
+                    Discrepancy detected between departmental ownership records (e.g. RoR Owner vs Tax Owner or Deed Owner).
+                </div>
+            </div>
+        ` : ''}
+
+        <div class="govt-card-widget">
+            <div class="govt-card-header">⚠ INTER-DEPARTMENTAL DATA CONFLICTS DETECTED</div>
+            ${conflicts.length > 0 ? `
+                <table class="govt-table-compact">
+                    <thead>
+                        <tr>
+                            <th>Conflict ID</th>
+                            <th>Type / Category</th>
+                            <th>Severity</th>
+                            <th>Description</th>
+                            <th>Affected Data</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${conflicts.map(c => `
+                            <tr>
+                                <td><strong>${c.id}</strong></td>
+                                <td>${c.title || c.category}</td>
+                                <td><span class="${c.severity === 'HIGH' ? 'status-badge-conflict' : 'status-badge-review'}">${c.severity}</span></td>
+                                <td>${c.description}</td>
+                                <td><span style="font-size:11px; color:#475569;">${c.affectedData || '-'}</span></td>
+                                <td><span class="status-badge-conflict">${c.status || 'OPEN'}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            ` : '<div style="padding:14px; color:#166534; background:#dcfce7; border-radius:3px;">✓ No inter-departmental data conflicts detected for this land parcel.</div>'}
+        </div>
+    `;
+}
+
+function renderTimelinePane(profile) {
+    const timeline = Array.isArray(profile.timeline) ? profile.timeline : [];
+    return `
+        <div class="govt-card-widget">
+            <div class="govt-card-header">🕒 LAND GOVERNANCE HISTORICAL TIMELINE</div>
+            ${timeline.length > 0 ? `
+                <div class="timeline-vertical-list">
+                    ${timeline.map(e => `
+                        <div class="timeline-item-entry">
+                            <div class="timeline-date-tag">${e.date || e.year}</div>
+                            <div class="timeline-title-text">${e.title}</div>
+                            <div class="timeline-dept-tag">Department: <strong>${e.department}</strong> | Officer: ${e.officer || 'OFF-GOVT-001'}</div>
+                            ${e.details ? `<div style="font-size:11px; color:#475569; margin-top:4px;">${e.details}</div>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            ` : '<div style="padding:12px; color:#64748b;">No timeline entries available.</div>'}
+        </div>
+    `;
+}
+
+function renderAuditPane(profile) {
+    const auditLogs = Array.isArray(profile.audit) ? profile.audit : [];
+    return `
+        <div class="govt-card-widget">
+            <div class="govt-card-header">🕒 AUDIT TRAIL LOGS</div>
+            ${auditLogs.length > 0 ? `
+                <table class="govt-table-compact">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Officer / Actor</th>
+                            <th>Department / Role</th>
+                            <th>Action</th>
+                            <th>Result</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${auditLogs.map(a => `
+                            <tr>
+                                <td>${a.timestamp ? a.timestamp.substring(0, 19).replace('T', ' ') : '-'}</td>
+                                <td><strong>${a.actor || a.officerId || 'system'}</strong></td>
+                                <td>${a.details?.role || a.department || 'OFFICER'}</td>
+                                <td><code>${a.action}</code></td>
+                                <td><span class="status-badge-verified">${a.result || 'SUCCESS'}</span></td>
+                                <td>${typeof a.details === 'object' ? JSON.stringify(a.details) : (a.details || '-')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            ` : '<div style="padding:12px; color:#64748b;">No audit trail events logged for this parcel yet.</div>'}
+        </div>
+    `;
+}
+
+function profileRow(label, value) {
+    return `
+        <div class="profile-row">
+            <span class="profile-label">${label}</span>
+            <span class="profile-value">${value !== undefined && value !== null && value !== "" ? value : "NOT AVAILABLE"}</span>
+        </div>
+    `;
+}
+
+function formatCurrency(val) {
+    if (val === null || val === undefined || isNaN(val)) return "₹0";
+    return `₹${Number(val).toLocaleString()}`;
+}
+
+function initIntegratedWorkspaceMap(parcel) {
+    setTimeout(() => {
+        const container = document.getElementById("workspace-leaflet-map");
+        if (!container) return;
+        if (window.integratedMap) {
+            window.integratedMap.remove();
+            window.integratedMap = null;
+        }
+        const coords = parcel.coordinates || [[11.0200, 76.9500], [11.0200, 76.9530], [11.0175, 76.9530], [11.0175, 76.9500]];
+        const poly = L.polygon(coords);
+        const bounds = poly.getBounds();
+        const center = bounds.getCenter();
+
+        const map = L.map("workspace-leaflet-map").setView(center, 16);
+        window.integratedMap = map;
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+
+        poly.setStyle({
+            color: "#0b1d3a",
+            weight: 3,
+            fillColor: "#38bdf8",
+            fillOpacity: 0.4
+        }).addTo(map);
+
+        poly.bindPopup(`
+            <strong>Parcel: ${parcel.id || "LND-001"}</strong><br>
+            Survey Number: ${parcel.surveyNumber || "SUR-101"}<br>
+            Land Use: ${parcel.landUse || "Residential"}<br>
+            Area: ${parcel.area || "2,400 sq.ft"}
+        `).openPopup();
+    }, 250);
+}
+
+window.renderOverviewPane = renderOverviewPane;
+window.renderGisMapPane = renderGisMapPane;
+window.renderOwnershipPane = renderOwnershipPane;
+window.renderRegistrationPane = renderRegistrationPane;
+window.renderLandUsePane = renderLandUsePane;
+window.renderPropertyTaxPane = renderPropertyTaxPane;
+window.renderBuildingMunicipalPane = renderBuildingMunicipalPane;
+window.renderRestrictionsPane = renderRestrictionsPane;
+window.renderDocumentsPane = renderDocumentsPane;
+window.renderConflictsPane = renderConflictsPane;
+window.renderTimelinePane = renderTimelinePane;
+window.renderAuditPane = renderAuditPane;
+window.initIntegratedWorkspaceMap = initIntegratedWorkspaceMap;
+window.profileRow = profileRow;
+window.formatCurrency = formatCurrency;
+
 
 

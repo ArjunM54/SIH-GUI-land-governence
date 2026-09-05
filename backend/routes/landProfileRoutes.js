@@ -18,8 +18,7 @@ const auditService = require("../services/auditService");
 router.get("/", requireAuth, (req, res) => {
     const allProfiles = getAllLandProfiles();
     const authorizedProfiles = allProfiles
-        .filter(p => canAccessParcel(req.user, p.parcelId))
-        .map(p => getVisibleLandProfile(req.user, p))
+        .filter(p => p && canAccessParcel(req.user, p.parcelId || p.parcel?.id))
         .filter(Boolean);
 
     res.json({
@@ -31,7 +30,7 @@ router.get("/", requireAuth, (req, res) => {
 
 /**
  * @route   GET /api/land-profile/:parcelId
- * @desc    Get complete land profile filtered by role & permissions
+ * @desc    Get integrated land profile for parcel
  */
 router.get("/:parcelId", requireAuth, (req, res) => {
     const parcelId = req.params.parcelId;
@@ -44,7 +43,8 @@ router.get("/:parcelId", requireAuth, (req, res) => {
         });
     }
 
-    const rawProfile = getLandProfile(parcelId);
+    const { getIntegratedLandProfile } = require("../data/landProfile");
+    const rawProfile = getIntegratedLandProfile(parcelId);
 
     if (!rawProfile) {
         return res.status(404).json({
@@ -57,16 +57,16 @@ router.get("/:parcelId", requireAuth, (req, res) => {
     const filteredProfile = getVisibleLandProfile(req.user, rawProfile);
 
     auditService.logEvent({
-        actor: req.user.email || req.user.officerId,
+        actor: req.user.email || req.user.officerId || req.user.id || "system",
         target: parcelId,
-        action: "VIEW_LAND_PROFILE",
+        action: "VIEW_INTEGRATED_LAND_PROFILE",
         result: "SUCCESS",
         details: { role: req.user.role }
     });
 
     res.json({
         success: true,
-        parcelId: filteredProfile.parcelId,
+        parcelId: filteredProfile.parcelId || parcelId,
         data: filteredProfile
     });
 });

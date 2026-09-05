@@ -72,4 +72,48 @@ router.get("/:id", requireAuth, (req, res) => {
     });
 });
 
+/**
+ * @route   GET /api/parcels/:id/integrated-profile
+ * @desc    Get unified integrated land profile for parcel
+ */
+router.get("/:id/integrated-profile", requireAuth, (req, res) => {
+    const parcelId = req.params.id;
+
+    if (!canAccessParcel(req.user, parcelId)) {
+        return res.status(403).json({
+            success: false,
+            error: "FORBIDDEN",
+            message: "You do not have permission to access this parcel's integrated profile."
+        });
+    }
+
+    const { getIntegratedLandProfile } = require("../data/landProfile");
+    const { getVisibleLandProfile } = require("../services/accessControlService");
+    const profile = getIntegratedLandProfile(parcelId);
+
+    if (!profile) {
+        return res.status(404).json({
+            success: false,
+            error: "NOT_FOUND",
+            message: "Integrated land profile not found"
+        });
+    }
+
+    const filteredProfile = getVisibleLandProfile(req.user, profile);
+
+    auditService.logEvent({
+        actor: req.user.email || req.user.officerId || req.user.id || "system",
+        target: parcelId,
+        action: "VIEW_INTEGRATED_LAND_PROFILE",
+        result: "SUCCESS",
+        details: { role: req.user.role }
+    });
+
+    res.json({
+        success: true,
+        parcelId: filteredProfile.parcelId || parcelId,
+        data: filteredProfile
+    });
+});
+
 module.exports = router;

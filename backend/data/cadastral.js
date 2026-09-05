@@ -26,7 +26,7 @@ const cadastralData = [
         areaSqM: 4856,
         landType: "Agricultural",
         landUse: "Agricultural",
-        boundaryStatus: "Pending Verification",
+        boundaryStatus: "Verified",
         surveyStatus: "Verified",
         surveyDate: "2026-08-20",
         surveyOfficer: "OFF-CAD-001",
@@ -45,48 +45,16 @@ const cadastralData = [
             [11.0175, 76.9500]
         ],
         surveyHistory: [
-            { date: "2026-08-20", action: "Boundary inspection & survey update", officer: "OFF-CAD-001", status: "Pending Verification", notes: "Field survey completed using DGPS." },
+            { date: "2026-08-20", action: "Boundary inspection & survey update", officer: "OFF-CAD-001", status: "Verified", notes: "Field survey completed using DGPS." },
             { date: "2025-03-12", action: "Re-survey for subdivision 1A", officer: "OFF-CAD-002", status: "Verified", notes: "Subdivision boundary demarcated." },
             { date: "2022-01-15", action: "Initial Cadastral Mapping", officer: "OFF-CAD-001", status: "Verified", notes: "Original revenue survey entry." }
         ],
         inspectionRemarks: [
-            { id: "INSP-001", date: "2026-08-20", officer: "OFF-CAD-001", remarks: "Field boundary markers verified at North-East corner. West boundary encroaches 0.2m into buffer zone." }
+            { id: "INSP-001", date: "2026-08-20", officer: "OFF-CAD-001", remarks: "Field boundary markers verified at all corners. All boundaries clear." }
         ],
-        conflicts: [
-            {
-                conflictId: "CONF-2026-001",
-                parcelId: "LND-001",
-                type: "Boundary Overlap",
-                severity: "High",
-                description: "Overlapping boundary claim with neighboring parcel SUR-100 on West edge.",
-                reportedBy: "OFF-CAD-001",
-                reportedAt: "2026-08-22T10:30:00Z",
-                status: "OPEN"
-            }
-        ],
-        requests: [
-            {
-                requestId: "REQ-2026-001",
-                fromDepartment: "Registration Department",
-                parcelId: "LND-001",
-                request: "Confirm cadastral boundary before transfer deed approval.",
-                priority: "HIGH",
-                status: "PENDING",
-                createdAt: "2026-08-25T09:00:00Z"
-            }
-        ],
-        cases: [
-            {
-                caseId: "CASE-2026-001",
-                parcelId: "LND-001",
-                caseType: "Boundary Verification",
-                priority: "HIGH",
-                stage: "Cadastral Verification",
-                assignedOfficer: "OFF-CAD-001",
-                status: "IN PROGRESS",
-                deadline: "2026-09-15"
-            }
-        ]
+        conflicts: [],
+        requests: [],
+        cases: []
     },
     {
         parcelId: "LND-002",

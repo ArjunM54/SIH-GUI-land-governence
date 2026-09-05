@@ -361,7 +361,26 @@ async function loadParcels() {
     } catch (error) {
         console.error("Unable to load parcels:", error);
         window.landParcels = [];
+        if (error && error.message && (error.message.includes("401") || error.message.includes("UNAUTHORIZED"))) {
+            showUnauthenticatedMapNotice();
+        }
     }
+}
+
+function showUnauthenticatedMapNotice() {
+    let notice = document.getElementById("map-unauth-notice");
+    if (!notice) {
+        notice = document.createElement("div");
+        notice.id = "map-unauth-notice";
+        notice.style.cssText = "position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(220, 38, 38, 0.95); color: white; padding: 12px 20px; border-radius: 8px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 12px; font-family: system-ui, -apple-system, sans-serif;";
+        const mapContainer = document.getElementById("map");
+        if (mapContainer) {
+            mapContainer.style.position = "relative";
+            mapContainer.appendChild(notice);
+        }
+    }
+    notice.innerHTML = `🔒 <span>Authentication required to view parcels.</span> <a href="login.html" style="color: #fff; background: rgba(255,255,255,0.25); padding: 4px 10px; border-radius: 4px; text-decoration: none; font-weight: bold;">Log In</a>`;
+    notice.style.display = "flex";
 }
 
 

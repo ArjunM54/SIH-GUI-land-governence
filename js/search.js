@@ -69,21 +69,33 @@ function searchParcels() {
 
                     ||
 
-                    parcel.village
+                    (parcel.owner && parcel.owner
                         .toLowerCase()
-                        .includes(query)
+                        .includes(query))
 
                     ||
 
-                    parcel.landType
+                    (parcel.village && parcel.village
                         .toLowerCase()
-                        .includes(query)
+                        .includes(query))
 
                     ||
 
-                    parcel.landUse
+                    (parcel.district && parcel.district
                         .toLowerCase()
-                        .includes(query)
+                        .includes(query))
+
+                    ||
+
+                    (parcel.landType && parcel.landType
+                        .toLowerCase()
+                        .includes(query))
+
+                    ||
+
+                    (parcel.landUse && parcel.landUse
+                        .toLowerCase()
+                        .includes(query))
 
                 );
 

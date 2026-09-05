@@ -63,42 +63,8 @@ const rorData = [
                 status: "Completed"
             }
         ],
-        mutations: [
-            {
-                mutationId: "MUT-2026-008",
-                parcelId: "LND-001",
-                type: "Ownership Transfer",
-                currentOwner: "Demo Agricultural Owner",
-                proposedOwner: "Suresh Kumar",
-                reason: "Sale Deed Execution",
-                supportingDocument: "REG-2026-045",
-                status: "PENDING",
-                priority: "HIGH",
-                currentStage: "Ownership Verification",
-                stages: [
-                    { name: "Mutation Requested", status: "COMPLETED" },
-                    { name: "Document Verification", status: "COMPLETED" },
-                    { name: "Cadastral Verification", status: "COMPLETED" },
-                    { name: "Ownership Verification", status: "IN_PROGRESS" },
-                    { name: "Dispute Check", status: "PENDING" },
-                    { name: "Approval", status: "PENDING" },
-                    { name: "RoR Update", status: "PENDING" }
-                ],
-                submittedDate: "2026-09-01T10:00:00Z"
-            }
-        ],
-        disputes: [
-            {
-                disputeId: "DISP-2026-001",
-                parcelId: "LND-001",
-                type: "Inheritance Claim",
-                severity: "Medium",
-                description: "Sibling filed objection claiming partial ownership share.",
-                reportedBy: "OFF-ROR-001",
-                reportedAt: "2026-09-02T11:00:00Z",
-                status: "OPEN"
-            }
-        ],
+        mutations: [],
+        disputes: [],
         recordCorrections: []
     },
     {
