@@ -676,34 +676,547 @@ function renderRegistrationAssignedParcels(parcels = []) {
     `;
 }
 
-function renderDepartmentRequests(requests = []) {
-    const container = document.getElementById("dept-requests-container");
-    if (!requests || requests.length === 0) {
-        container.innerHTML = `<div style="padding: 1rem; color: #94a3b8;">No interdepartmental requests pending.</div>`;
-        return;
+/* --- INTER-DEPARTMENTAL PARCEL VERIFICATION REQUEST SUITE (PHASE 11F) --- */
+
+const DEPARTMENT_WORK_OPTIONS = {
+    "Cadastral & Survey Department": [
+        { value: "VERIFY_BOUNDARY", label: "Verify Boundary" },
+        { value: "VERIFY_SURVEY_NUMBER", label: "Verify Survey Number" },
+        { value: "VERIFY_PARCEL_AREA", label: "Verify Parcel Area" },
+        { value: "VERIFY_GIS_RECORD", label: "Verify GIS Record" }
+    ],
+    "Land Records Department": [
+        { value: "VERIFY_CURRENT_OWNER", label: "Verify Current Owner" },
+        { value: "VERIFY_ROR", label: "Verify Record of Rights (RoR)" },
+        { value: "VERIFY_MUTATION", label: "Verify Mutation Record" },
+        { value: "PROVIDE_OWNERSHIP_HISTORY", label: "Provide Ownership History" }
+    ],
+    "Registration Department": [
+        { value: "VERIFY_REGISTRATION", label: "Verify Registration" },
+        { value: "PROVIDE_LATEST_TRANSACTION", label: "Provide Latest Transaction" },
+        { value: "VERIFY_SALE_TRANSFER", label: "Verify Sale/Transfer" },
+        { value: "PROVIDE_REGISTRATION_HISTORY", label: "Provide Registration History" }
+    ],
+    "Land Use & Planning Department": [
+        { value: "VERIFY_CURRENT_LAND_USE", label: "Verify Current Land Use" },
+        { value: "VERIFY_ZONING", label: "Verify Zoning" },
+        { value: "VERIFY_MASTER_PLAN", label: "Verify Master Plan Alignment" },
+        { value: "VERIFY_CONVERSION_STATUS", label: "Verify Conversion Status" },
+        { value: "VERIFY_RESTRICTIONS", label: "Verify Restrictions" }
+    ],
+    "Property Tax & Municipal Department": [
+        { value: "VERIFY_TAX_ASSESSMENT", label: "Verify Tax Assessment" },
+        { value: "VERIFY_TAX_PAYMENT", label: "Verify Tax Payment" },
+        { value: "PROPERTY_TAX_CLEARANCE", label: "Provide Property Tax Clearance" },
+        { value: "VERIFY_OUTSTANDING_DUES", label: "Verify Outstanding Dues" },
+        { value: "VERIFY_MUNICIPAL_PROPERTY", label: "Verify Municipal Property" }
+    ]
+};
+
+function normalizeDept(dept) {
+    if (!dept) return "";
+    const lower = String(dept).toLowerCase().trim();
+    if (lower.includes("cadastral") || lower.includes("survey")) return "Cadastral & Survey Department";
+    if (lower.includes("record") || lower.includes("ror")) return "Land Records Department";
+    if (lower.includes("registration")) return "Registration Department";
+    if (lower.includes("use") || lower.includes("planning") || lower.includes("zoning")) return "Land Use & Planning Department";
+    if (lower.includes("tax") || lower.includes("municipal")) return "Property Tax & Municipal Department";
+    return dept;
+}
+
+function handleTargetDeptChange(targetDept) {
+    const workSelect = document.getElementById("deptreq-work");
+    if (!workSelect) return;
+
+    workSelect.innerHTML = `<option value="">Select Required Work...</option>`;
+    const normalizedTarget = normalizeDept(targetDept);
+    const options = DEPARTMENT_WORK_OPTIONS[normalizedTarget] || [];
+
+    options.forEach(opt => {
+        const el = document.createElement("option");
+        el.value = opt.value;
+        el.textContent = opt.label;
+        workSelect.appendChild(el);
+    });
+}
+
+function openCreateDepartmentRequestModal(parcelId, defaultToDept = "", defaultWork = "") {
+    const pId = parcelId || (activeWorkspaceParcel ? activeWorkspaceParcel.parcelId : "LND-001");
+    document.getElementById("deptreq-parcel-id").value = pId;
+    document.getElementById("deptreq-survey-no").value = activeWorkspaceParcel ? (activeWorkspaceParcel.surveyNumber || "SUR-101") : "SUR-101";
+    document.getElementById("deptreq-from-officer").value = `${currentOfficer.name || 'Officer'} (${currentOfficer.officerId || 'OFF-001'})`;
+    document.getElementById("deptreq-from-dept").value = currentOfficer.department || "Officer Department";
+
+    const toDeptSelect = document.getElementById("deptreq-to-dept");
+    const currentDeptNorm = normalizeDept(currentOfficer.department);
+
+    Array.from(toDeptSelect.options).forEach(opt => {
+        if (opt.value && normalizeDept(opt.value) === currentDeptNorm && currentOfficer.role !== "admin") {
+            opt.disabled = true;
+            opt.textContent = `${opt.textContent} (Your Department)`;
+        } else {
+            opt.disabled = false;
+        }
+    });
+
+    if (defaultToDept) {
+        toDeptSelect.value = defaultToDept;
+        handleTargetDeptChange(defaultToDept);
+        if (defaultWork) {
+            document.getElementById("deptreq-work").value = defaultWork;
+        }
+    } else {
+        toDeptSelect.value = "";
+        document.getElementById("deptreq-work").innerHTML = `<option value="">Select Target Department First...</option>`;
     }
 
-    container.innerHTML = `
+    document.getElementById("deptreq-reason").value = "";
+    document.getElementById("deptreq-expected").value = "";
+    document.getElementById("deptreq-priority").value = "NORMAL";
+
+    document.getElementById("modal-department-request").style.display = "flex";
+}
+
+function quickRequestVerification(targetDept, defaultWork) {
+    const pId = activeWorkspaceParcel ? activeWorkspaceParcel.parcelId : "LND-001";
+    openCreateDepartmentRequestModal(pId, targetDept, defaultWork);
+}
+
+async function handleCreateDepartmentRequestSubmit(event) {
+    event.preventDefault();
+    const btn = document.getElementById("btn-submit-dept-req");
+    if (btn) btn.disabled = true;
+
+    try {
+        const parcelId = document.getElementById("deptreq-parcel-id").value;
+        const toDepartment = document.getElementById("deptreq-to-dept").value;
+        const requestType = document.getElementById("deptreq-type").value;
+        const requiredWork = document.getElementById("deptreq-work").value;
+        const priority = document.getElementById("deptreq-priority").value;
+        const reason = document.getElementById("deptreq-reason").value;
+        const expectedResponse = document.getElementById("deptreq-expected").value;
+
+        const payload = {
+            parcelId,
+            toDepartment,
+            requestType,
+            requiredWork,
+            priority,
+            reason,
+            expectedResponse,
+            fromOfficerId: currentOfficer.officerId || currentOfficer.uid,
+            fromOfficerName: currentOfficer.name,
+            fromDepartment: currentOfficer.department
+        };
+
+        const res = await window.createDepartmentRequest(payload);
+        if (res.success) {
+            alert("Request sent successfully.");
+            closeModal("modal-department-request");
+            loadOfficerDashboard();
+            if (document.getElementById("generic-records-container")) {
+                loadAndRenderDepartmentRequestsTab(document.getElementById("generic-records-container"));
+            }
+        } else {
+            alert(res.message || "Failed to create department request.");
+        }
+    } catch (e) {
+        alert(e.message || "Failed to send request.");
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+async function renderDepartmentRequests(requests = []) {
+    const container = document.getElementById("dept-requests-container");
+    if (!container) return;
+
+    try {
+        const res = await window.getDepartmentRequests({ myRequests: true });
+        const allReqs = res.data || requests;
+
+        if (!allReqs || allReqs.length === 0) {
+            container.innerHTML = `<div style="padding: 1rem; color: #94a3b8;">No interdepartmental requests pending.</div>`;
+            return;
+        }
+
+        container.innerHTML = renderRequestsTableHTML(allReqs, "INCOMING & OUTGOING DEPARTMENT REQUESTS");
+    } catch (e) {
+        container.innerHTML = `<div style="padding: 1rem; color: #ef4444;">Error loading requests: ${e.message}</div>`;
+    }
+}
+
+async function loadAndRenderDepartmentRequestsTab(container) {
+    container.innerHTML = `<div style="padding: 1.5rem; color: #94a3b8;">Loading department requests...</div>`;
+    try {
+        const res = await window.getDepartmentRequests({ myRequests: true });
+        const reqs = res.data || [];
+
+        const myDept = normalizeDept(currentOfficer.department);
+        const incoming = reqs.filter(r => normalizeDept(r.to.department) === myDept);
+        const outgoing = reqs.filter(r => normalizeDept(r.from.department) === myDept || r.from.officerId === (currentOfficer.officerId || currentOfficer.uid));
+
+        container.innerHTML = `
+            <div style="margin-bottom: 1.5rem; display:flex; justify-content:space-between; align-items:center;">
+                <h3>📤 DEPARTMENT ACTION REQUESTS</h3>
+                <button class="btn-govt-primary" onclick="openCreateDepartmentRequestModal()">+ Department Request</button>
+            </div>
+
+            <div style="margin-bottom: 2rem;">
+                <h4 style="color:#38bdf8; margin-bottom:0.75rem;">📥 INCOMING REQUESTS (FOR MY DEPARTMENT)</h4>
+                ${renderRequestsTableHTML(incoming, "Incoming Requests", true)}
+            </div>
+
+            <div>
+                <h4 style="color:#38bdf8; margin-bottom:0.75rem;">📤 MY OUTGOING REQUESTS (SENT TO OTHER DEPARTMENTS)</h4>
+                ${renderRequestsTableHTML(outgoing, "Outgoing Requests", false)}
+            </div>
+        `;
+    } catch (e) {
+        container.innerHTML = `<div style="padding: 1rem; color: #ef4444;">Failed to load department requests: ${e.message}</div>`;
+    }
+}
+
+function renderRequestsTableHTML(requests = [], title = "", isIncoming = true) {
+    if (!requests || requests.length === 0) {
+        return `<div style="padding: 1rem; background: #0f172a; border: 1px solid var(--govt-border); color: #94a3b8;">No ${title.toLowerCase()} found.</div>`;
+    }
+
+    return `
         <table class="table-govt">
             <thead>
-                <tr><th>Request ID</th><th>From Dept</th><th>Parcel</th><th>Request Summary</th><th>Priority</th><th>Status</th><th>Action</th></tr>
+                <tr>
+                    <th>Request ID</th>
+                    <th>${isIncoming ? 'From Dept' : 'To Dept'}</th>
+                    <th>Parcel ID</th>
+                    <th>Request Type</th>
+                    <th>Required Work</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Action</th>
+                </tr>
             </thead>
             <tbody>
-                ${requests.map(r => `
-                    <tr>
-                        <td><strong>${r.requestId}</strong></td>
-                        <td>${r.fromDepartment}</td>
-                        <td>${r.parcelId}</td>
-                        <td>${r.request}</td>
-                        <td><span class="priority-${(r.priority || 'medium').toLowerCase()}">${r.priority}</span></td>
-                        <td><span class="status-tag status-pending">${r.status}</span></td>
-                        <td><button class="btn-govt-primary" onclick="openRespondRequestModal('${r.requestId}')">Respond</button></td>
-                    </tr>
-                `).join('')}
+                ${requests.map(r => {
+                    const isUrgent = r.priority === "URGENT";
+                    const priorityClass = isUrgent ? "priority-high" : (r.priority === "HIGH" ? "priority-high" : "priority-medium");
+                    const statusClass = r.status === "COMPLETED" ? "status-verified" : (r.status === "PENDING" ? "status-pending" : "status-review");
+                    const isOverdue = r.isOverdue;
+
+                    return `
+                        <tr style="${isUrgent ? 'background: rgba(239, 68, 68, 0.08);' : ''}">
+                            <td><strong>${r.requestId}</strong></td>
+                            <td>${isIncoming ? r.from.department : r.to.department}</td>
+                            <td><strong>${r.parcelId}</strong></td>
+                            <td>${r.requestType}</td>
+                            <td><code>${r.requiredWork}</code></td>
+                            <td><span class="${priorityClass}">${r.priority}</span></td>
+                            <td>
+                                <span class="status-tag ${statusClass}">${r.status}</span>
+                                ${isOverdue ? '<span class="status-tag" style="background:#7f1d1d; color:#fca5a5; font-weight:700;">OVERDUE</span>' : ''}
+                            </td>
+                            <td>${r.createdAt ? r.createdAt.substring(0, 10) : 'N/A'}</td>
+                            <td style="display:flex; gap:0.25rem; flex-wrap:wrap;">
+                                <button class="btn-govt-secondary" style="padding:2px 6px; font-size:0.75rem;" onclick="openDepartmentRequestDetailModal('${r.requestId}')">View Request</button>
+                                ${isIncoming && r.status === 'PENDING' ? `<button class="btn-govt-primary" style="padding:2px 6px; font-size:0.75rem;" onclick="handleAcceptRequest('${r.requestId}')">Accept</button>` : ''}
+                                ${isIncoming && (r.status === 'ACCEPTED' || r.status === 'IN_PROGRESS') ? `<button class="btn-govt-primary" style="padding:2px 6px; font-size:0.75rem;" onclick="openCompleteDepartmentRequestModal('${r.requestId}')">Complete</button>` : ''}
+                                ${isOverdue || r.status === 'IN_PROGRESS' ? `<button class="btn-govt-warning" style="padding:2px 6px; font-size:0.75rem;" onclick="handleEscalateRequest('${r.requestId}')">Escalate</button>` : ''}
+                            </td>
+                        </tr>
+                    `;
+                }).join('')}
             </tbody>
         </table>
     `;
 }
+
+async function openDepartmentRequestDetailModal(requestId) {
+    try {
+        const res = await window.getDepartmentRequestById(requestId);
+        if (!res.success || !res.data) {
+            alert("Request not found.");
+            return;
+        }
+
+        const r = res.data;
+        document.getElementById("reqdetail-modal-title").textContent = `📋 REQUEST ${r.requestId} DETAILS`;
+
+        const isOverdue = r.isOverdue;
+        const myDept = normalizeDept(currentOfficer.department);
+        const isTargetDept = normalizeDept(r.to.department) === myDept || currentOfficer.role === "admin";
+        const isRequesterDept = normalizeDept(r.from.department) === myDept || r.from.officerId === (currentOfficer.officerId || currentOfficer.uid) || currentOfficer.role === "admin";
+
+        const content = document.getElementById("reqdetail-content");
+        content.innerHTML = `
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; background:#0f172a; padding:1rem; border:1px solid var(--govt-border); font-size:0.85rem; margin-bottom:1rem;">
+                <div><strong>Parcel ID:</strong> ${r.parcelId}</div>
+                <div><strong>Survey Number:</strong> ${r.surveyNumber || 'N/A'}</div>
+                <div><strong>From Department:</strong> ${r.from.department}</div>
+                <div><strong>Requested By:</strong> ${r.from.officerName} (${r.from.officerId})</div>
+                <div><strong>To Department:</strong> ${r.to.department}</div>
+                <div><strong>Request Type:</strong> ${r.requestType}</div>
+                <div><strong>Required Work:</strong> <code>${r.requiredWork}</code></div>
+                <div><strong>Priority:</strong> <span class="priority-${(r.priority || 'NORMAL').toLowerCase()}">${r.priority}</span></div>
+                <div><strong>Status:</strong> <span class="status-tag status-pending">${r.status}</span> ${isOverdue ? '<span style="background:#7f1d1d; color:#fca5a5; padding:2px 6px; border-radius:3px; font-weight:700;">OVERDUE</span>' : ''}</div>
+                <div><strong>Created At:</strong> ${r.createdAt ? new Date(r.createdAt).toLocaleString() : 'N/A'}</div>
+                <div><strong>Due SLA:</strong> ${r.dueAt ? new Date(r.dueAt).toLocaleString() : 'N/A'}</div>
+            </div>
+
+            <div style="margin-bottom:1rem;">
+                <label style="font-weight:700; color:#38bdf8; font-size:0.85rem;">Reason for Request:</label>
+                <div style="background:#0f172a; padding:0.75rem; border:1px solid var(--govt-border); font-size:0.85rem; margin-top:0.25rem;">
+                    ${r.reason || 'No specific reason provided.'}
+                </div>
+            </div>
+
+            ${r.expectedResponse ? `
+                <div style="margin-bottom:1rem;">
+                    <label style="font-weight:700; color:#38bdf8; font-size:0.85rem;">Expected Response:</label>
+                    <div style="background:#0f172a; padding:0.75rem; border:1px solid var(--govt-border); font-size:0.85rem; margin-top:0.25rem;">
+                        ${r.expectedResponse}
+                    </div>
+                </div>
+            ` : ''}
+
+            ${r.response ? `
+                <div style="margin-bottom:1rem; border:1px solid #059669; padding:0.75rem; background:rgba(5, 150, 105, 0.1);">
+                    <h4 style="color:#10b981; margin-bottom:0.5rem;">✓ VERIFICATION RESPONSE (${r.response.result})</h4>
+                    <div style="font-size:0.85rem; margin-bottom:0.25rem;"><strong>Completed By:</strong> ${r.response.completedByName || r.response.completedBy} (${r.completedAt ? new Date(r.completedAt).toLocaleString() : ''})</div>
+                    <div style="font-size:0.85rem; margin-bottom:0.25rem;"><strong>Remarks:</strong> ${r.response.remarks || r.response.informationProvided}</div>
+                    ${r.response.supportingDocument ? `<div style="font-size:0.85rem;"><strong>Document Ref:</strong> <code>${r.response.supportingDocument}</code></div>` : ''}
+                </div>
+            ` : ''}
+
+            <div>
+                <h4 style="color:#38bdf8; margin-bottom:0.5rem; font-size:0.9rem;">📜 AUDIT & TIMELINE</h4>
+                <ul class="timeline-list">
+                    ${(r.timeline || []).map(t => `
+                        <li class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-date">${t.timestamp ? new Date(t.timestamp).toLocaleTimeString() : ''} — ${t.actor}</div>
+                            <div class="timeline-title">${t.event}</div>
+                            <div class="timeline-desc">${t.notes || ''}</div>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+        `;
+
+        const actionGroup = document.getElementById("reqdetail-action-buttons");
+        actionGroup.innerHTML = "";
+
+        if (isTargetDept) {
+            if (r.status === "PENDING") {
+                actionGroup.innerHTML += `<button class="btn-govt-primary" onclick="handleAcceptRequest('${r.requestId}')">Accept Request</button>`;
+                actionGroup.innerHTML += `<button class="btn-govt-danger" onclick="handleRejectRequest('${r.requestId}')">Reject Request</button>`;
+                actionGroup.innerHTML += `<button class="btn-govt-warning" onclick="handleRequestMoreInfo('${r.requestId}')">Request More Information</button>`;
+            } else if (r.status === "ACCEPTED") {
+                actionGroup.innerHTML += `<button class="btn-govt-primary" onclick="handleStartRequest('${r.requestId}')">Begin Work</button>`;
+                actionGroup.innerHTML += `<button class="btn-govt-warning" onclick="handleRequestMoreInfo('${r.requestId}')">Request More Information</button>`;
+                actionGroup.innerHTML += `<button class="btn-govt-danger" onclick="handleRejectRequest('${r.requestId}')">Reject</button>`;
+            } else if (r.status === "IN_PROGRESS" || r.status === "MORE_INFORMATION_REQUIRED") {
+                actionGroup.innerHTML += `<button class="btn-govt-primary" onclick="openCompleteDepartmentRequestModal('${r.requestId}')">Complete Request</button>`;
+                actionGroup.innerHTML += `<button class="btn-govt-warning" onclick="handleRequestMoreInfo('${r.requestId}')">Request More Information</button>`;
+                actionGroup.innerHTML += `<button class="btn-govt-warning" onclick="handleEscalateRequest('${r.requestId}')">Escalate</button>`;
+            }
+        }
+
+        if (isRequesterDept && !["COMPLETED", "REJECTED", "CANCELLED"].includes(r.status)) {
+            actionGroup.innerHTML += `<button class="btn-govt-secondary" onclick="handleCancelRequest('${r.requestId}')">Cancel Request</button>`;
+        }
+
+        actionGroup.innerHTML += `<button class="btn-govt-secondary" onclick="closeModal('modal-request-detail')">Close</button>`;
+
+        document.getElementById("modal-request-detail").style.display = "flex";
+    } catch (e) {
+        alert("Failed to load request details: " + e.message);
+    }
+}
+
+async function handleAcceptRequest(requestId) {
+    try {
+        const res = await window.acceptDepartmentRequest(requestId);
+        if (res.success) {
+            alert("Request accepted successfully.");
+            closeModal("modal-request-detail");
+            loadOfficerDashboard();
+            if (document.getElementById("generic-records-container")) {
+                loadAndRenderDepartmentRequestsTab(document.getElementById("generic-records-container"));
+            }
+        } else {
+            alert(res.message || "Failed to accept request.");
+        }
+    } catch (e) {
+        alert(e.message || "Failed to accept request.");
+    }
+}
+
+async function handleStartRequest(requestId) {
+    try {
+        const res = await window.startDepartmentRequest(requestId);
+        if (res.success) {
+            alert("Verification work started.");
+            closeModal("modal-request-detail");
+            loadOfficerDashboard();
+            if (document.getElementById("generic-records-container")) {
+                loadAndRenderDepartmentRequestsTab(document.getElementById("generic-records-container"));
+            }
+        } else {
+            alert(res.message || "Failed to start request.");
+        }
+    } catch (e) {
+        alert(e.message || "Failed to start request.");
+    }
+}
+
+function openCompleteDepartmentRequestModal(requestId) {
+    document.getElementById("complete-req-id").value = requestId;
+    document.getElementById("complete-req-id-label").value = requestId;
+    document.getElementById("complete-req-info").value = "";
+    document.getElementById("complete-req-remarks").value = "";
+    document.getElementById("complete-req-doc").value = "";
+
+    closeModal("modal-request-detail");
+    document.getElementById("modal-request-completion").style.display = "flex";
+}
+
+async function handleDepartmentRequestCompletionSubmit(event) {
+    event.preventDefault();
+    const requestId = document.getElementById("complete-req-id").value;
+    const result = document.getElementById("complete-req-result").value;
+    const informationProvided = document.getElementById("complete-req-info").value;
+    const remarks = document.getElementById("complete-req-remarks").value;
+    const supportingDocument = document.getElementById("complete-req-doc").value;
+
+    const btn = document.getElementById("btn-submit-complete-req");
+    if (btn) btn.disabled = true;
+
+    try {
+        const payload = {
+            result,
+            informationProvided,
+            remarks,
+            supportingDocument
+        };
+
+        const res = await window.completeDepartmentRequest(requestId, payload);
+        if (res.success) {
+            alert("Department verification request completed successfully.");
+            closeModal("modal-request-completion");
+            loadOfficerDashboard();
+            if (document.getElementById("generic-records-container")) {
+                loadAndRenderDepartmentRequestsTab(document.getElementById("generic-records-container"));
+            }
+        } else {
+            alert(res.message || "Failed to complete request.");
+        }
+    } catch (e) {
+        alert(e.message || "Failed to complete request.");
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+async function handleRejectRequest(requestId) {
+    const reason = prompt("Enter grounds/reason for rejecting this request:");
+    if (!reason) return;
+
+    try {
+        const res = await window.rejectDepartmentRequest(requestId, reason);
+        if (res.success) {
+            alert("Request rejected.");
+            closeModal("modal-request-detail");
+            loadOfficerDashboard();
+            if (document.getElementById("generic-records-container")) {
+                loadAndRenderDepartmentRequestsTab(document.getElementById("generic-records-container"));
+            }
+        } else {
+            alert(res.message || "Failed to reject request.");
+        }
+    } catch (e) {
+        alert(e.message || "Failed to reject request.");
+    }
+}
+
+async function handleRequestMoreInfo(requestId) {
+    const notes = prompt("Specify what additional information or documentation is required:");
+    if (!notes) return;
+
+    try {
+        const res = await window.requestMoreInfoDepartment(requestId, notes);
+        if (res.success) {
+            alert("Information request sent to requester.");
+            closeModal("modal-request-detail");
+            loadOfficerDashboard();
+            if (document.getElementById("generic-records-container")) {
+                loadAndRenderDepartmentRequestsTab(document.getElementById("generic-records-container"));
+            }
+        } else {
+            alert(res.message || "Failed to submit request.");
+        }
+    } catch (e) {
+        alert(e.message || "Failed to submit request.");
+    }
+}
+
+async function handleEscalateRequest(requestId) {
+    const reason = prompt("Specify escalation reason (e.g. SLA breach / urgent priority):");
+    if (!reason) return;
+
+    try {
+        const res = await window.escalateDepartmentRequest(requestId, reason);
+        if (res.success) {
+            alert("Request escalated.");
+            closeModal("modal-request-detail");
+            loadOfficerDashboard();
+            if (document.getElementById("generic-records-container")) {
+                loadAndRenderDepartmentRequestsTab(document.getElementById("generic-records-container"));
+            }
+        } else {
+            alert(res.message || "Failed to escalate request.");
+        }
+    } catch (e) {
+        alert(e.message || "Failed to escalate request.");
+    }
+}
+
+async function handleCancelRequest(requestId) {
+    const reason = prompt("Enter reason for cancelling this request:");
+    if (!reason) return;
+
+    try {
+        const res = await window.cancelDepartmentRequest(requestId, reason);
+        if (res.success) {
+            alert("Request cancelled.");
+            closeModal("modal-request-detail");
+            loadOfficerDashboard();
+            if (document.getElementById("generic-records-container")) {
+                loadAndRenderDepartmentRequestsTab(document.getElementById("generic-records-container"));
+            }
+        } else {
+            alert(res.message || "Failed to cancel request.");
+        }
+    } catch (e) {
+        alert(e.message || "Failed to cancel request.");
+    }
+}
+
+// Expose handlers to window
+window.handleTargetDeptChange = handleTargetDeptChange;
+window.openCreateDepartmentRequestModal = openCreateDepartmentRequestModal;
+window.quickRequestVerification = quickRequestVerification;
+window.handleCreateDepartmentRequestSubmit = handleCreateDepartmentRequestSubmit;
+window.openDepartmentRequestDetailModal = openDepartmentRequestDetailModal;
+window.handleAcceptRequest = handleAcceptRequest;
+window.handleStartRequest = handleStartRequest;
+window.openCompleteDepartmentRequestModal = openCompleteDepartmentRequestModal;
+window.handleDepartmentRequestCompletionSubmit = handleDepartmentRequestCompletionSubmit;
+window.handleRejectRequest = handleRejectRequest;
+window.handleRequestMoreInfo = handleRequestMoreInfo;
+window.handleEscalateRequest = handleEscalateRequest;
+window.handleCancelRequest = handleCancelRequest;
+
 
 function renderCases(cases = []) {
     const container = document.getElementById("cases-container");
@@ -1315,6 +1828,12 @@ function switchOfficerTab(tabName) {
 
 function renderGenericTabContent(tabName) {
     const container = document.getElementById("generic-records-container");
+
+    if (tabName === "department-requests") {
+        loadAndRenderDepartmentRequestsTab(container);
+        return;
+    }
+
     if (!currentDeptData) return;
 
     if (tabName === "transfer-requests" || tabName === "registration-records") {

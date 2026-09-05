@@ -181,6 +181,7 @@ function renderLandProfile(profile) {
                     </div>
                 </div>
                 <div class="workspace-actions-group">
+                    <button class="btn-govt-primary" onclick="openCreateDepartmentRequestModal('${parcel.id || profile.parcelId}')">📤 + DEPARTMENT REQUEST</button>
                     <button class="btn-govt-print" onclick="printIntegratedLandProfile()">🖨️ PRINT LAND PROFILE</button>
                     <button class="btn-govt-close" onclick="closeLandProfile()">✕ CLOSE</button>
                 </div>
@@ -223,6 +224,7 @@ function renderLandProfile(profile) {
             <button class="workspace-tab-btn" onclick="switchWorkspaceTab('restrictions')">RESTRICTIONS</button>
             <button class="workspace-tab-btn" onclick="switchWorkspaceTab('documents')">DOCUMENTS (${documents.length})</button>
             <button class="workspace-tab-btn" onclick="switchWorkspaceTab('conflicts')">CONFLICTS (${conflicts.length})</button>
+            <button class="workspace-tab-btn" onclick="switchWorkspaceTab('deptrequests')">DEPARTMENT REQUESTS</button>
             <button class="workspace-tab-btn" onclick="switchWorkspaceTab('timeline')">TIMELINE</button>
             <button class="workspace-tab-btn" onclick="switchWorkspaceTab('audit')">AUDIT</button>
         </div>
@@ -266,6 +268,10 @@ function renderLandProfile(profile) {
 
             <div class="tab-pane-content" id="tab-pane-conflicts">
                 ${renderConflictsPane(profile)}
+            </div>
+
+            <div class="tab-pane-content" id="tab-pane-deptrequests">
+                ${renderDepartmentRequestsPane(profile)}
             </div>
 
             <div class="tab-pane-content" id="tab-pane-timeline">
@@ -3449,6 +3455,87 @@ window.renderDocumentsPane = renderDocumentsPane;
 window.renderConflictsPane = renderConflictsPane;
 window.renderTimelinePane = renderTimelinePane;
 window.renderAuditPane = renderAuditPane;
+
+function renderDepartmentRequestsPane(profile) {
+    const parcelId = profile.parcel ? profile.parcel.id : (profile.parcelId || "LND-001");
+
+    setTimeout(() => {
+        loadParcelDepartmentRequestsInProfile(parcelId);
+    }, 100);
+
+    return `
+        <div class="govt-card-widget">
+            <div class="govt-card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>📤 PARCEL INTER-DEPARTMENTAL VERIFICATION REQUESTS</span>
+                <button class="btn-govt-primary" onclick="openCreateDepartmentRequestModal('${parcelId}')" style="padding:0.25rem 0.6rem; font-size:0.8rem;">+ New Request</button>
+            </div>
+            <div id="profile-dept-requests-container" style="padding:1rem;">
+                <div style="color:#64748b; font-size:0.9rem;">Loading inter-departmental requests...</div>
+            </div>
+        </div>
+    `;
+}
+
+async function loadParcelDepartmentRequestsInProfile(parcelId) {
+    const container = document.getElementById("profile-dept-requests-container");
+    if (!container) return;
+
+    try {
+        const res = await window.getParcelDepartmentRequests(parcelId);
+        if (!res.success || !res.data || res.data.length === 0) {
+            container.innerHTML = `<div style="color:#64748b; font-size:0.9rem;">No inter-departmental verification requests recorded for parcel ${parcelId}.</div>`;
+            return;
+        }
+
+        const requests = res.data;
+
+        container.innerHTML = `
+            <table class="govt-table-compact">
+                <thead>
+                    <tr>
+                        <th>Req ID</th>
+                        <th>From Dept</th>
+                        <th>To Dept</th>
+                        <th>Request Type</th>
+                        <th>Required Work</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Response / Remarks</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${requests.map(r => {
+                        const statusClass = r.status === 'COMPLETED' ? 'status-badge-verified' : (r.status === 'PENDING' ? 'status-badge-pending' : 'status-badge-review');
+                        const isOverdue = r.isOverdue;
+                        return `
+                            <tr>
+                                <td><strong>${r.requestId}</strong></td>
+                                <td>${r.from.department}</td>
+                                <td>${r.to.department}</td>
+                                <td>${r.requestType}</td>
+                                <td><code>${r.requiredWork}</code></td>
+                                <td><span class="priority-${(r.priority || 'NORMAL').toLowerCase()}">${r.priority}</span></td>
+                                <td>
+                                    <span class="${statusClass}">${r.status}</span>
+                                    ${isOverdue ? '<span style="background:#7f1d1d; color:#fca5a5; font-size:0.7rem; padding:2px 4px; border-radius:3px; margin-left:4px; font-weight:700;">OVERDUE</span>' : ''}
+                                </td>
+                                <td>${r.response ? `<strong>${r.response.result}:</strong> ${r.response.remarks}` : (r.reason || 'Pending assessment')}</td>
+                                <td><button class="btn-govt-secondary" onclick="openDepartmentRequestDetailModal('${r.requestId}')" style="padding:2px 6px; font-size:0.75rem;">View</button>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+    } catch (e) {
+        container.innerHTML = `<div style="color:#ef4444; font-size:0.9rem;">Failed to load department requests: ${e.message}</div>`;
+    }
+}
+
+window.renderDepartmentRequestsPane = renderDepartmentRequestsPane;
+window.loadParcelDepartmentRequestsInProfile = loadParcelDepartmentRequestsInProfile;
+
 window.initIntegratedWorkspaceMap = initIntegratedWorkspaceMap;
 window.profileRow = profileRow;
 window.formatCurrency = formatCurrency;

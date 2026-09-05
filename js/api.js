@@ -589,7 +589,92 @@ async function getAdminAuditLogs(limit = 50) {
     return await apiRequest(`/api/admin/audit-logs?limit=${limit}`);
 }
 
-console.log("LandGov API client initialized with Auth & Officer methods.");
+/* =========================================================
+   INTER-DEPARTMENTAL PARCEL VERIFICATION REQUEST APIS
+   ========================================================= */
+
+async function getDepartmentRequests(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return await apiRequest(`/api/department-requests${query ? `?${query}` : ''}`);
+}
+
+async function getDepartmentRequestById(requestId) {
+    return await apiRequest(`/api/department-requests/${requestId}`);
+}
+
+async function createDepartmentRequest(data) {
+    return await apiRequest("/api/department-requests", {
+        method: "POST",
+        body: JSON.stringify(data)
+    });
+}
+
+async function acceptDepartmentRequest(requestId) {
+    return await apiRequest(`/api/department-requests/${requestId}/accept`, {
+        method: "PUT"
+    });
+}
+
+async function startDepartmentRequest(requestId) {
+    return await apiRequest(`/api/department-requests/${requestId}/start`, {
+        method: "PUT"
+    });
+}
+
+async function requestMoreInfoDepartment(requestId, notes) {
+    return await apiRequest(`/api/department-requests/${requestId}/more-info`, {
+        method: "PUT",
+        body: JSON.stringify({ notes })
+    });
+}
+
+async function completeDepartmentRequest(requestId, completionData) {
+    return await apiRequest(`/api/department-requests/${requestId}/complete`, {
+        method: "PUT",
+        body: JSON.stringify(completionData)
+    });
+}
+
+async function rejectDepartmentRequest(requestId, reason) {
+    return await apiRequest(`/api/department-requests/${requestId}/reject`, {
+        method: "PUT",
+        body: JSON.stringify({ reason })
+    });
+}
+
+async function escalateDepartmentRequest(requestId, reason) {
+    return await apiRequest(`/api/department-requests/${requestId}/escalate`, {
+        method: "PUT",
+        body: JSON.stringify({ reason })
+    });
+}
+
+async function cancelDepartmentRequest(requestId, reason) {
+    return await apiRequest(`/api/department-requests/${requestId}/cancel`, {
+        method: "PUT",
+        body: JSON.stringify({ reason })
+    });
+}
+
+async function getParcelDepartmentRequests(parcelId) {
+    return await apiRequest(`/api/department-requests/parcels/${parcelId}/department-requests`);
+}
+
+// Expose to window
+window.getDepartmentRequests = getDepartmentRequests;
+window.getDepartmentRequestById = getDepartmentRequestById;
+window.createDepartmentRequest = createDepartmentRequest;
+window.acceptDepartmentRequest = acceptDepartmentRequest;
+window.startDepartmentRequest = startDepartmentRequest;
+window.requestMoreInfoDepartment = requestMoreInfoDepartment;
+window.completeDepartmentRequest = completeDepartmentRequest;
+window.rejectDepartmentRequest = rejectDepartmentRequest;
+window.escalateDepartmentRequest = escalateDepartmentRequest;
+window.cancelDepartmentRequest = cancelDepartmentRequest;
+window.getParcelDepartmentRequests = getParcelDepartmentRequests;
+
+console.log("LandGov API client initialized with Auth, Officer & Department Request methods.");
+
 
 
 

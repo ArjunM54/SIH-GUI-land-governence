@@ -64,6 +64,9 @@ const auditRoutes =
 const documentRoutes =
     require("./routes/documentRoutes");
 
+const departmentRequestRoutes =
+    require("./routes/departmentRequestRoutes");
+
 const { verifyAuth } = require("./middleware/authMiddleware");
 const authRoutes = require("./routes/authRoutes");
 const citizenRoutes = require("./routes/citizenRoutes");
@@ -221,6 +224,11 @@ app.use(
 app.use(
     "/api/documents",
     documentRoutes
+);
+
+app.use(
+    "/api/department-requests",
+    departmentRequestRoutes
 );
 
 /* Authentication & Governance Routes */
