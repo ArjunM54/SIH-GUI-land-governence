@@ -354,6 +354,14 @@ async function getLandOwnershipHistory(parcelId) {
     return await apiRequest(`/api/citizen/properties/${parcelId}/history`);
 }
 
+async function getApplicationTimeline(appId) {
+    return await apiRequest(`/api/applications/${appId}/timeline`);
+}
+
+async function getApplicationByNumber(appNum) {
+    return await apiRequest(`/api/applications/number/${appNum}`);
+}
+
 async function getCitizenServices() {
     return await apiRequest("/api/citizen/services");
 }
@@ -812,6 +820,11 @@ window.API = window.API || {};
 window.API.getOfficerDepartmentDocuments = getOfficerDepartmentDocuments;
 window.API.verifyOfficerDocument = verifyOfficerDocument;
 window.API.updateVerificationStage = updateVerificationStage;
+window.API.getApplicationTimeline = getApplicationTimeline;
+window.API.getApplicationByNumber = getApplicationByNumber;
+
+window.getApplicationTimeline = getApplicationTimeline;
+window.getApplicationByNumber = getApplicationByNumber;
 
 window.getDepartmentRequests = getDepartmentRequests;
 window.getDepartmentRequestById = getDepartmentRequestById;

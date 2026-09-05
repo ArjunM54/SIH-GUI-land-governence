@@ -18,21 +18,19 @@ const applications = [];
 // In-memory notifications store
 const notifications = [];
 
+// In-memory application timeline store
+const applicationTimeline = [];
+
+// In-memory inter-department requests store
+const departmentRequests = [];
+
 /**
- * Generates Application ID (e.g., OWN-2026-000125, MUT-2026-000126, LND-2026-000127)
+ * Generates unique Application Number (e.g., LAND-2026-000142)
  */
 function generateAppId(type = "Owner Change") {
-    const prefixMap = {
-        "Owner Change": "OWN",
-        "Mutation Request": "MUT",
-        "Property Registration": "REG",
-        "Land Use Request": "LND",
-        "Property Tax Services": "TAX"
-    };
-    const prefix = prefixMap[type] || "APP";
     const year = new Date().getFullYear();
-    const seq = String(applications.length + 125).padStart(6, "0");
-    return `${prefix}-${year}-${seq}`;
+    const seq = String(applications.length + 142).padStart(6, "0");
+    return `LAND-${year}-${seq}`;
 }
 
 /**
@@ -139,6 +137,10 @@ function submitOwnerChangeApplication(user, data) {
 
     applications.unshift(newApp);
 
+    // Add initial timeline events
+    addTimelineEvent(appId, user.email, "citizen", "Citizen Portal", "APPLICATION_SUBMITTED", "DRAFT", "SUBMITTED", `Application ${appId} submitted for parcel ${newApp.parcelId}.`);
+    addTimelineEvent(appId, "System Engine", "system", "LandGov Core", "ROUTED_TO_DEPARTMENTS", "SUBMITTED", "UNDER_VERIFICATION", `Documents and tasks assigned to 5 officer departments.`);
+
     // Audit record
     auditService.logEvent({
         actor: user.email,
@@ -194,6 +196,10 @@ function submitServiceApplication(user, data) {
     };
 
     applications.unshift(newApp);
+
+    // Add initial timeline events
+    addTimelineEvent(appId, user.email, "citizen", "Citizen Portal", "APPLICATION_SUBMITTED", "DRAFT", "SUBMITTED", `Service application ${appId} submitted for parcel ${newApp.parcelId}.`);
+    addTimelineEvent(appId, "System Engine", "system", "LandGov Core", "ROUTED_TO_DEPARTMENTS", "SUBMITTED", "UNDER_VERIFICATION", `Documents and service request assigned for departmental review.`);
 
     auditService.logEvent({
         actor: user.email,
@@ -537,6 +543,155 @@ function getNotificationsForUser(user) {
 }
 
 /**
+ * Adds an event to the persistent Application Timeline
+ */
+function addTimelineEvent(appId, actor, role, department, action, oldStatus, newStatus, remarks = "") {
+    const event = {
+        id: `EVT-${Date.now().toString().slice(-8)}`,
+        applicationId: appId,
+        actor: actor || "System",
+        role: role || "system",
+        department: department || "System Engine",
+        action: action,
+        oldStatus: oldStatus || null,
+        newStatus: newStatus || null,
+        remarks: remarks || "",
+        timestamp: new Date().toISOString()
+    };
+    applicationTimeline.unshift(event);
+    return event;
+}
+
+/**
+ * Retrieves the full timeline for a given application
+ */
+function getApplicationTimeline(appId) {
+    if (!appId) return [];
+    const appKey = String(appId).trim().toUpperCase();
+    return applicationTimeline.filter(t => (t.applicationId || "").toUpperCase() === appKey);
+}
+
+/**
+ * Creates an Inter-Department Request between officer departments
+ */
+function createDepartmentRequest(fromUser, appId, toDepartment, requestType, message, priority = "HIGH") {
+    const app = applications.find(a => a.applicationId.toUpperCase() === String(appId).trim().toUpperCase());
+    if (!app) {
+        return { success: false, message: "Matching application not found." };
+    }
+
+    const now = new Date().toISOString();
+    const reqId = `REQ-${Date.now().toString().slice(-6)}`;
+    const reqRecord = {
+        id: reqId,
+        requestNumber: reqId,
+        applicationId: app.applicationId,
+        parcelId: app.parcelId,
+        fromDepartment: fromUser.department || fromUser.officerType || "Land Records Department",
+        toDepartment: toDepartment,
+        fromOfficer: fromUser.name || fromUser.officerId || fromUser.email,
+        toOfficer: null,
+        requestType: requestType || "Document Verification",
+        message: message || "Please review and verify submitted records.",
+        priority: (priority || "HIGH").toUpperCase(),
+        status: "PENDING",
+        createdAt: now,
+        respondedAt: null,
+        responseRemarks: null
+    };
+
+    departmentRequests.unshift(reqRecord);
+
+    const oldStatus = app.status;
+    app.status = "INTER_DEPARTMENT_REVIEW";
+    app.lastUpdated = now;
+
+    addTimelineEvent(
+        app.applicationId,
+        fromUser.name || fromUser.email,
+        "officer",
+        fromUser.department || "Officer Department",
+        "INTER_DEPARTMENT_REQUEST_SENT",
+        oldStatus,
+        "INTER_DEPARTMENT_REVIEW",
+        `Requested verification from ${toDepartment}. Message: ${message}`
+    );
+
+    auditService.logEvent({
+        actor: fromUser.email || fromUser.officerId,
+        target: app.applicationId,
+        action: "INTER_DEPARTMENT_REQUEST_CREATED",
+        result: "SUCCESS",
+        details: { toDepartment, requestType, reqId }
+    });
+
+    return { success: true, message: `Inter-department request (${reqId}) sent to ${toDepartment}.`, request: reqRecord };
+}
+
+/**
+ * Gets incoming/outgoing department requests for an officer user
+ */
+function getDepartmentRequestsForUser(user) {
+    if (!user) return { incoming: [], outgoing: [] };
+    const dept = (user.department || user.officerType || "").toLowerCase();
+    const officerName = (user.name || user.email || "").toLowerCase();
+
+    const incoming = departmentRequests.filter(r => 
+        r.toDepartment.toLowerCase().includes(dept) || 
+        dept.includes(r.toDepartment.toLowerCase()) || 
+        user.role === "admin"
+    );
+    const outgoing = departmentRequests.filter(r => 
+        (r.fromOfficer || "").toLowerCase() === officerName || 
+        user.role === "admin"
+    );
+
+    return { incoming, outgoing, total: departmentRequests.length };
+}
+
+/**
+ * Responds to / resolves an Inter-Department Request
+ */
+function respondDepartmentRequest(user, requestId, decision = "APPROVED", remarks = "") {
+    const reqRecord = departmentRequests.find(r => r.id === requestId || r.requestNumber === requestId);
+    if (!reqRecord) {
+        return { success: false, message: "Department request record not found." };
+    }
+
+    const now = new Date().toISOString();
+    reqRecord.status = (decision || "APPROVED").toUpperCase() === "REJECTED" ? "REJECTED" : "COMPLETED";
+    reqRecord.toOfficer = user.name || user.email;
+    reqRecord.respondedAt = now;
+    reqRecord.responseRemarks = remarks || "Inter-department review completed.";
+
+    const app = applications.find(a => a.applicationId.toUpperCase() === reqRecord.applicationId.toUpperCase());
+    if (app) {
+        app.lastUpdated = now;
+        addTimelineEvent(
+            app.applicationId,
+            user.name || user.email,
+            "officer",
+            user.department || reqRecord.toDepartment,
+            "INTER_DEPARTMENT_RESPONSE_SUBMITTED",
+            app.status,
+            app.status,
+            `Responded to ${reqRecord.fromDepartment}: ${remarks || decision}`
+        );
+    }
+
+    return { success: true, message: "Department request response recorded.", request: reqRecord };
+}
+
+/**
+ * Get notifications for logged-in citizen
+ */
+function getNotificationsForUser(user) {
+    if (!user) return [];
+    const userEmail = (user.email || "").toLowerCase();
+    return notifications.filter(n => n.citizenEmail.toLowerCase() === userEmail || user.role === "admin");
+}
+
+/**
  * Mark notification as read
  */
 function markNotificationRead(user, notifId) {
@@ -551,6 +706,8 @@ function markNotificationRead(user, notifId) {
 module.exports = {
     applications,
     notifications,
+    applicationTimeline,
+    departmentRequests,
     getApplicationsForCitizen,
     getApplicationById,
     submitOwnerChangeApplication,
@@ -559,6 +716,11 @@ module.exports = {
     resubmitApplicationDocument,
     getOwnershipHistory,
     getNotificationsForUser,
-    markNotificationRead
+    markNotificationRead,
+    addTimelineEvent,
+    getApplicationTimeline,
+    createDepartmentRequest,
+    getDepartmentRequestsForUser,
+    respondDepartmentRequest
 };
 

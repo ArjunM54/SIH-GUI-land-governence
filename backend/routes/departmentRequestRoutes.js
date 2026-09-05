@@ -54,6 +54,20 @@ function isAuthorizedRequester(user, request) {
     return userDept === fromDept;
 }
 
+// GET /api/department-requests/incoming
+router.get("/incoming", (req, res) => {
+    const { getDepartmentRequestsForUser } = require("../services/applicationService");
+    const { incoming } = getDepartmentRequestsForUser(req.user);
+    return res.json({ success: true, count: incoming.length, data: incoming, requests: incoming });
+});
+
+// GET /api/department-requests/outgoing
+router.get("/outgoing", (req, res) => {
+    const { getDepartmentRequestsForUser } = require("../services/applicationService");
+    const { outgoing } = getDepartmentRequestsForUser(req.user);
+    return res.json({ success: true, count: outgoing.length, data: outgoing, requests: outgoing });
+});
+
 /**
  * GET /api/department-requests
  * Query options: parcelId, status, fromDepartment, toDepartment, myRequests
