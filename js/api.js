@@ -101,6 +101,40 @@ async function getParcelById(
 
 }
 
+async function getParcelRegistration(parcelId) {
+    return await apiRequest(`/api/parcels/${parcelId}/registration`);
+}
+
+async function getParcelLandUse(parcelId) {
+    return await apiRequest(`/api/parcels/${parcelId}/land-use`);
+}
+
+async function getParcelPropertyTax(parcelId) {
+    return await apiRequest(`/api/parcels/${parcelId}/property-tax`);
+}
+
+async function getParcelBuilding(parcelId) {
+    return await apiRequest(`/api/parcels/${parcelId}/building`);
+}
+
+async function getParcelRestrictions(parcelId) {
+    return await apiRequest(`/api/parcels/${parcelId}/restrictions`);
+}
+
+async function getParcelDocuments(parcelId) {
+    return await apiRequest(`/api/parcels/${parcelId}/documents`);
+}
+
+window.getParcelRegistration = getParcelRegistration;
+window.getParcelLandUse = getParcelLandUse;
+window.getParcelPropertyTax = getParcelPropertyTax;
+window.getParcelBuilding = getParcelBuilding;
+window.getParcelRestrictions = getParcelRestrictions;
+window.getParcelDocuments = getParcelDocuments;
+window.getGisParcel = getGisParcel;
+window.getParcelOwnership = getParcelOwnership;
+
+
 
 /* =========================================================
    5. GET UTILITIES
@@ -672,6 +706,9 @@ window.rejectDepartmentRequest = rejectDepartmentRequest;
 window.escalateDepartmentRequest = escalateDepartmentRequest;
 window.cancelDepartmentRequest = cancelDepartmentRequest;
 window.getParcelDepartmentRequests = getParcelDepartmentRequests;
+window.getGisParcel = getGisParcel;
+window.getParcelOwnership = getParcelOwnership;
+
 
 console.log("LandGov API client initialized with Auth, Officer & Department Request methods.");
 

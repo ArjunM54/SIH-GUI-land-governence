@@ -88,7 +88,7 @@ async function runTests() {
     try {
         // Login as Citizen to get token
         const loginRes = await makeRequest({
-            hostname: "localhost",
+            hostname: "127.0.0.1",
             port: 5000,
             path: "/api/auth/login",
             method: "POST",
@@ -100,7 +100,7 @@ async function runTests() {
 
         // Call GET /api/parcels/LND-001/integrated-profile
         const apiRes1 = await makeRequest({
-            hostname: "localhost",
+            hostname: "127.0.0.1",
             port: 5000,
             path: "/api/parcels/LND-001/integrated-profile",
             method: "GET",
@@ -110,9 +110,54 @@ async function runTests() {
         assert(apiRes1.statusCode === 200, "HTTP GET /api/parcels/LND-001/integrated-profile returns 200 OK");
         assert(apiRes1.body.success === true && apiRes1.body.data.governance.overallStatus === "VERIFIED", "HTTP response returns GOVERNANCE VERIFIED for LND-001");
 
+        // Call GET /api/parcels/LND-001/gis (Phase 12B)
+        const gisRes = await makeRequest({
+            hostname: "127.0.0.1",
+            port: 5000,
+            path: "/api/parcels/LND-001/gis",
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        assert(gisRes.statusCode === 200, "HTTP GET /api/parcels/LND-001/gis returns 200 OK");
+        assert(gisRes.body.success === true && gisRes.body.data.parcelId === "LND-001", "GIS API returns valid parcelId LND-001");
+        assert(Array.isArray(gisRes.body.data.geometry), "GIS API returns geometry coordinates array");
+
+        // Call GET /api/parcels/LND-001/ownership (Phase 12C)
+        const ownerRes = await makeRequest({
+            hostname: "127.0.0.1",
+            port: 5000,
+            path: "/api/parcels/LND-001/ownership",
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        assert(ownerRes.statusCode === 200, "HTTP GET /api/parcels/LND-001/ownership returns 200 OK");
+        assert(ownerRes.body.success === true && ownerRes.body.data.parcelId === "LND-001", "Ownership API returns valid parcelId LND-001");
+        assert(ownerRes.body.data.rightsHolder && ownerRes.body.data.sourceDepartment === "Land Records / RoR Department", "Ownership API returns rightsHolder & source department");
+
+        // Call GET /api/parcels/LND-002/gis (Unauthorized for citizen)
+        const gisUnauth = await makeRequest({
+            hostname: "127.0.0.1",
+            port: 5000,
+            path: "/api/parcels/LND-002/gis",
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        assert(gisUnauth.statusCode === 403, "HTTP GET /api/parcels/LND-002/gis returns 403 FORBIDDEN for unauthorized parcel");
+
+        // Call GET /api/parcels/LND-002/ownership (Unauthorized for citizen)
+        const ownerUnauth = await makeRequest({
+            hostname: "127.0.0.1",
+            port: 5000,
+            path: "/api/parcels/LND-002/ownership",
+            method: "GET",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        assert(ownerUnauth.statusCode === 403, "HTTP GET /api/parcels/LND-002/ownership returns 403 FORBIDDEN for unauthorized parcel");
+
         // Call GET /api/parcels/LND-002/integrated-profile (unauthorized for citizen cit-001 who only owns LND-001)
+
         const apiRes2 = await makeRequest({
-            hostname: "localhost",
+            hostname: "127.0.0.1",
             port: 5000,
             path: "/api/parcels/LND-002/integrated-profile",
             method: "GET",
@@ -123,7 +168,7 @@ async function runTests() {
 
         // Call GET without token
         const noAuthRes = await makeRequest({
-            hostname: "localhost",
+            hostname: "127.0.0.1",
             port: 5000,
             path: "/api/parcels/LND-001/integrated-profile",
             method: "GET"

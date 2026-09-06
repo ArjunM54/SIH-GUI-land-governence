@@ -301,8 +301,8 @@ function getIntegratedLandProfile(parcelId) {
 
     // Overall Status Calculation
     let overallGovernanceStatus = "VERIFIED";
-    const hasCriticalConflict = allConflicts.some(c => (c.severity || "").toUpperCase() === "HIGH" || (c.status || "").toUpperCase() === "CONFLICT");
-    const hasPendingReview = [cadastralStatus, rorStatus, registrationStatus, landUseStatus, taxStatus].includes("REVIEW REQUIRED");
+    const hasCriticalConflict = allConflicts.some(c => (c.severity || "").toUpperCase() === "HIGH" || (c.status || "").toUpperCase() === "CONFLICT") || (raw.restrictions?.court?.status === "PENDING");
+    const hasPendingReview = [cadastralStatus, rorStatus, registrationStatus, landUseStatus, taxStatus].includes("REVIEW REQUIRED") || restrictionsStatus === "RESTRICTED" || docs.some(d => d.status === "PENDING" || d.status === "EXPIRED");
 
     if (hasCriticalConflict) {
         overallGovernanceStatus = "CONFLICT DETECTED";
