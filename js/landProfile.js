@@ -2732,7 +2732,7 @@ window.handleUploadDocumentSubmit = handleUploadDocumentSubmit;
    PHASE 12 — INTEGRATED LAND PARCEL WORKSPACE PANE RENDERERS
    ========================================================= */
 
-window.switchWorkspaceTab = function(tabId) {
+window.switchWorkspaceTab = function (tabId) {
     const tabs = document.querySelectorAll('.workspace-tab-btn');
     tabs.forEach(btn => btn.classList.remove('active'));
 
@@ -2745,16 +2745,32 @@ window.switchWorkspaceTab = function(tabId) {
     const activePane = document.getElementById(`tab-pane-${tabId}`);
     if (activePane) activePane.classList.add('active');
 
-    if (tabId === 'gismap' && window.integratedMap) {
-        setTimeout(() => { window.integratedMap.invalidateSize(); }, 150);
+    if (
+        tabId === "gismap" &&
+        window.integratedMap
+    ) {
+        setTimeout(() => {
+
+            window.integratedMap.invalidateSize();
+
+            const container =
+                document.getElementById(
+                    "workspace-leaflet-map"
+                );
+
+            if (container) {
+                window.integratedMap.invalidateSize();
+            }
+
+        }, 300);
     }
 };
 
-window.printIntegratedLandProfile = function() {
+window.printIntegratedLandProfile = function () {
     window.print();
 };
 
-window.closeLandProfile = function() {
+window.closeLandProfile = function () {
     const panel = document.getElementById("land-profile-panel");
     if (panel) {
         panel.classList.remove("active", "integrated-workspace");
@@ -3371,22 +3387,195 @@ function renderConflictsPane(profile) {
 }
 
 function renderTimelinePane(profile) {
-    const timeline = Array.isArray(profile.timeline) ? profile.timeline : [];
+
+    const timeline =
+        Array.isArray(profile.timeline)
+            ? profile.timeline
+            : [];
+
     return `
         <div class="govt-card-widget">
-            <div class="govt-card-header">🕒 LAND GOVERNANCE HISTORICAL TIMELINE</div>
-            ${timeline.length > 0 ? `
-                <div class="timeline-vertical-list">
-                    ${timeline.map(e => `
-                        <div class="timeline-item-entry">
-                            <div class="timeline-date-tag">${e.date || e.year}</div>
-                            <div class="timeline-title-text">${e.title}</div>
-                            <div class="timeline-dept-tag">Department: <strong>${e.department}</strong> | Officer: ${e.officer || 'OFF-GOVT-001'}</div>
-                            ${e.details ? `<div style="font-size:11px; color:#475569; margin-top:4px;">${e.details}</div>` : ''}
+
+            <div class="govt-card-header">
+                🕒 LAND GOVERNANCE TIMELINE
+            </div>
+
+            ${timeline.length > 0
+            ? `
+                        <div class="timeline-vertical-list">
+
+                            ${timeline.map(event => {
+
+                const isApproved =
+                    event.eventType ===
+                    "OFFICER_APPROVED";
+
+                const isRejected =
+                    event.eventType ===
+                    "OFFICER_REJECTED";
+
+                const isApplication =
+                    !!event.applicationId;
+
+                const statusClass =
+                    isApproved
+                        ? "status-badge-verified"
+                        : isRejected
+                            ? "status-badge-conflict"
+                            : "status-badge-review";
+
+                return `
+                                    <div
+                                        class="timeline-item-entry"
+                                        style="
+                                            position:relative;
+                                            padding:16px;
+                                            margin-bottom:12px;
+                                            border-left:4px solid ${isApproved
+                        ? "#22c55e"
+                        : isRejected
+                            ? "#ef4444"
+                            : "#38bdf8"
+                    };
+                                            background:#f8fafc;
+                                            border-radius:6px;
+                                        "
+                                    >
+
+                                        <div
+                                            class="timeline-date-tag"
+                                        >
+                                            ${event.timestamp
+                        ? new Date(
+                            event.timestamp
+                        ).toLocaleString(
+                            "en-IN"
+                        )
+                        : (
+                            event.date ||
+                            event.year ||
+                            "-"
+                        )
+                    }
+                                        </div>
+
+                                        <div
+                                            class="timeline-title-text"
+                                            style="
+                                                font-weight:800;
+                                                margin-top:5px;
+                                            "
+                                        >
+                                            ${isApproved
+                        ? "✓ "
+                        : isRejected
+                            ? "✕ "
+                            : "• "
+                    }
+
+                                            ${event.title}
+                                        </div>
+
+                                        <div
+                                            class="timeline-dept-tag"
+                                        >
+                                            Department:
+                                            <strong>
+                                                ${event.department ||
+                    "LandGov"
+                    }
+                                            </strong>
+                                        </div>
+
+                                        <div
+                                            style="
+                                                margin-top:5px;
+                                                font-size:12px;
+                                                color:#475569;
+                                            "
+                                        >
+                                            Officer:
+                                            <strong>
+                                                ${event.officer ||
+                    "System"
+                    }
+                                            </strong>
+                                        </div>
+
+                                        ${isApplication
+                        ? `
+                                                    <div
+                                                        style="
+                                                            margin-top:7px;
+                                                            font-size:12px;
+                                                        "
+                                                    >
+                                                        Application:
+                                                        <strong>
+                                                            ${event.applicationId}
+                                                        </strong>
+                                                    </div>
+                                                `
+                        : ""
+                    }
+
+                                        ${event.newStatus
+                        ? `
+                                                    <div
+                                                        style="
+                                                            margin-top:8px;
+                                                        "
+                                                    >
+                                                        <span
+                                                            class="${statusClass}"
+                                                        >
+                                                            ${event.oldStatus
+                            ? `${event.oldStatus} → `
+                            : ""
+                        }
+                                                            ${event.newStatus}
+                                                        </span>
+                                                    </div>
+                                                `
+                        : ""
+                    }
+
+                                        ${event.details
+                        ? `
+                                                    <div
+                                                        style="
+                                                            margin-top:8px;
+                                                            font-size:12px;
+                                                            color:#64748b;
+                                                        "
+                                                    >
+                                                        ${event.details}
+                                                    </div>
+                                                `
+                        : ""
+                    }
+
+                                    </div>
+                                `;
+
+            }).join("")}
+
                         </div>
-                    `).join('')}
-                </div>
-            ` : '<div style="padding:12px; color:#64748b;">No timeline entries available.</div>'}
+                    `
+            : `
+                        <div
+                            style="
+                                padding:20px;
+                                text-align:center;
+                                color:#64748b;
+                            "
+                        >
+                            No timeline events available
+                            for this land parcel.
+                        </div>
+                    `
+        }
+
         </div>
     `;
 }
@@ -3441,39 +3630,144 @@ function formatCurrency(val) {
 }
 
 function initIntegratedWorkspaceMap(parcel) {
+
     setTimeout(() => {
-        const container = document.getElementById("workspace-leaflet-map");
-        if (!container) return;
+
+        const container =
+            document.getElementById("workspace-leaflet-map");
+
+        if (!container) {
+            console.warn(
+                "GIS map container not found."
+            );
+            return;
+        }
+
+        if (typeof L === "undefined") {
+            container.innerHTML = `
+                <div style="
+                    height:100%;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    background:#f1f5f9;
+                    color:#b91c1c;
+                    font-weight:700;
+                    padding:20px;
+                    text-align:center;
+                ">
+                    GIS Map library could not be loaded.
+                    Please check your internet connection.
+                </div>
+            `;
+            console.error(
+                "Leaflet library is not loaded."
+            );
+            return;
+        }
+
+        // Remove previous map
         if (window.integratedMap) {
             window.integratedMap.remove();
             window.integratedMap = null;
         }
-        const coords = parcel.coordinates || [[11.0200, 76.9500], [11.0200, 76.9530], [11.0175, 76.9530], [11.0175, 76.9500]];
-        const poly = L.polygon(coords);
-        const bounds = poly.getBounds();
-        const center = bounds.getCenter();
 
-        const map = L.map("workspace-leaflet-map").setView(center, 16);
+        const defaultCoords = [
+            [11.0200, 76.9500],
+            [11.0200, 76.9530],
+            [11.0175, 76.9530],
+            [11.0175, 76.9500]
+        ];
+
+        const coords =
+            Array.isArray(parcel.coordinates) &&
+                parcel.coordinates.length >= 3
+                ? parcel.coordinates
+                : defaultCoords;
+
+        const polygon =
+            L.polygon(coords);
+
+        const bounds =
+            polygon.getBounds();
+
+        const center =
+            bounds.getCenter();
+
+        const map =
+            L.map(
+                "workspace-leaflet-map",
+                {
+                    zoomControl: true
+                }
+            );
+
         window.integratedMap = map;
 
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            attribution: '&copy; OpenStreetMap'
-        }).addTo(map);
+        map.setView(
+            center,
+            17
+        );
 
-        poly.setStyle({
-            color: "#0b1d3a",
-            weight: 3,
-            fillColor: "#38bdf8",
-            fillOpacity: 0.4
-        }).addTo(map);
+        L.tileLayer(
+            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            {
+                maxZoom: 20,
+                attribution:
+                    "&copy; OpenStreetMap contributors"
+            }
+        ).addTo(map);
 
-        poly.bindPopup(`
-            <strong>Parcel: ${parcel.id || "LND-001"}</strong><br>
-            Survey Number: ${parcel.surveyNumber || "SUR-101"}<br>
-            Land Use: ${parcel.landUse || "Residential"}<br>
-            Area: ${parcel.area || "2,400 sq.ft"}
-        `).openPopup();
-    }, 250);
+        polygon
+            .setStyle({
+                color: "#0b1d3a",
+                weight: 3,
+                fillColor: "#38bdf8",
+                fillOpacity: 0.35
+            })
+            .addTo(map);
+
+        map.fitBounds(
+            bounds,
+            {
+                padding: [25, 25]
+            }
+        );
+
+        polygon.bindPopup(`
+            <div style="min-width:180px;">
+                <strong>
+                    Parcel:
+                    ${parcel.id || "N/A"}
+                </strong>
+                <br>
+                Survey:
+                ${parcel.surveyNumber || "N/A"}
+                <br>
+                Land Use:
+                ${parcel.landUse || "N/A"}
+                <br>
+                Area:
+                ${parcel.area || "N/A"}
+            </div>
+        `);
+
+        polygon.openPopup();
+
+        // Important when map is inside a hidden tab
+        setTimeout(() => {
+            if (window.integratedMap) {
+                window.integratedMap.invalidateSize();
+                window.integratedMap.fitBounds(
+                    bounds,
+                    {
+                        padding: [25, 25]
+                    }
+                );
+            }
+        }, 300);
+
+    }, 300);
 }
 
 window.renderOverviewPane = renderOverviewPane;
@@ -3539,9 +3833,9 @@ async function loadParcelDepartmentRequestsInProfile(parcelId) {
                 </thead>
                 <tbody>
                     ${requests.map(r => {
-                        const statusClass = r.status === 'COMPLETED' ? 'status-badge-verified' : (r.status === 'PENDING' ? 'status-badge-pending' : 'status-badge-review');
-                        const isOverdue = r.isOverdue;
-                        return `
+            const statusClass = r.status === 'COMPLETED' ? 'status-badge-verified' : (r.status === 'PENDING' ? 'status-badge-pending' : 'status-badge-review');
+            const isOverdue = r.isOverdue;
+            return `
                             <tr>
                                 <td><strong>${r.requestId}</strong></td>
                                 <td>${r.from.department}</td>
@@ -3557,7 +3851,7 @@ async function loadParcelDepartmentRequestsInProfile(parcelId) {
                                 <td><button class="btn-govt-secondary" onclick="openDepartmentRequestDetailModal('${r.requestId}')" style="padding:2px 6px; font-size:0.75rem;">View</button>
                             </tr>
                         `;
-                    }).join('')}
+        }).join('')}
                 </tbody>
             </table>
         `;
@@ -3565,6 +3859,14 @@ async function loadParcelDepartmentRequestsInProfile(parcelId) {
         container.innerHTML = `<div style="color:#ef4444; font-size:0.9rem;">Failed to load department requests: ${e.message}</div>`;
     }
 }
+window.viewParcelProfile = function (parcelId) {
+    if (!parcelId) {
+        console.error("Parcel ID is missing.");
+        return;
+    }
+
+    openCompleteLandProfile(parcelId);
+};
 
 window.renderDepartmentRequestsPane = renderDepartmentRequestsPane;
 window.loadParcelDepartmentRequestsInProfile = loadParcelDepartmentRequestsInProfile;
@@ -3574,4 +3876,4 @@ window.profileRow = profileRow;
 window.formatCurrency = formatCurrency;
 
 
-
+

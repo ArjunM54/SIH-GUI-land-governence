@@ -56,7 +56,7 @@ router.get("/", (req, res) => {
 router.get("/number/:applicationNumber", (req, res) => {
     try {
         const appNum = String(req.params.applicationNumber).trim().toUpperCase();
-        const app = applications.find(a => a.applicationId.toUpperCase() === appNum);
+        const app = applications.find(a => (a.applicationId || "").toUpperCase() === appNum || (a.parcelId || "").toUpperCase() === appNum);
         if (!app) {
             return res.status(404).json({ success: false, message: `Application ${appNum} not found.` });
         }
@@ -130,72 +130,73 @@ router.post("/", (req, res) => {
 router.patch("/:id/status", (req, res) => {
     try {
         const appId = String(req.params.id).trim().toUpperCase();
-        const { status, remarks, deptKey } = req.body;
-        const app = applications.find(a => a.applicationId.toUpperCase() === appId);
+
+        const {
+            status,
+            remarks,
+            deptKey,
+            requestedDocument
+        } = req.body;
+
+        if (!appId) {
+            return res.status(400).json({
+                success: false,
+                message: "Application ID is required."
+            });
+        }
+
+        if (!deptKey) {
+            return res.status(400).json({
+                success: false,
+                message: "Department key is required."
+            });
+        }
+
+        if (!status) {
+            return res.status(400).json({
+                success: false,
+                message: "Application decision is required."
+            });
+        }
+
+        const app = applications.find(
+            a =>
+                String(a.applicationId).trim().toUpperCase() === appId
+        );
+
         if (!app) {
-            return res.status(404).json({ success: false, message: `Application ${appId} not found.` });
-        }
-        const result = updateVerificationStage(req.user, appId, deptKey || "cadastral", status, remarks);
-        return res.json(result);
-    } catch (e) {
-        return res.status(500).json({ success: false, message: e.message });
-    }
-});
-
-/**
- * GET /api/applications/:applicationId/documents/:documentId/view
- * Secure PDF viewing endpoint for officers and authorized citizens
- */
-router.get("/:applicationId/documents/:documentId/view", (req, res) => {
-    try {
-        const { applicationId, documentId } = req.params;
-        const doc = getDocumentById(documentId);
-        if (!doc) {
-            return res.status(404).json({ success: false, message: `Document '${documentId}' not found.` });
+            return res.status(404).json({
+                success: false,
+                message: `Application ${appId} not found.`
+            });
         }
 
-        const filePath = resolveStoredFilePath(doc.fileName || doc.filePath);
-        if (!filePath || !fs.existsSync(filePath)) {
-            return res.status(404).json({ success: false, message: "Physical PDF document file not found." });
+        if (!app.verifications || !app.verifications[deptKey]) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid verification department: ${deptKey}`
+            });
         }
 
-        auditService.logEvent({
-            actor: req.user.email || req.user.officerId,
-            target: documentId,
-            action: "DOCUMENT_VIEWED",
-            result: "SUCCESS",
-            details: { applicationId, documentType: doc.documentType }
+        const result = updateVerificationStage(
+            req.user,
+            appId,
+            deptKey,
+            status,
+            remarks || "",
+            requestedDocument || ""
+        );
+
+        return res.status(200).json(result);
+
+    } catch (error) {
+        console.error("Application status update error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Failed to update application status."
         });
-
-        res.setHeader("Content-Type", "application/pdf");
-        res.setHeader("Content-Disposition", `inline; filename="${doc.fileName || 'document.pdf'}"`);
-        return res.sendFile(filePath);
-    } catch (e) {
-        return res.status(500).json({ success: false, message: e.message });
     }
 });
 
-/**
- * GET /api/applications/:applicationId/documents/:documentId/download
- * Secure PDF download endpoint
- */
-router.get("/:applicationId/documents/:documentId/download", (req, res) => {
-    try {
-        const { applicationId, documentId } = req.params;
-        const doc = getDocumentById(documentId);
-        if (!doc) {
-            return res.status(404).json({ success: false, message: `Document '${documentId}' not found.` });
-        }
-
-        const filePath = resolveStoredFilePath(doc.fileName || doc.filePath);
-        if (!filePath || !fs.existsSync(filePath)) {
-            return res.status(404).json({ success: false, message: "Physical PDF document file not found." });
-        }
-
-        return res.download(filePath, doc.fileName || `${documentId}.pdf`);
-    } catch (e) {
-        return res.status(500).json({ success: false, message: e.message });
-    }
-});
-
-module.exports = router;
+module.exports = router;

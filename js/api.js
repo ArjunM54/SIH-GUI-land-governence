@@ -39,10 +39,10 @@ async function apiRequest(endpoint, options = {}) {
             let errMessage = `API Error: ${response.status}`;
             try {
                 const errData = await response.json();
-                if (errData && errData.error) {
-                    errMessage = errData.error;
+                if (errData && (errData.message || errData.error)) {
+                    errMessage = errData.message || errData.error;
                 }
-            } catch (e) {}
+            } catch (e) { }
             throw new Error(errMessage);
         }
 
@@ -788,31 +788,49 @@ async function verifyOfficerDocument(documentId, decision, remarks) {
     });
 }
 
-async function updateVerificationStage(target, deptKey, decision, verificationRemarks, requestedDocument) {
-    const endpointMap = {
-        cadastral: "/api/officer/cadastral/verify-boundary",
-        ror: "/api/officer/ror/approve-mutation",
-        registration: "/api/officer/registration/approve-transfer",
-        landUse: "/api/officer/land-use/approve-conversion",
-        propertyTax: "/api/officer/property-tax/approve-clearance"
-    };
-    const endpoint = endpointMap[deptKey] || "/api/officer/cadastral/verify-boundary";
+async function updateVerificationStage(
+    applicationId,
+    deptKey,
+    decision,
+    verificationRemarks,
+    requestedDocument = ""
+) {
 
-    return await apiRequest(endpoint, {
-        method: "POST",
-        body: JSON.stringify({
-            parcelId: target,
-            mutationId: target,
-            registrationId: target,
-            conversionId: target,
-            requestId: target,
-            decision,
-            status: decision,
-            verificationRemarks,
-            remarks: verificationRemarks,
-            requestedDocument
-        })
-    });
+    if (!applicationId) {
+        throw new Error(
+            "Application ID is required."
+        );
+    }
+
+    const validDepartments = [
+        "cadastral",
+        "ror",
+        "registration",
+        "landUse",
+        "propertyTax"
+    ];
+
+    if (!validDepartments.includes(deptKey)) {
+        throw new Error(
+            `Invalid department: ${deptKey}`
+        );
+    }
+
+    return await apiRequest(
+        `/api/applications/${encodeURIComponent(applicationId)}/status`,
+        {
+            method: "PATCH",
+
+            body: JSON.stringify({
+                deptKey: deptKey,
+                status: decision,
+                remarks:
+                    verificationRemarks || "",
+                requestedDocument:
+                    requestedDocument || ""
+            })
+        }
+    );
 }
 
 // Expose to API object & window

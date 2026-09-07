@@ -1,13 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Citizen Land Portal | LandGov GIS</title>
+    <!-- Leaflet GIS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/landProfile.css">
     <link rel="stylesheet" href="css/citizen.css">
 </head>
+
 <body class="citizen-body">
 
     <!-- MOBILE HEADER TOGGLE -->
@@ -90,7 +95,8 @@
                 <li class="nav-item">
                     <a id="nav-notifications" class="nav-link" onclick="switchTab('notifications')">
                         <span class="nav-link-content"><span>🔔</span> Notifications</span>
-                        <span id="notif-badge-count" style="background: #ef4444; color: #fff; border-radius: 10px; padding: 0.1rem 0.4rem; font-size: 0.72rem; display: none;">0</span>
+                        <span id="notif-badge-count"
+                            style="background: #ef4444; color: #fff; border-radius: 10px; padding: 0.1rem 0.4rem; font-size: 0.72rem; display: none;">0</span>
                     </a>
                 </li>
 
@@ -123,7 +129,8 @@
             <section id="section-dashboard" class="tab-section">
                 <div class="dashboard-header-panel">
                     <h1>Welcome, <span id="welcome-name">Citizen</span></h1>
-                    <p style="color: #94a3b8; margin: 0;">Access land services, submit applications, track 5-department verifications, and download documents.</p>
+                    <p style="color: #94a3b8; margin: 0;">Access land services, submit applications, track 5-department
+                        verifications, and download documents.</p>
                 </div>
 
                 <!-- METRICS GRID -->
@@ -163,7 +170,8 @@
                     <div class="card-panel">
                         <div class="card-title">
                             <span>📋 Recent Applications</span>
-                            <button class="action-btn" onclick="switchTab('applications', 'my')" style="font-size: 0.78rem;">View All</button>
+                            <button class="action-btn" onclick="switchTab('applications', 'my')"
+                                style="font-size: 0.78rem;">View All</button>
                         </div>
                         <div id="recent-applications-container">
                             <table class="table-custom">
@@ -178,7 +186,10 @@
                                     </tr>
                                 </thead>
                                 <tbody id="recent-applications-tbody">
-                                    <tr><td colspan="6" style="text-align: center; color: #94a3b8;">Loading applications...</td></tr>
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; color: #94a3b8;">Loading
+                                            applications...</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -188,10 +199,13 @@
                     <div class="card-panel">
                         <div class="card-title">
                             <span>🔔 Recent Notifications</span>
-                            <button class="action-btn" onclick="switchTab('notifications')" style="font-size: 0.78rem;">View All</button>
+                            <button class="action-btn" onclick="switchTab('notifications')"
+                                style="font-size: 0.78rem;">View All</button>
                         </div>
-                        <div id="recent-notifications-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
-                            <div style="color: #94a3b8; text-align: center; padding: 1rem;">Loading notifications...</div>
+                        <div id="recent-notifications-container"
+                            style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <div style="color: #94a3b8; text-align: center; padding: 1rem;">Loading notifications...
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -200,7 +214,8 @@
                 <div class="card-panel">
                     <div class="card-title">
                         <span>🗺️ My Registered Parcels Overview</span>
-                        <button class="action-btn" onclick="switchTab('myland')" style="font-size: 0.78rem;">Manage My Land</button>
+                        <button class="action-btn" onclick="switchTab('myland')" style="font-size: 0.78rem;">Manage My
+                            Land</button>
                     </div>
                     <div id="dash-properties-container">
                         <table class="table-custom">
@@ -214,19 +229,24 @@
                                 </tr>
                             </thead>
                             <tbody id="dash-properties-tbody">
-                                <tr><td colspan="5" style="text-align: center; color: #94a3b8;">Loading properties...</td></tr>
+                                <tr>
+                                    <td colspan="5" style="text-align: center; color: #94a3b8;">Loading properties...
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
                 <!-- GIS MAP CARD -->
-                <div class="card-panel" style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+                <div class="card-panel"
+                    style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
                     <h3 style="margin: 0 0 0.5rem 0; color: #38bdf8;">Interactive GIS Land Map</h3>
                     <p style="color: #94a3b8; max-width: 600px; margin: 0 auto 1.25rem auto; font-size: 0.9rem;">
                         View spatial boundaries, satellite overlays, and conflict analysis on the unified GIS map.
                     </p>
-                    <a href="index.html#map-section" class="action-btn" style="display: inline-block; text-decoration: none; padding: 0.75rem 1.5rem;">
+                    <a href="index.html#map-section" class="action-btn"
+                        style="display: inline-block; text-decoration: none; padding: 0.75rem 1.5rem;">
                         Launch Interactive GIS Map 🗺️
                     </a>
                 </div>
@@ -236,7 +256,8 @@
             <section id="section-myland" class="tab-section" style="display: none;">
                 <div class="dashboard-header-panel">
                     <h1>🗺️ My Land</h1>
-                    <p style="color: #94a3b8; margin: 0;">Access and inspect your registered land parcels and detailed ownership records. Citizens only see properties legitimately associated with their account.</p>
+                    <p style="color: #94a3b8; margin: 0;">Access and inspect your registered land parcels and detailed
+                        ownership records. Citizens only see properties legitimately associated with their account.</p>
                 </div>
 
                 <div id="myland-cards-container">
@@ -248,21 +269,26 @@
             <section id="section-applications" class="tab-section" style="display: none;">
                 <div class="dashboard-header-panel">
                     <h1>📄 Citizen Applications</h1>
-                    <p style="color: #94a3b8; margin: 0;">Submit land-related applications and track real-time verification across all 5 government officer departments.</p>
+                    <p style="color: #94a3b8; margin: 0;">Submit land-related applications and track real-time
+                        verification across all 5 government officer departments.</p>
                 </div>
 
                 <!-- APPLICATION SUB-TABS -->
                 <div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem;">
-                    <button id="app-tab-submit" class="action-btn" onclick="switchAppSubTab('submit')">➕ Submit Application</button>
-                    <button id="app-tab-my" class="secondary-btn" onclick="switchAppSubTab('my')">📋 My Applications</button>
-                    <button id="app-tab-track" class="secondary-btn" onclick="switchAppSubTab('track')">📊 Track Application Timeline</button>
+                    <button id="app-tab-submit" class="action-btn" onclick="switchAppSubTab('submit')">➕ Submit
+                        Application</button>
+                    <button id="app-tab-my" class="secondary-btn" onclick="switchAppSubTab('my')">📋 My
+                        Applications</button>
+                    <button id="app-tab-track" class="secondary-btn" onclick="switchAppSubTab('track')">📊 Track
+                        Application Timeline</button>
                 </div>
 
                 <!-- SUB-TAB: SUBMIT APPLICATION -->
                 <div id="app-sub-submit" class="app-sub-section">
                     <div class="card-panel">
                         <div class="card-title">SUBMIT APPLICATION — What would you like to apply for?</div>
-                        <p style="color: #94a3b8; font-size: 0.88rem;">Select a land service appropriate for citizens below to launch the request workflow.</p>
+                        <p style="color: #94a3b8; font-size: 0.88rem;">Select a land service appropriate for citizens
+                            below to launch the request workflow.</p>
 
                         <div class="service-cards-grid">
                             <!-- OWNER CHANGE CARD -->
@@ -270,7 +296,8 @@
                                 <div>
                                     <div class="service-card-icon">🔄</div>
                                     <div class="service-card-title">Owner Change</div>
-                                    <div class="service-card-desc">Request change of property ownership. Requires 5-department government officer verifications.</div>
+                                    <div class="service-card-desc">Request change of property ownership. Requires
+                                        5-department government officer verifications.</div>
                                 </div>
                                 <button class="action-btn" onclick="openOwnerChangeModal()">[ Apply ]</button>
                             </div>
@@ -280,9 +307,11 @@
                                 <div>
                                     <div class="service-card-icon">📝</div>
                                     <div class="service-card-title">Mutation Request</div>
-                                    <div class="service-card-desc">Update land records (RoR) following an eligible transaction or inheritance.</div>
+                                    <div class="service-card-desc">Update land records (RoR) following an eligible
+                                        transaction or inheritance.</div>
                                 </div>
-                                <button class="action-btn" onclick="openServiceModal('Mutation Request')">[ Apply ]</button>
+                                <button class="action-btn" onclick="openServiceModal('Mutation Request')">[ Apply
+                                    ]</button>
                             </div>
 
                             <!-- PROPERTY REGISTRATION CARD -->
@@ -290,9 +319,11 @@
                                 <div>
                                     <div class="service-card-icon">🏛️</div>
                                     <div class="service-card-title">Property Registration</div>
-                                    <div class="service-card-desc">Submit registration-related deed requests and verify stamp duty status.</div>
+                                    <div class="service-card-desc">Submit registration-related deed requests and verify
+                                        stamp duty status.</div>
                                 </div>
-                                <button class="action-btn" onclick="openServiceModal('Property Registration')">[ Apply ]</button>
+                                <button class="action-btn" onclick="openServiceModal('Property Registration')">[ Apply
+                                    ]</button>
                             </div>
 
                             <!-- LAND USE REQUEST CARD -->
@@ -300,9 +331,11 @@
                                 <div>
                                     <div class="service-card-icon">🗺️</div>
                                     <div class="service-card-title">Land Use Request</div>
-                                    <div class="service-card-desc">Request land-use change, planning permission, or zoning classification enquiry.</div>
+                                    <div class="service-card-desc">Request land-use change, planning permission, or
+                                        zoning classification enquiry.</div>
                                 </div>
-                                <button class="action-btn" onclick="openServiceModal('Land Use Request')">[ Apply ]</button>
+                                <button class="action-btn" onclick="openServiceModal('Land Use Request')">[ Apply
+                                    ]</button>
                             </div>
                         </div>
                     </div>
@@ -325,7 +358,10 @@
                                     </tr>
                                 </thead>
                                 <tbody id="my-applications-tbody">
-                                    <tr><td colspan="6" style="text-align: center; color: #94a3b8;">Loading applications...</td></tr>
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; color: #94a3b8;">Loading
+                                            applications...</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -337,12 +373,15 @@
                     <div class="card-panel">
                         <div class="card-title">
                             <span>🏛️ Multi-Officer Application Tracking Timeline</span>
-                            <select id="track-app-select" class="form-input" style="width: auto; padding: 0.35rem 0.75rem;" onchange="loadTrackingDetails(this.value)">
+                            <select id="track-app-select" class="form-input"
+                                style="width: auto; padding: 0.35rem 0.75rem;"
+                                onchange="loadTrackingDetails(this.value)">
                                 <option value="">Select Application...</option>
                             </select>
                         </div>
                         <div id="tracking-detail-container">
-                            <div style="text-align: center; color: #94a3b8; padding: 2rem;">Please select an application to view its 5-department verification timeline.</div>
+                            <div style="text-align: center; color: #94a3b8; padding: 2rem;">Please select an application
+                                to view its 5-department verification timeline.</div>
                         </div>
                     </div>
                 </div>
@@ -352,7 +391,8 @@
             <section id="section-services" class="tab-section" style="display: none;">
                 <div class="dashboard-header-panel">
                     <h1>Government Land Services</h1>
-                    <p style="color: #94a3b8; margin: 0;">Access LandGov services and submit land-related requests from one place.</p>
+                    <p style="color: #94a3b8; margin: 0;">Access LandGov services and submit land-related requests from
+                        one place.</p>
                 </div>
 
                 <div class="grid-2col" style="margin-bottom: 1.5rem;">
@@ -360,45 +400,56 @@
                     <div class="card-panel">
                         <div class="card-title">🏛️ Property Registration</div>
                         <p style="color: #94a3b8; font-size: 0.88rem; line-height: 1.5;">
-                            View registration details, deed numbers, stamp duty payment status, and submit registration-related requests.
+                            View registration details, deed numbers, stamp duty payment status, and submit
+                            registration-related requests.
                         </p>
-                        <div id="service-reg-details" style="background: #0f172a; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #334155;">
+                        <div id="service-reg-details"
+                            style="background: #0f172a; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #334155;">
                             <div style="font-size: 0.85rem; color: #cbd5e1;">Loading registration data...</div>
                         </div>
-                        <button class="action-btn" onclick="openServiceModal('Property Registration')">Submit Registration Request</button>
+                        <button class="action-btn" onclick="openServiceModal('Property Registration')">Submit
+                            Registration Request</button>
                     </div>
 
                     <!-- SERVICE 2: MUTATION REQUEST -->
                     <div class="card-panel">
                         <div class="card-title">📝 Mutation Request</div>
                         <p style="color: #94a3b8; font-size: 0.88rem; line-height: 1.5;">
-                            Request an update to land records (RoR) following a legally recognized ownership or property transaction.
+                            Request an update to land records (RoR) following a legally recognized ownership or property
+                            transaction.
                         </p>
-                        <div id="service-mut-details" style="background: #0f172a; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #334155;">
+                        <div id="service-mut-details"
+                            style="background: #0f172a; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #334155;">
                             <div style="font-size: 0.85rem; color: #cbd5e1;">Loading mutation status...</div>
                         </div>
-                        <button class="action-btn" onclick="openServiceModal('Mutation Request')">Submit Mutation Request</button>
+                        <button class="action-btn" onclick="openServiceModal('Mutation Request')">Submit Mutation
+                            Request</button>
                     </div>
 
                     <!-- SERVICE 3: LAND USE REQUEST -->
                     <div class="card-panel">
                         <div class="card-title">🗺️ Land Use Request</div>
                         <p style="color: #94a3b8; font-size: 0.88rem; line-height: 1.5;">
-                            Submit requests for land-use conversion, zoning classification enquiry, or planning permission. Routed to Land Use & Planning Officers.
+                            Submit requests for land-use conversion, zoning classification enquiry, or planning
+                            permission. Routed to Land Use & Planning Officers.
                         </p>
-                        <div id="service-lu-details" style="background: #0f172a; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #334155;">
+                        <div id="service-lu-details"
+                            style="background: #0f172a; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #334155;">
                             <div style="font-size: 0.85rem; color: #cbd5e1;">Loading land use records...</div>
                         </div>
-                        <button class="action-btn" onclick="openServiceModal('Land Use Request')">Submit Land Use Request</button>
+                        <button class="action-btn" onclick="openServiceModal('Land Use Request')">Submit Land Use
+                            Request</button>
                     </div>
 
                     <!-- SERVICE 4: PROPERTY TAX SERVICES -->
                     <div class="card-panel">
                         <div class="card-title">💰 Property Tax Services</div>
                         <p style="color: #94a3b8; font-size: 0.88rem; line-height: 1.5;">
-                            View property tax assessments, payment history, outstanding amounts, and download tax clearance receipts.
+                            View property tax assessments, payment history, outstanding amounts, and download tax
+                            clearance receipts.
                         </p>
-                        <div id="service-tax-details" style="background: #0f172a; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #334155;">
+                        <div id="service-tax-details"
+                            style="background: #0f172a; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #334155;">
                             <div style="font-size: 0.85rem; color: #cbd5e1;">Loading property tax details...</div>
                         </div>
                         <button class="action-btn" onclick="switchTab('tax')">Access Property Tax Portal</button>
@@ -410,7 +461,8 @@
             <section id="section-documents" class="tab-section" style="display: none;">
                 <div class="dashboard-header-panel">
                     <h1>📑 My Documents</h1>
-                    <p style="color: #94a3b8; margin: 0;">View, download, and verify digital land certificates, RoR titles, tax receipts, and issued documents.</p>
+                    <p style="color: #94a3b8; margin: 0;">View, download, and verify digital land certificates, RoR
+                        titles, tax receipts, and issued documents.</p>
                 </div>
 
                 <div class="card-panel">
@@ -420,13 +472,25 @@
                     </div>
 
                     <!-- DOCUMENT CATEGORY FILTERS -->
-                    <div id="doc-category-filters" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
-                        <button class="action-btn doc-filter-btn active" onclick="filterDocsByCategory('All', this)" style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">All Documents</button>
-                        <button class="secondary-btn doc-filter-btn" onclick="filterDocsByCategory('Ownership Documents', this)" style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">Ownership Documents</button>
-                        <button class="secondary-btn doc-filter-btn" onclick="filterDocsByCategory('Registration Documents', this)" style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">Registration Documents</button>
-                        <button class="secondary-btn doc-filter-btn" onclick="filterDocsByCategory('Tax Documents', this)" style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">Tax Documents</button>
-                        <button class="secondary-btn doc-filter-btn" onclick="filterDocsByCategory('Application Documents', this)" style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">Application Documents</button>
-                        <button class="secondary-btn doc-filter-btn" onclick="filterDocsByCategory('Issued Documents', this)" style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">Issued Documents</button>
+                    <div id="doc-category-filters"
+                        style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
+                        <button class="action-btn doc-filter-btn active" onclick="filterDocsByCategory('All', this)"
+                            style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">All Documents</button>
+                        <button class="secondary-btn doc-filter-btn"
+                            onclick="filterDocsByCategory('Ownership Documents', this)"
+                            style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">Ownership Documents</button>
+                        <button class="secondary-btn doc-filter-btn"
+                            onclick="filterDocsByCategory('Registration Documents', this)"
+                            style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">Registration Documents</button>
+                        <button class="secondary-btn doc-filter-btn"
+                            onclick="filterDocsByCategory('Tax Documents', this)"
+                            style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">Tax Documents</button>
+                        <button class="secondary-btn doc-filter-btn"
+                            onclick="filterDocsByCategory('Application Documents', this)"
+                            style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">Application Documents</button>
+                        <button class="secondary-btn doc-filter-btn"
+                            onclick="filterDocsByCategory('Issued Documents', this)"
+                            style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">Issued Documents</button>
                     </div>
 
                     <div id="documents-table-container">
@@ -443,7 +507,10 @@
                                 </tr>
                             </thead>
                             <tbody id="documents-tbody">
-                                <tr><td colspan="7" style="text-align: center; color: #94a3b8;">Loading documents...</td></tr>
+                                <tr>
+                                    <td colspan="7" style="text-align: center; color: #94a3b8;">Loading documents...
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -454,7 +521,8 @@
             <section id="section-tax" class="tab-section" style="display: none;">
                 <div class="dashboard-header-panel">
                     <h1>💰 Property Tax Portal</h1>
-                    <p style="color: #94a3b8; margin: 0;">Quick access to view property tax assessments, outstanding dues, payment status, and download tax receipts.</p>
+                    <p style="color: #94a3b8; margin: 0;">Quick access to view property tax assessments, outstanding
+                        dues, payment status, and download tax receipts.</p>
                 </div>
 
                 <div class="card-panel">
@@ -469,13 +537,15 @@
             <section id="section-notifications" class="tab-section" style="display: none;">
                 <div class="dashboard-header-panel">
                     <h1>🔔 Notifications & Alerts</h1>
-                    <p style="color: #94a3b8; margin: 0;">Real-time alerts regarding application progress, officer approvals, document requests, and system updates.</p>
+                    <p style="color: #94a3b8; margin: 0;">Real-time alerts regarding application progress, officer
+                        approvals, document requests, and system updates.</p>
                 </div>
 
                 <div class="card-panel">
                     <div class="card-title">
                         <span>Notifications Feed</span>
-                        <button class="secondary-btn" onclick="markAllNotificationsRead()" style="font-size: 0.78rem;">Mark All as Read</button>
+                        <button class="secondary-btn" onclick="markAllNotificationsRead()"
+                            style="font-size: 0.78rem;">Mark All as Read</button>
                     </div>
                     <div id="notifications-feed-container" style="display: flex; flex-direction: column; gap: 0.85rem;">
                         <div style="text-align: center; color: #94a3b8; padding: 2rem;">Loading notifications...</div>
@@ -487,7 +557,8 @@
             <section id="section-profile" class="tab-section" style="display: none;">
                 <div class="dashboard-header-panel">
                     <h1>👤 My Profile</h1>
-                    <p style="color: #94a3b8; margin: 0;">View citizen credentials and update contact details. Citizen ID, Role, and Privileges are strictly managed by administrative policy.</p>
+                    <p style="color: #94a3b8; margin: 0;">View citizen credentials and update contact details. Citizen
+                        ID, Role, and Privileges are strictly managed by administrative policy.</p>
                 </div>
 
                 <div class="grid-2col">
@@ -495,13 +566,36 @@
                         <div class="card-title">Citizen Identity Details</div>
                         <table class="table-custom">
                             <tbody>
-                                <tr><th style="width: 35%;">Full Name</th><td id="prof-name">Hari Prem</td></tr>
-                                <tr><th>Citizen ID</th><td><span id="prof-id" class="citizen-id-tag">CIT-2026-9081</span></td></tr>
-                                <tr><th>Email Address</th><td id="prof-email">citizen@landgov.gov</td></tr>
-                                <tr><th>Mobile Number</th><td id="prof-mobile">6383120790</td></tr>
-                                <tr><th>Residential Address</th><td id="prof-address">145/2A, Main Road, Coimbatore</td></tr>
-                                <tr><th>Account Status</th><td><span class="status-tag tag-approved">Active</span></td></tr>
-                                <tr><th>User Role</th><td id="prof-role" style="text-transform: uppercase; font-weight: 600; color: #38bdf8;">Citizen</td></tr>
+                                <tr>
+                                    <th style="width: 35%;">Full Name</th>
+                                    <td id="prof-name">Hari Prem</td>
+                                </tr>
+                                <tr>
+                                    <th>Citizen ID</th>
+                                    <td><span id="prof-id" class="citizen-id-tag">CIT-2026-9081</span></td>
+                                </tr>
+                                <tr>
+                                    <th>Email Address</th>
+                                    <td id="prof-email">citizen@landgov.gov</td>
+                                </tr>
+                                <tr>
+                                    <th>Mobile Number</th>
+                                    <td id="prof-mobile">6383120790</td>
+                                </tr>
+                                <tr>
+                                    <th>Residential Address</th>
+                                    <td id="prof-address">145/2A, Main Road, Coimbatore</td>
+                                </tr>
+                                <tr>
+                                    <th>Account Status</th>
+                                    <td><span class="status-tag tag-approved">Active</span></td>
+                                </tr>
+                                <tr>
+                                    <th>User Role</th>
+                                    <td id="prof-role"
+                                        style="text-transform: uppercase; font-weight: 600; color: #38bdf8;">Citizen
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -524,7 +618,8 @@
                             <div style="font-size: 0.78rem; color: #94a3b8; margin-bottom: 1rem;">
                                 Note: You cannot modify Role, Citizen ID, or Admin privileges.
                             </div>
-                            <button type="submit" class="action-btn" style="width: 100%; padding: 0.75rem;">Save Profile Updates</button>
+                            <button type="submit" class="action-btn" style="width: 100%; padding: 0.75rem;">Save Profile
+                                Updates</button>
                         </form>
                     </div>
                 </div>
@@ -534,31 +629,47 @@
             <section id="section-help" class="tab-section" style="display: none;">
                 <div class="dashboard-header-panel">
                     <h1>❓ Help & Support</h1>
-                    <p style="color: #94a3b8; margin: 0;">Frequently Asked Questions, tracking guidance, and citizen assistance.</p>
+                    <p style="color: #94a3b8; margin: 0;">Frequently Asked Questions, tracking guidance, and citizen
+                        assistance.</p>
                 </div>
 
                 <div class="grid-2col">
                     <div class="card-panel">
                         <div class="card-title">Frequently Asked Questions</div>
                         <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            <div style="background: #0f172a; padding: 1rem; border-radius: 8px; border: 1px solid #334155;">
-                                <strong style="color: #38bdf8; display: block; margin-bottom: 0.3rem;">Q: How do I submit an owner-change request?</strong>
-                                <span style="font-size: 0.85rem; color: #cbd5e1;">Navigate to Applications → Submit Application → Owner Change. Provide parcel details, new owner information, supporting documents, and submit.</span>
+                            <div
+                                style="background: #0f172a; padding: 1rem; border-radius: 8px; border: 1px solid #334155;">
+                                <strong style="color: #38bdf8; display: block; margin-bottom: 0.3rem;">Q: How do I
+                                    submit an owner-change request?</strong>
+                                <span style="font-size: 0.85rem; color: #cbd5e1;">Navigate to Applications → Submit
+                                    Application → Owner Change. Provide parcel details, new owner information,
+                                    supporting documents, and submit.</span>
                             </div>
 
-                            <div style="background: #0f172a; padding: 1rem; border-radius: 8px; border: 1px solid #334155;">
-                                <strong style="color: #38bdf8; display: block; margin-bottom: 0.3rem;">Q: How long does verification take?</strong>
-                                <span style="font-size: 0.85rem; color: #cbd5e1;">Applications undergo verification across 5 government officer departments (Cadastral, RoR, Registration, Land Use, Property Tax). Typically completed within 3 to 7 working days.</span>
+                            <div
+                                style="background: #0f172a; padding: 1rem; border-radius: 8px; border: 1px solid #334155;">
+                                <strong style="color: #38bdf8; display: block; margin-bottom: 0.3rem;">Q: How long does
+                                    verification take?</strong>
+                                <span style="font-size: 0.85rem; color: #cbd5e1;">Applications undergo verification
+                                    across 5 government officer departments (Cadastral, RoR, Registration, Land Use,
+                                    Property Tax). Typically completed within 3 to 7 working days.</span>
                             </div>
 
-                            <div style="background: #0f172a; padding: 1rem; border-radius: 8px; border: 1px solid #334155;">
-                                <strong style="color: #38bdf8; display: block; margin-bottom: 0.3rem;">Q: Why are multiple officers reviewing my request?</strong>
-                                <span style="font-size: 0.85rem; color: #cbd5e1;">LandGov enforces multi-departmental governance to prevent fraudulent land transfers. All 5 departments must verify legal title, survey boundaries, deeds, zoning, and tax clearance.</span>
+                            <div
+                                style="background: #0f172a; padding: 1rem; border-radius: 8px; border: 1px solid #334155;">
+                                <strong style="color: #38bdf8; display: block; margin-bottom: 0.3rem;">Q: Why are
+                                    multiple officers reviewing my request?</strong>
+                                <span style="font-size: 0.85rem; color: #cbd5e1;">LandGov enforces multi-departmental
+                                    governance to prevent fraudulent land transfers. All 5 departments must verify legal
+                                    title, survey boundaries, deeds, zoning, and tax clearance.</span>
                             </div>
 
-                            <div style="background: #0f172a; padding: 1rem; border-radius: 8px; border: 1px solid #334155;">
-                                <strong style="color: #38bdf8; display: block; margin-bottom: 0.3rem;">Q: How can I track my application status?</strong>
-                                <span style="font-size: 0.85rem; color: #cbd5e1;">Go to Applications → Track Application to view the step-by-step 5-department verification timeline.</span>
+                            <div
+                                style="background: #0f172a; padding: 1rem; border-radius: 8px; border: 1px solid #334155;">
+                                <strong style="color: #38bdf8; display: block; margin-bottom: 0.3rem;">Q: How can I
+                                    track my application status?</strong>
+                                <span style="font-size: 0.85rem; color: #cbd5e1;">Go to Applications → Track Application
+                                    to view the step-by-step 5-department verification timeline.</span>
                             </div>
                         </div>
                     </div>
@@ -581,79 +692,92 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Message / Details</label>
-                                <textarea id="support-message" class="form-input" rows="4" placeholder="Describe your issue or query..." required></textarea>
+                                <textarea id="support-message" class="form-input" rows="4"
+                                    placeholder="Describe your issue or query..." required></textarea>
                             </div>
-                            <button type="submit" class="action-btn" style="width: 100%; padding: 0.75rem;">Submit Ticket to Support</button>
+                            <button type="submit" class="action-btn" style="width: 100%; padding: 0.75rem;">Submit
+                                Ticket to Support</button>
                         </form>
                     </div>
                 </div>
-            <!-- 📜 SECTION: APPLICATION HISTORY -->
-            <section id="section-history" class="tab-section" style="display: none;">
-                <div class="dashboard-header-panel">
-                    <h1>📜 Application History</h1>
-                    <p style="color: #94a3b8; margin: 0;">Complete historical log of all past completed, approved, and archived land applications.</p>
-                </div>
-
-                <div class="card-panel">
-                    <div class="card-title">
-                        <span>History Log</span>
-                        <span style="font-size: 0.8rem; color: #94a3b8;">All historical submissions</span>
-                    </div>
-                    <div id="history-applications-container">
-                        <table class="table-custom">
-                            <thead>
-                                <tr>
-                                    <th>Application ID</th>
-                                    <th>Service Type</th>
-                                    <th>Property</th>
-                                    <th>Submission Date</th>
-                                    <th>Final Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="history-applications-tbody">
-                                <tr><td colspan="6" style="text-align: center; color: #94a3b8;">Loading application history...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- ⚙ SECTION: SETTINGS -->
-            <section id="section-settings" class="tab-section" style="display: none;">
-                <div class="dashboard-header-panel">
-                    <h1>⚙ Portal Settings</h1>
-                    <p style="color: #94a3b8; margin: 0;">Manage your account preferences, notification alerts, and security settings.</p>
-                </div>
-
-                <div class="grid-2col">
-                    <div class="card-panel">
-                        <div class="card-title">🔔 Notification Preferences</div>
-                        <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
-                            <label style="display: flex; align-items: center; gap: 0.75rem; color: #cbd5e1; font-size: 0.9rem;">
-                                <input type="checkbox" checked style="width: 18px; height: 18px;">
-                                Email alerts on officer verification decisions
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 0.75rem; color: #cbd5e1; font-size: 0.9rem;">
-                                <input type="checkbox" checked style="width: 18px; height: 18px;">
-                                Notifications when additional documents are requested
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 0.75rem; color: #cbd5e1; font-size: 0.9rem;">
-                                <input type="checkbox" checked style="width: 18px; height: 18px;">
-                                Property tax assessment updates
-                            </label>
-                        </div>
+                <!-- 📜 SECTION: APPLICATION HISTORY -->
+                <section id="section-history" class="tab-section" style="display: none;">
+                    <div class="dashboard-header-panel">
+                        <h1>📜 Application History</h1>
+                        <p style="color: #94a3b8; margin: 0;">Complete historical log of all past completed, approved,
+                            and archived land applications.</p>
                     </div>
 
                     <div class="card-panel">
-                        <div class="card-title">🔒 Security & Authentication</div>
-                        <div style="margin-top: 1rem;">
-                            <div style="font-size: 0.88rem; color: #94a3b8; margin-bottom: 0.75rem;">Account Authentication Mode: JWT Bearer Session</div>
-                            <button class="secondary-btn" onclick="alert('Password reset link sent to your registered email.')">Change Password</button>
+                        <div class="card-title">
+                            <span>History Log</span>
+                            <span style="font-size: 0.8rem; color: #94a3b8;">All historical submissions</span>
+                        </div>
+                        <div id="history-applications-container">
+                            <table class="table-custom">
+                                <thead>
+                                    <tr>
+                                        <th>Application ID</th>
+                                        <th>Service Type</th>
+                                        <th>Property</th>
+                                        <th>Submission Date</th>
+                                        <th>Final Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-applications-tbody">
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; color: #94a3b8;">Loading application
+                                            history...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                </div>
-            </section>
+                </section>
+
+                <!-- ⚙ SECTION: SETTINGS -->
+                <section id="section-settings" class="tab-section" style="display: none;">
+                    <div class="dashboard-header-panel">
+                        <h1>⚙ Portal Settings</h1>
+                        <p style="color: #94a3b8; margin: 0;">Manage your account preferences, notification alerts, and
+                            security settings.</p>
+                    </div>
+
+                    <div class="grid-2col">
+                        <div class="card-panel">
+                            <div class="card-title">🔔 Notification Preferences</div>
+                            <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+                                <label
+                                    style="display: flex; align-items: center; gap: 0.75rem; color: #cbd5e1; font-size: 0.9rem;">
+                                    <input type="checkbox" checked style="width: 18px; height: 18px;">
+                                    Email alerts on officer verification decisions
+                                </label>
+                                <label
+                                    style="display: flex; align-items: center; gap: 0.75rem; color: #cbd5e1; font-size: 0.9rem;">
+                                    <input type="checkbox" checked style="width: 18px; height: 18px;">
+                                    Notifications when additional documents are requested
+                                </label>
+                                <label
+                                    style="display: flex; align-items: center; gap: 0.75rem; color: #cbd5e1; font-size: 0.9rem;">
+                                    <input type="checkbox" checked style="width: 18px; height: 18px;">
+                                    Property tax assessment updates
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="card-panel">
+                            <div class="card-title">🔒 Security & Authentication</div>
+                            <div style="margin-top: 1rem;">
+                                <div style="font-size: 0.88rem; color: #94a3b8; margin-bottom: 0.75rem;">Account
+                                    Authentication Mode: JWT Bearer Session</div>
+                                <button class="secondary-btn"
+                                    onclick="alert('Password reset link sent to your registered email.')">Change
+                                    Password</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
         </main>
     </div>
@@ -676,11 +800,13 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Current Owner</label>
-                    <input type="text" id="oc-current-owner" class="form-input" readonly placeholder="Existing registered owner">
+                    <input type="text" id="oc-current-owner" class="form-input" readonly
+                        placeholder="Existing registered owner">
                 </div>
                 <div class="form-group">
                     <label class="form-label">New Owner Full Name *</label>
-                    <input type="text" id="oc-new-owner" class="form-input" placeholder="Enter new owner full name" required>
+                    <input type="text" id="oc-new-owner" class="form-input" placeholder="Enter new owner full name"
+                        required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Relationship / Transaction Type *</label>
@@ -693,65 +819,88 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Reason for Transfer *</label>
-                    <textarea id="oc-reason" class="form-input" rows="2" placeholder="State reason for ownership change request..." required></textarea>
+                    <textarea id="oc-reason" class="form-input" rows="2"
+                        placeholder="State reason for ownership change request..." required></textarea>
                 </div>
-                <div class="form-group" style="background: #0f172a; padding: 1rem; border-radius: 8px; border: 1px solid #334155; margin-bottom: 1rem;">
-                    <label class="form-label" style="font-weight: 600; color: #38bdf8; margin-bottom: 0.5rem; display: block;">
+                <div class="form-group"
+                    style="background: #0f172a; padding: 1rem; border-radius: 8px; border: 1px solid #334155; margin-bottom: 1rem;">
+                    <label class="form-label"
+                        style="font-weight: 600; color: #38bdf8; margin-bottom: 0.5rem; display: block;">
                         📁 Required Documents (Mapped to Reviewing Officer Departments)
                     </label>
                     <div style="display: flex; flex-direction: column; gap: 0.85rem;">
                         <div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-bottom: 0.25rem;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-bottom: 0.25rem;">
                                 <span><strong>1. Registered Sale Deed / Transfer Instrument</strong> *</span>
-                                <span class="status-tag tag-review" style="font-size: 0.7rem;">Target: Registration & RoR</span>
+                                <span class="status-tag tag-review" style="font-size: 0.7rem;">Target: Registration &
+                                    RoR</span>
                             </div>
-                            <input type="file" id="oc-doc-saleDeed" class="form-input" accept=".pdf,.png,.jpg" style="padding: 0.35rem; font-size: 0.82rem;">
+                            <input type="file" id="oc-doc-saleDeed" class="form-input" accept=".pdf,.png,.jpg"
+                                style="padding: 0.35rem; font-size: 0.82rem;">
                         </div>
                         <div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-bottom: 0.25rem;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-bottom: 0.25rem;">
                                 <span><strong>2. Government Identity Proof</strong> (Aadhaar/PAN/Passport)</span>
-                                <span class="status-tag tag-review" style="font-size: 0.7rem;">Target: Registration</span>
+                                <span class="status-tag tag-review" style="font-size: 0.7rem;">Target:
+                                    Registration</span>
                             </div>
-                            <input type="file" id="oc-doc-idProof" class="form-input" accept=".pdf,.png,.jpg" style="padding: 0.35rem; font-size: 0.82rem;">
+                            <input type="file" id="oc-doc-idProof" class="form-input" accept=".pdf,.png,.jpg"
+                                style="padding: 0.35rem; font-size: 0.82rem;">
                         </div>
                         <div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-bottom: 0.25rem;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-bottom: 0.25rem;">
                                 <span><strong>3. Previous Record of Rights (RoR) / Title Copy</strong></span>
-                                <span class="status-tag tag-review" style="font-size: 0.7rem;">Target: Land Records & Cadastral</span>
+                                <span class="status-tag tag-review" style="font-size: 0.7rem;">Target: Land Records &
+                                    Cadastral</span>
                             </div>
-                            <input type="file" id="oc-doc-previousRoR" class="form-input" accept=".pdf,.png,.jpg" style="padding: 0.35rem; font-size: 0.82rem;">
+                            <input type="file" id="oc-doc-previousRoR" class="form-input" accept=".pdf,.png,.jpg"
+                                style="padding: 0.35rem; font-size: 0.82rem;">
                         </div>
                         <div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-bottom: 0.25rem;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-bottom: 0.25rem;">
                                 <span><strong>4. Survey / Cadastral Boundary Sketch</strong></span>
-                                <span class="status-tag tag-review" style="font-size: 0.7rem;">Target: Cadastral & Survey</span>
+                                <span class="status-tag tag-review" style="font-size: 0.7rem;">Target: Cadastral &
+                                    Survey</span>
                             </div>
-                            <input type="file" id="oc-doc-surveyDoc" class="form-input" accept=".pdf,.png,.jpg" style="padding: 0.35rem; font-size: 0.82rem;">
+                            <input type="file" id="oc-doc-surveyDoc" class="form-input" accept=".pdf,.png,.jpg"
+                                style="padding: 0.35rem; font-size: 0.82rem;">
                         </div>
                         <div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-bottom: 0.25rem;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-bottom: 0.25rem;">
                                 <span><strong>5. Land Use & Zoning Compliance Proof</strong></span>
-                                <span class="status-tag tag-review" style="font-size: 0.7rem;">Target: Land Use & Planning</span>
+                                <span class="status-tag tag-review" style="font-size: 0.7rem;">Target: Land Use &
+                                    Planning</span>
                             </div>
-                            <input type="file" id="oc-doc-landUseDoc" class="form-input" accept=".pdf,.png,.jpg" style="padding: 0.35rem; font-size: 0.82rem;">
+                            <input type="file" id="oc-doc-landUseDoc" class="form-input" accept=".pdf,.png,.jpg"
+                                style="padding: 0.35rem; font-size: 0.82rem;">
                         </div>
                         <div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-bottom: 0.25rem;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-bottom: 0.25rem;">
                                 <span><strong>6. Property Tax Clearance Receipt</strong></span>
-                                <span class="status-tag tag-review" style="font-size: 0.7rem;">Target: Property Tax & Municipal</span>
+                                <span class="status-tag tag-review" style="font-size: 0.7rem;">Target: Property Tax &
+                                    Municipal</span>
                             </div>
-                            <input type="file" id="oc-doc-taxReceipt" class="form-input" accept=".pdf,.png,.jpg" style="padding: 0.35rem; font-size: 0.82rem;">
+                            <input type="file" id="oc-doc-taxReceipt" class="form-input" accept=".pdf,.png,.jpg"
+                                style="padding: 0.35rem; font-size: 0.82rem;">
                         </div>
                     </div>
                 </div>
                 <div class="form-group" style="display: flex; gap: 0.5rem; align-items: flex-start; margin-top: 1rem;">
                     <input type="checkbox" id="oc-declaration" required style="margin-top: 0.2rem;">
                     <label for="oc-declaration" style="font-size: 0.8rem; color: #cbd5e1;">
-                        I declare that all information provided is accurate and true. I understand this request must be verified by all 5 government officer departments before ownership is updated.
+                        I declare that all information provided is accurate and true. I understand this request must be
+                        verified by all 5 government officer departments before ownership is updated.
                     </label>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
-                    <button type="button" class="secondary-btn" onclick="closeModal('owner-change-modal')">Cancel</button>
+                    <button type="button" class="secondary-btn"
+                        onclick="closeModal('owner-change-modal')">Cancel</button>
                     <button type="submit" class="action-btn">Submit Owner Change Application</button>
                 </div>
             </form>
@@ -775,11 +924,13 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Service Request Details / Reason *</label>
-                    <textarea id="srv-reason" class="form-input" rows="3" placeholder="Provide details of your request..." required></textarea>
+                    <textarea id="srv-reason" class="form-input" rows="3"
+                        placeholder="Provide details of your request..." required></textarea>
                 </div>
                 <div id="srv-extra-fields"></div>
                 <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
-                    <button type="button" class="secondary-btn" onclick="closeModal('service-request-modal')">Cancel</button>
+                    <button type="button" class="secondary-btn"
+                        onclick="closeModal('service-request-modal')">Cancel</button>
                     <button type="submit" class="action-btn">Submit Request</button>
                 </div>
             </form>
@@ -802,7 +953,8 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Document Title / File Name *</label>
-                    <input type="text" id="resubmit-doc-name" class="form-input" placeholder="e.g. Updated_Sale_Deed.pdf" required>
+                    <input type="text" id="resubmit-doc-name" class="form-input"
+                        placeholder="e.g. Updated_Sale_Deed.pdf" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Select Document File *</label>
@@ -817,11 +969,18 @@
     </div>
 
     <!-- SCRIPTS -->
+    <!-- Leaflet GIS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <script src="js/firebase-config.js"></script>
     <script src="js/permissions.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/api.js"></script>
+
+    <!-- Must load AFTER Leaflet -->
     <script src="js/landProfile.js"></script>
+
     <script src="js/citizen.js"></script>
 </body>
+
 </html>

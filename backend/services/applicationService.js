@@ -13,7 +13,50 @@ const rorData = require("../data/ror");
 const parcelsData = require("../data/parcels");
 
 // In-memory applications store
-const applications = [];
+const applications = [
+    {
+        applicationId: "LAND-2026-000142",
+        type: "Owner Change",
+        parcelId: "LND-001",
+        surveyNumber: "SUR-101",
+        currentOwner: "Ramesh Sharma",
+        newOwner: "Arjun Kumar",
+        relationship: "Sale Transfer",
+        reason: "Land purchase & ownership transfer",
+        citizenEmail: "arjun@gmail.com",
+        status: "UNDER_VERIFICATION",
+        submittedDate: "2026-09-07T10:00:00.000Z",
+        lastUpdated: "2026-09-07T10:00:00.000Z",
+        verifications: {
+            cadastral: { department: "Cadastral & Survey Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null },
+            ror: { department: "Land Records / RoR Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null },
+            registration: { department: "Registration Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null },
+            landUse: { department: "Land Use & Planning Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null },
+            propertyTax: { department: "Property Tax & Municipal Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null }
+        }
+    },
+    {
+        applicationId: "LAND-2026-000143",
+        type: "Land Use Conversion",
+        parcelId: "LND-002",
+        surveyNumber: "SUR-102",
+        currentOwner: "Industrial Infra Ltd",
+        newOwner: "Industrial Infra Ltd",
+        relationship: "Owner",
+        reason: "Zoning & Development Permission",
+        citizenEmail: "arjun@gmail.com",
+        status: "UNDER_VERIFICATION",
+        submittedDate: "2026-09-07T11:00:00.000Z",
+        lastUpdated: "2026-09-07T11:00:00.000Z",
+        verifications: {
+            cadastral: { department: "Cadastral & Survey Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null },
+            ror: { department: "Land Records / RoR Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null },
+            registration: { department: "Registration Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null },
+            landUse: { department: "Land Use & Planning Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null },
+            propertyTax: { department: "Property Tax & Municipal Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null }
+        }
+    }
+];
 
 // In-memory notifications store
 const notifications = [];
@@ -97,7 +140,10 @@ function submitOwnerChangeApplication(user, data) {
         newOwner: newOwner || "New Owner",
         relationship: relationship || "Property Transfer",
         reason: reason || "Ownership change application submitted by citizen",
-        supportingDocs: Array.isArray(supportingDocs) ? supportingDocs : ["Sale_Deed.pdf", "Identity_Proof.pdf", "Prev_Ownership.pdf", "Survey_Sketch.pdf"],
+        supportingDocs:
+            Array.isArray(supportingDocs)
+                ? supportingDocs
+                : [],
         declaration: !!declaration,
         status: "UNDER_VERIFICATION",
         submittedDate: now,
@@ -279,16 +325,14 @@ function getOwnershipHistory(parcelId) {
  * Officer Verification Handler for any of the 5 officer types.
  */
 function updateVerificationStage(officerUser, appIdOrParcel, deptKey, decision, remarks, requestedDocumentName = "") {
-    // Find application by appId or parcelId
-    let app = applications.find(a => a.applicationId.toUpperCase() === String(appIdOrParcel).trim().toUpperCase());
+    const targetKey = String(appIdOrParcel).trim().toUpperCase();
+    let app = applications.find(a =>
+        (a.applicationId || "").toUpperCase() === targetKey ||
+        (a.parcelId || "").toUpperCase() === targetKey
+    );
 
     if (!app) {
-        // Fallback: match latest active application for parcelId
-        app = applications.slice().reverse().find(a => (a.parcelId || "").toUpperCase() === String(appIdOrParcel).trim().toUpperCase() && a.status !== "COMPLETED" && a.status !== "REJECTED");
-    }
-
-    if (!app) {
-        return { success: false, message: "No matching active application found for verification." };
+        return { success: false, message: `No matching active application found for ID/Parcel '${appIdOrParcel}'.` };
     }
 
     const now = new Date().toISOString();
@@ -316,6 +360,92 @@ function updateVerificationStage(officerUser, appIdOrParcel, deptKey, decision, 
         requestedDocument: stageStatus === "DOCUMENT_REQUIRED" ? (requestedDocumentName || remarks || "Additional Document") : null
     };
     app.lastUpdated = now;
+
+    const previousStage =
+        app.verifications[deptKey] || {};
+
+    const oldStageStatus =
+        previousStage.status || "PENDING";
+
+    const departmentNames = {
+        cadastral:
+            "Cadastral & Survey Department",
+
+        ror:
+            "Land Records / RoR Department",
+
+        registration:
+            "Registration Department",
+
+        landUse:
+            "Land Use & Planning Department",
+
+        propertyTax:
+            "Property Tax & Municipal Department"
+    };
+
+    app.verifications[deptKey] = {
+
+        department:
+            previousStage.department ||
+            departmentNames[deptKey],
+
+        status:
+            stageStatus,
+
+        officerId:
+            officerUser.officerId ||
+            officerUser.email,
+
+        officerName:
+            officerUser.name ||
+            "Government Officer",
+
+        date:
+            now,
+
+        remarks:
+            remarks ||
+            `${officerUser.name || "Officer"} updated verification status.`,
+
+        requestedDocument:
+            stageStatus === "DOCUMENT_REQUIRED"
+                ? (
+                    requestedDocumentName ||
+                    remarks ||
+                    "Additional Document"
+                )
+                : null
+    };
+
+    app.lastUpdated = now;
+
+    addTimelineEvent(
+        app.applicationId,
+
+        officerUser.name ||
+        officerUser.officerId ||
+        officerUser.email,
+
+        "officer",
+
+        departmentNames[deptKey] ||
+        officerUser.department ||
+        deptKey,
+
+        stageStatus === "APPROVED"
+            ? "OFFICER_APPROVED"
+            : stageStatus === "REJECTED"
+                ? "OFFICER_REJECTED"
+                : "DOCUMENT_REQUIRED",
+
+        oldStageStatus,
+
+        stageStatus,
+
+        remarks ||
+        `${departmentNames[deptKey]} verification updated.`
+    );
 
     // Handle DOCUMENT_REQUIRED
     if (stageStatus === "DOCUMENT_REQUIRED") {
@@ -636,13 +766,13 @@ function getDepartmentRequestsForUser(user) {
     const dept = (user.department || user.officerType || "").toLowerCase();
     const officerName = (user.name || user.email || "").toLowerCase();
 
-    const incoming = departmentRequests.filter(r => 
-        r.toDepartment.toLowerCase().includes(dept) || 
-        dept.includes(r.toDepartment.toLowerCase()) || 
+    const incoming = departmentRequests.filter(r =>
+        r.toDepartment.toLowerCase().includes(dept) ||
+        dept.includes(r.toDepartment.toLowerCase()) ||
         user.role === "admin"
     );
-    const outgoing = departmentRequests.filter(r => 
-        (r.fromOfficer || "").toLowerCase() === officerName || 
+    const outgoing = departmentRequests.filter(r =>
+        (r.fromOfficer || "").toLowerCase() === officerName ||
         user.role === "admin"
     );
 

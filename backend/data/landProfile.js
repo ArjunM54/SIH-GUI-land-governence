@@ -207,6 +207,38 @@ function getLandProfile(parcelId) {
 /* =========================================================
    GET INTEGRATED LAND PROFILE
    ========================================================= */
+function formatApplicationTimelineTitle(event) {
+
+    const titles = {
+
+        APPLICATION_SUBMITTED:
+            "Citizen Application Submitted",
+
+        ROUTED_TO_DEPARTMENTS:
+            "Application Routed to Departments",
+
+        OFFICER_APPROVED:
+            "Department Verification Approved",
+
+        OFFICER_REJECTED:
+            "Department Verification Rejected",
+
+        DOCUMENT_REQUIRED:
+            "Additional Document Requested",
+
+        INTER_DEPARTMENT_REQUEST_SENT:
+            "Inter-Department Verification Requested",
+
+        INTER_DEPARTMENT_RESPONSE_SUBMITTED:
+            "Inter-Department Response Submitted"
+    };
+
+    return (
+        titles[event.action] ||
+        event.action ||
+        "Application Status Updated"
+    );
+}
 
 function getIntegratedLandProfile(parcelId) {
     const raw = getLandProfile(parcelId);
@@ -304,69 +336,105 @@ function getIntegratedLandProfile(parcelId) {
 
     // Timeline Construction
     const timeline = [];
-    if (raw.cadastral?.surveyHistory) {
-        raw.cadastral.surveyHistory.forEach(h => {
-            timeline.push({
-                date: h.date,
-                year: h.date ? h.date.substring(0, 4) : "2026",
-                title: h.action,
-                department: "Cadastral Department",
-                officer: h.officer || "OFF-CAD-001",
-                details: h.notes
-            });
-        });
-    }
-    if (raw.ror?.ownershipHistory) {
-        raw.ror.ownershipHistory.forEach(h => {
-            timeline.push({
-                date: h.date,
-                year: h.date ? h.date.substring(0, 4) : "2026",
-                title: `Ownership Record: ${h.owner}`,
-                department: "RoR Department",
-                officer: "OFF-ROR-001",
-                details: `Document: ${h.document}, Status: ${h.status}`
-            });
-        });
-    }
-    if (raw.registration?.transactionHistory) {
-        raw.registration.transactionHistory.forEach(h => {
-            timeline.push({
-                date: h.year ? `${h.year}-01-01` : "2026-01-01",
-                year: h.year || "2026",
-                title: `${h.type} (${h.seller} → ${h.buyer})`,
-                department: "Registration Department",
-                officer: "OFF-REG-001",
-                details: `Consideration: ₹${(h.consideration || 0).toLocaleString()}, Ref: ${h.docRef}`
-            });
-        });
-    }
-    if (raw.landUse?.landUseHistory) {
-        raw.landUse.landUseHistory.forEach(h => {
-            timeline.push({
-                date: h.year ? `${h.year}-01-01` : "2026-01-01",
-                year: h.year || "2026",
-                title: `Land Use Designated: ${h.landUse} (${h.zone})`,
-                department: "Land Use & Planning Department",
-                officer: h.officer || "OFF-LU-001",
-                details: `Status: ${h.status}`
-            });
-        });
-    }
-    if (raw.propertyTax?.taxHistory) {
-        raw.propertyTax.taxHistory.forEach(h => {
-            timeline.push({
-                date: h.year ? `${h.year.substring(0, 4)}-04-01` : "2026-04-01",
-                year: h.year ? h.year.substring(0, 4) : "2026",
-                title: `Property Tax Assessment (${h.year})`,
-                department: "Property Tax & Municipal Department",
-                officer: "OFF-TAX-001",
-                details: `Demand: ₹${h.demand}, Paid: ₹${h.paid}, Status: ${h.status}`
-            });
-        });
-    }
+    // =====================================================
+    // LIVE CITIZEN APPLICATION TIMELINE
+    // =====================================================
 
-    timeline.sort((a, b) => String(b.date || b.year).localeCompare(String(a.date || a.year)));
+    const parcelApplications =
+        applicationService.applications.filter(
+            app =>
+                String(app.parcelId || "")
+                    .trim()
+                    .toUpperCase() ===
+                String(parcelId)
+                    .trim()
+                    .toUpperCase()
+        );
 
+    const applicationTimelineEvents = [];
+
+    parcelApplications.forEach(app => {
+
+        const events =
+            applicationService.getApplicationTimeline(
+                app.applicationId
+            );
+
+        events.forEach(event => {
+
+            applicationTimelineEvents.push({
+
+                date:
+                    event.timestamp
+                        ? event.timestamp.split("T")[0]
+                        : "",
+
+                timestamp:
+                    event.timestamp,
+
+                year:
+                    event.timestamp
+                        ? event.timestamp.substring(0, 4)
+                        : "2026",
+
+                title:
+                    formatApplicationTimelineTitle(
+                        event
+                    ),
+
+                department:
+                    event.department ||
+                    "LandGov",
+
+                officer:
+                    event.actor ||
+                    "System",
+
+                details:
+                    [
+                        `Application: ${event.applicationId}`,
+
+                        event.oldStatus
+                            ? `Status: ${event.oldStatus} → ${event.newStatus}`
+                            : `Status: ${event.newStatus || ""}`,
+
+                        event.remarks
+                            ? `Remarks: ${event.remarks}`
+                            : ""
+                    ]
+                        .filter(Boolean)
+                        .join(" | "),
+
+                applicationId:
+                    event.applicationId,
+
+                eventType:
+                    event.action
+            });
+
+        });
+
+    });
+    timeline.push(
+        ...applicationTimelineEvents
+    );
+
+
+    timeline.sort((a, b) => {
+
+        const dateA =
+            a.timestamp ||
+            a.date ||
+            `${a.year || "1900"}-01-01`;
+
+        const dateB =
+            b.timestamp ||
+            b.date ||
+            `${b.year || "1900"}-01-01`;
+
+        return String(dateB)
+            .localeCompare(String(dateA));
+    });
     return {
         ...raw,
         ownership: raw.ror || null,

@@ -171,20 +171,78 @@ async function processDocumentUpload(metadata = {}, fileObject = null) {
 
     const newDocumentRecord = addDocumentRecord({
         documentId,
+
+        // IMPORTANT: connect the uploaded PDF to the citizen application
+        applicationId: metadata.applicationId || null,
+
         parcelId,
+
         documentType,
-        documentNumber: metadata.documentNumber || `DOC-NUM-${Date.now()}`,
-        title: metadata.title || "Uploaded Land Document",
-        issuingDepartment: metadata.issuingDepartment || "Submitted Authority",
-        issueDate: metadata.issueDate || new Date().toISOString().split("T")[0],
+
+        documentNumber:
+            metadata.documentNumber ||
+            `DOC-NUM-${Date.now()}`,
+
+        title:
+            metadata.title ||
+            fileObject.originalname ||
+            "Uploaded Land Document",
+
+        issuingDepartment:
+            metadata.issuingDepartment ||
+            "Citizen Submission",
+
+        issueDate:
+            metadata.issueDate ||
+            new Date().toISOString().split("T")[0],
+
         status: "AVAILABLE",
+
+        verificationStatus: "PENDING",
+
+        // Actual physical file stored by server
         fileName: serverFileName,
+
+        // Original file information
+        originalFileName:
+            fileObject.originalname ||
+            metadata.originalFileName ||
+            "document.pdf",
+
         fileType: mimeType,
+
         fileSize,
+
         storageStatus: "STORED",
+
+        // VERY IMPORTANT
+        responsibleDepartments:
+            Array.isArray(metadata.responsibleDepartments) &&
+                metadata.responsibleDepartments.length > 0
+                ? metadata.responsibleDepartments
+                : [
+                    "cadastral",
+                    "ror",
+                    "registration",
+                    "landUse",
+                    "propertyTax"
+                ],
+
+        uploadedBy:
+            metadata.uploadedBy ||
+            "Citizen",
+
+        uploadedAt:
+            new Date().toISOString(),
+
         textExtraction,
-        description: metadata.description || "User uploaded evidence document record.",
-        createdAt: new Date().toISOString()
+
+        description:
+            metadata.description ||
+            "Document uploaded by citizen for application verification.",
+
+        createdAt:
+            new Date().toISOString()
     });
 
     return {

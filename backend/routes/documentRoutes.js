@@ -108,21 +108,65 @@ router.post("/application/:applicationId/upload-requirement", requireAuth, (req,
         }
 
         const requirements = getDocumentRequirementsForType(app.type);
-        const reqConfig = requirements.find(r => r.key === reqKey) || {
-            key: reqKey || "custom",
-            title: reqKey || "Document",
-            docType: docType || "SUPPORTING_DOC",
-            responsibleDepartments: ["cadastral", "ror", "registration", "landUse", "propertyTax"]
-        };
+        const reqConfig =
+            requirements.find(r =>
+                r.key === reqKey ||
+                r.documentType === docType ||
+                r.docType === docType
+            ) || {
+                key: reqKey || "custom",
+                title: reqKey || "Citizen Uploaded Document",
+                documentType: docType || "OTHER",
+
+                // Citizen application documents must be visible
+                // to all 5 verification departments.
+                responsibleDepartments: [
+                    "cadastral",
+                    "ror",
+                    "registration",
+                    "landUse",
+                    "propertyTax"
+                ]
+            };
+
+        const applicationDepartments = [
+            "cadastral",
+            "ror",
+            "registration",
+            "landUse",
+            "propertyTax"
+        ];
 
         const result = await processDocumentUpload({
             parcelId: app.parcelId,
-            docType: reqConfig.docType || docType || "OTHER",
-            title: `${reqConfig.title} - Resubmission`,
-            applicationId: app.applicationId,
-            reqKey: reqConfig.key,
-            responsibleDepartments: reqConfig.responsibleDepartments,
-            uploadedBy: req.user.email || req.user.uid
+
+            documentType:
+                reqConfig.documentType ||
+                reqConfig.docType ||
+                docType ||
+                "OTHER",
+
+            title:
+                reqConfig.title ||
+                fileObject?.originalname ||
+                "Citizen Uploaded Document",
+
+            applicationId:
+                app.applicationId,
+
+            reqKey:
+                reqConfig.key,
+
+            responsibleDepartments:
+                applicationDepartments,
+
+            uploadedBy:
+                req.user.email ||
+                req.user.uid,
+
+            originalFileName:
+                fileObject?.originalname || "document.pdf"
+
         }, fileObject);
 
         if (!result.success) {

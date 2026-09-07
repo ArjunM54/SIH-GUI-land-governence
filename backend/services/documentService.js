@@ -168,11 +168,18 @@ function getDocumentsByApplicationId(applicationId) {
 /**
  * Retrieves documents mapped to a specific Officer Department.
  */
-function getDocumentsForDepartment(departmentKey) {
-    if (!departmentKey) return [];
-    const deptKey = String(departmentKey).trim().toLowerCase();
 
-    // Mapping department officerType to requirement department keys
+function getDocumentsForDepartment(departmentKey) {
+
+    if (!departmentKey) {
+        return [];
+    }
+
+    const officerType =
+        String(departmentKey)
+            .trim()
+            .toLowerCase();
+
     const deptMap = {
         cadastral_officer: "cadastral",
         land_records_officer: "ror",
@@ -181,11 +188,65 @@ function getDocumentsForDepartment(departmentKey) {
         property_tax_officer: "propertyTax"
     };
 
-    const targetDept = deptMap[deptKey] || deptKey;
+    const targetDept =
+        deptMap[officerType] || officerType;
 
-    return documents.filter(d => {
-        if (!Array.isArray(d.responsibleDepartments)) return true;
-        return d.responsibleDepartments.some(r => r.toLowerCase() === targetDept);
+
+    return documents.filter(doc => {
+
+        /*
+         * IMPORTANT:
+         *
+         * Only citizen/application documents
+         * should appear in this queue.
+         */
+        const isCitizenApplicationDocument =
+            !!doc.applicationId;
+
+
+        /*
+         * Old government/static documents
+         * without applicationId should not be
+         * mixed with the citizen application queue.
+         */
+        if (!isCitizenApplicationDocument) {
+            return false;
+        }
+
+
+        /*
+         * If responsibleDepartments exists,
+         * use it.
+         */
+        if (
+            Array.isArray(doc.responsibleDepartments) &&
+            doc.responsibleDepartments.length > 0
+        ) {
+
+            return doc.responsibleDepartments.some(
+                department =>
+                    String(department)
+                        .trim()
+                        .toLowerCase() ===
+                    targetDept.toLowerCase()
+            );
+        }
+
+
+        /*
+         * Backward compatibility:
+         *
+         * If an old citizen application document
+         * has applicationId but no department list,
+         * show it to all five departments.
+         */
+        return [
+            "cadastral",
+            "ror",
+            "registration",
+            "landUse",
+            "propertyTax"
+        ].includes(targetDept);
     });
 }
 
