@@ -220,6 +220,7 @@ function createDepartmentRequest(data) {
         priority: (data.priority || "NORMAL").toUpperCase(),
         reason: data.reason || "",
         expectedResponse: data.expectedResponse || "",
+        conflictId: data.conflictId || null,
         status: "PENDING",
         createdAt: now.toISOString(),
         dueAt,

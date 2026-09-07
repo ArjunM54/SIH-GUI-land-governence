@@ -42,7 +42,7 @@ async function apiRequest(endpoint, options = {}) {
                 if (errData && errData.error) {
                     errMessage = errData.error;
                 }
-            } catch (e) {}
+            } catch (e) { }
             throw new Error(errMessage);
         }
 
@@ -131,8 +131,7 @@ window.getParcelPropertyTax = getParcelPropertyTax;
 window.getParcelBuilding = getParcelBuilding;
 window.getParcelRestrictions = getParcelRestrictions;
 window.getParcelDocuments = getParcelDocuments;
-window.getGisParcel = getGisParcel;
-window.getParcelOwnership = getParcelOwnership;
+
 
 
 
@@ -694,11 +693,84 @@ async function getParcelDepartmentRequests(parcelId) {
     return await apiRequest(`/api/department-requests/parcels/${parcelId}/department-requests`);
 }
 
+async function assignDepartmentRequest(requestId, officerId) {
+    return await apiRequest(`/api/department-requests/${requestId}/assign`, {
+        method: "PUT",
+        body: JSON.stringify({ assignedOfficerId: officerId })
+    });
+}
+
+/* =========================================================
+   LAND DATA CONFLICT DETECTION & RESOLUTION APIS (PHASE 12K)
+   ========================================================= */
+
+async function getConflicts(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return await apiRequest(`/api/conflicts${query ? `?${query}` : ''}`);
+}
+
+async function getConflictById(conflictId) {
+    return await apiRequest(`/api/conflicts/${conflictId}`);
+}
+
+async function getParcelConflicts(parcelId) {
+    return await apiRequest(`/api/conflicts/parcel/${parcelId}`);
+}
+
+async function runConsistencyCheck(parcelId, options = {}) {
+    return await apiRequest(`/api/conflicts/check/${parcelId}`, {
+        method: "POST",
+        body: JSON.stringify(options)
+    });
+}
+
+async function assignConflict(conflictId, assignedOfficer, assignedDepartment) {
+    return await apiRequest(`/api/conflicts/${conflictId}/assign`, {
+        method: "PUT",
+        body: JSON.stringify({ assignedOfficer, assignedDepartment })
+    });
+}
+
+async function startConflictReview(conflictId) {
+    return await apiRequest(`/api/conflicts/${conflictId}/start-review`, {
+        method: "PUT"
+    });
+}
+
+async function requestConflictVerification(conflictId, requestData) {
+    return await apiRequest(`/api/conflicts/${conflictId}/request-verification`, {
+        method: "POST",
+        body: JSON.stringify(requestData)
+    });
+}
+
+async function resolveConflict(conflictId, resolutionRemark) {
+    return await apiRequest(`/api/conflicts/${conflictId}/resolve`, {
+        method: "PUT",
+        body: JSON.stringify({ resolutionRemark })
+    });
+}
+
+async function dismissConflict(conflictId, resolutionRemark) {
+    return await apiRequest(`/api/conflicts/${conflictId}/dismiss`, {
+        method: "PUT",
+        body: JSON.stringify({ resolutionRemark })
+    });
+}
+
+async function reopenConflict(conflictId, reason) {
+    return await apiRequest(`/api/conflicts/${conflictId}/reopen`, {
+        method: "PUT",
+        body: JSON.stringify({ reason })
+    });
+}
+
 // Expose to window
 window.getDepartmentRequests = getDepartmentRequests;
 window.getDepartmentRequestById = getDepartmentRequestById;
 window.createDepartmentRequest = createDepartmentRequest;
 window.acceptDepartmentRequest = acceptDepartmentRequest;
+window.assignDepartmentRequest = assignDepartmentRequest;
 window.startDepartmentRequest = startDepartmentRequest;
 window.requestMoreInfoDepartment = requestMoreInfoDepartment;
 window.completeDepartmentRequest = completeDepartmentRequest;
@@ -706,11 +778,67 @@ window.rejectDepartmentRequest = rejectDepartmentRequest;
 window.escalateDepartmentRequest = escalateDepartmentRequest;
 window.cancelDepartmentRequest = cancelDepartmentRequest;
 window.getParcelDepartmentRequests = getParcelDepartmentRequests;
-window.getGisParcel = getGisParcel;
-window.getParcelOwnership = getParcelOwnership;
 
+window.getConflicts = getConflicts;
+window.getConflictById = getConflictById;
+window.getParcelConflicts = getParcelConflicts;
+window.runConsistencyCheck = runConsistencyCheck;
+window.assignConflict = assignConflict;
+window.startConflictReview = startConflictReview;
+window.requestConflictVerification = requestConflictVerification;
+window.resolveConflict = resolveConflict;
+window.dismissConflict = dismissConflict;
+window.reopenConflict = reopenConflict;
 
-console.log("LandGov API client initialized with Auth, Officer & Department Request methods.");
+/* =========================================================
+   LAND DATA TIMELINE & COMPREHENSIVE AUDIT APIS (PHASE 12L & 12M)
+   ========================================================= */
+
+async function getParcelTimeline(parcelId, params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return await apiRequest(`/api/parcels/${parcelId}/timeline${query ? `?${query}` : ''}`);
+}
+
+async function getAudits(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return await apiRequest(`/api/audits${query ? `?${query}` : ''}`);
+}
+
+async function getAuditMetrics() {
+    return await apiRequest("/api/audits/metrics");
+}
+
+async function getParcelAudits(parcelId) {
+    return await apiRequest(`/api/audits/parcel/${parcelId}`);
+}
+
+async function getAuditById(auditId) {
+    return await apiRequest(`/api/audits/${auditId}`);
+}
+
+function getAuditExportUrl(format = "csv", params = {}) {
+    const queryParams = new URLSearchParams({ ...params, format }).toString();
+    return `${API_BASE_URL}/api/audits/export?${queryParams}`;
+}
+
+window.getParcelTimeline = getParcelTimeline;
+window.getAudits = getAudits;
+window.getAuditMetrics = getAuditMetrics;
+window.getParcelAudits = getParcelAudits;
+window.getAuditById = getAuditById;
+window.getAuditExportUrl = getAuditExportUrl;
+
+window.loginUser = loginUser;
+window.registerCitizen = registerCitizen;
+window.getAuthSession = getAuthSession;
+window.logoutUser = logoutUser;
+window.getParcels = getParcels;
+window.getLandProfile = getLandProfile;
+window.getParcelById = getParcelById;
+window.checkBackendHealth = checkBackendHealth;
+
+console.log("LandGov API client initialized with Auth, Officer, Requests, Conflicts, Timeline & Audit methods.");
+
 
 
 

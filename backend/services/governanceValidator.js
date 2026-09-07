@@ -396,7 +396,7 @@ function validateLandGovernance(profile) {
             restStatus = hasConflict ? "CONFLICT" : "WARNING";
             restSeverity = hasConflict ? "HIGH" : (riskLevel === "HIGH" ? "HIGH" : "MEDIUM");
             restMessage = activeRestrictions.map(r => r.message).join(" ");
-            
+
             activeRestrictions.forEach(r => {
                 recommendations.add(r.rec);
                 issues.push({

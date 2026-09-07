@@ -4924,10 +4924,19 @@ window.openDocumentDetailsModal = openDocumentDetailsModal;
 
 
 function renderConflictsPane(profile) {
+    const parcelId = profile.parcel ? profile.parcel.id : (profile.parcelId || "LND-001");
     const conflicts = Array.isArray(profile.conflicts) ? profile.conflicts : [];
     const hasOwnerMismatch = conflicts.some(c => c.category === 'OWNERSHIP' || (c.title && c.title.toLowerCase().includes('owner')));
 
     return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h4 style="margin:0; color:#0b1d3a;">⚠ LAND GOVERNANCE CONFLICTS</h4>
+            <div style="display:flex; gap:8px;">
+                <button class="btn-govt-primary" onclick="handleRunConsistencyCheck('${parcelId}')" style="padding:4px 10px; font-size:12px;">🔍 Run Consistency Check</button>
+                <button class="btn-govt-secondary" onclick="switchToConflictsCenter('${parcelId}')" style="padding:4px 10px; font-size:12px;">View Conflict Center</button>
+            </div>
+        </div>
+
         ${hasOwnerMismatch ? `
             <div style="background:#fee2e2; border:1px solid #fca5a5; border-left:4px solid #dc2626; padding:12px; border-radius:3px; margin-bottom:12px;">
                 <div style="color:#991b1b; font-weight:800; font-size:14px; margin-bottom:4px;">🚨 HIGH PRIORITY — OWNER MISMATCH DETECTED</div>
@@ -4938,7 +4947,7 @@ function renderConflictsPane(profile) {
         ` : ''}
 
         <div class="govt-card-widget">
-            <div class="govt-card-header">⚠ INTER-DEPARTMENTAL DATA CONFLICTS DETECTED</div>
+            <div class="govt-card-header">INTER-DEPARTMENTAL DATA CONFLICTS DETECTED</div>
             ${conflicts.length > 0 ? `
                 <table class="govt-table-compact">
                     <thead>
@@ -4947,19 +4956,22 @@ function renderConflictsPane(profile) {
                             <th>Type / Category</th>
                             <th>Severity</th>
                             <th>Description</th>
-                            <th>Affected Data</th>
                             <th>Status</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${conflicts.map(c => `
                             <tr>
                                 <td><strong>${c.id}</strong></td>
-                                <td>${c.title || c.category}</td>
-                                <td><span class="${c.severity === 'HIGH' ? 'status-badge-conflict' : 'status-badge-review'}">${c.severity}</span></td>
+                                <td>${c.title || c.type || c.category}</td>
+                                <td><span class="${c.severity === 'CRITICAL' || c.severity === 'HIGH' ? 'status-badge-conflict' : 'status-badge-review'}">${c.severity}</span></td>
                                 <td>${c.description}</td>
-                                <td><span style="font-size:11px; color:#475569;">${c.affectedData || '-'}</span></td>
-                                <td><span class="status-badge-conflict">${c.status || 'OPEN'}</span></td>
+                                <td><span class="${c.status === 'RESOLVED' ? 'status-badge-verified' : 'status-badge-conflict'}">${c.status || 'OPEN'}</span></td>
+                                <td style="display:flex; gap:4px;">
+                                    <button class="btn-govt-secondary" onclick="openConflictDetailModal('${c.id}')" style="padding:2px 6px; font-size:11px;">View</button>
+                                    ${c.status !== 'RESOLVED' && c.status !== 'DISMISSED' ? `<button class="btn-govt-primary" onclick="handleRequestVerificationFromConflict('${c.id}')" style="padding:2px 6px; font-size:11px;">Request Verification</button>` : ''}
+                                </td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -4970,60 +4982,297 @@ function renderConflictsPane(profile) {
 }
 
 function renderTimelinePane(profile) {
-    const timeline = Array.isArray(profile.timeline) ? profile.timeline : [];
+    const parcelId = profile.parcel ? profile.parcel.id : (profile.parcelId || "LND-001");
+    const surveyNo = profile.parcel?.surveyNumber || profile.cadastral?.surveyNumber || "SUR-101";
+
+    setTimeout(() => {
+        loadParcelTimelineInProfile(parcelId);
+    }, 100);
+
     return `
         <div class="govt-card-widget">
-            <div class="govt-card-header">🕒 LAND GOVERNANCE HISTORICAL TIMELINE</div>
-            ${timeline.length > 0 ? `
-                <div class="timeline-vertical-list">
-                    ${timeline.map(e => `
-                        <div class="timeline-item-entry">
-                            <div class="timeline-date-tag">${e.date || e.year}</div>
-                            <div class="timeline-title-text">${e.title}</div>
-                            <div class="timeline-dept-tag">Department: <strong>${e.department}</strong> | Officer: ${e.officer || 'OFF-GOVT-001'}</div>
-                            ${e.details ? `<div style="font-size:11px; color:#475569; margin-top:4px;">${e.details}</div>` : ''}
-                        </div>
-                    `).join('')}
+            <div class="govt-card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>🕒 UNIFIED PARCEL HISTORY & TIMELINE — ${parcelId} (Survey No: ${surveyNo})</span>
+                <span class="dept-badge badge-cadastral">Phase 12L Integrated</span>
+            </div>
+
+            <!-- TIMELINE FILTER BAR -->
+            <div style="background:#0f172a; padding:0.75rem; border-bottom:1px solid var(--govt-border); display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+                <div style="display:flex; align-items:center; gap:0.25rem;">
+                    <label style="font-size:0.75rem; color:#94a3b8; font-weight:700;">Department:</label>
+                    <select id="timeline-dept-filter" onchange="filterProfileTimeline('${parcelId}')" style="background:#1e293b; color:#e2e8f0; border:1px solid #334155; padding:0.25rem 0.5rem; border-radius:4px; font-size:0.75rem;">
+                        <option value="ALL">ALL DEPARTMENTS</option>
+                        <option value="CADASTRAL">Cadastral & Survey</option>
+                        <option value="ROR">Land Records / RoR</option>
+                        <option value="REGISTRATION">Registration</option>
+                        <option value="LAND_USE">Land Use & Planning</option>
+                        <option value="TAX">Property Tax & Municipal</option>
+                        <option value="BUILDING">Building Authority</option>
+                        <option value="RESTRICTIONS">Restrictions</option>
+                        <option value="DOCUMENTS">Documents</option>
+                        <option value="REQUESTS">Department Requests</option>
+                        <option value="CONFLICTS">Conflicts</option>
+                    </select>
                 </div>
-            ` : '<div style="padding:12px; color:#64748b;">No timeline entries available.</div>'}
+
+                <div style="display:flex; align-items:center; gap:0.25rem;">
+                    <label style="font-size:0.75rem; color:#94a3b8; font-weight:700;">Time Period:</label>
+                    <select id="timeline-date-filter" onchange="filterProfileTimeline('${parcelId}')" style="background:#1e293b; color:#e2e8f0; border:1px solid #334155; padding:0.25rem 0.5rem; border-radius:4px; font-size:0.75rem;">
+                        <option value="ALL_TIME">All Time</option>
+                        <option value="TODAY">Today</option>
+                        <option value="LAST_7_DAYS">Last 7 Days</option>
+                        <option value="LAST_30_DAYS">Last 30 Days</option>
+                        <option value="LAST_6_MONTHS">Last 6 Months</option>
+                        <option value="LAST_YEAR">Last Year</option>
+                    </select>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:0.25rem; flex:1; min-width:180px;">
+                    <input type="text" id="timeline-search-input" onkeyup="filterProfileTimeline('${parcelId}')" placeholder="Search event ID, reference, officer..." style="width:100%; background:#1e293b; color:#e2e8f0; border:1px solid #334155; padding:0.25rem 0.5rem; border-radius:4px; font-size:0.75rem;">
+                </div>
+
+                <button class="btn-govt-secondary" id="btn-sort-timeline" onclick="toggleTimelineSort('${parcelId}')" style="padding:0.25rem 0.5rem; font-size:0.75rem;" data-sort="NEWEST_FIRST">⬇ Newest First</button>
+            </div>
+
+            <!-- TIMELINE CONTAINER -->
+            <div id="profile-timeline-container" style="padding:1rem;">
+                <div style="color:#64748b; font-size:0.9rem;">Loading unified parcel timeline events...</div>
+            </div>
         </div>
     `;
 }
 
+let profileTimelineSortOrder = "NEWEST_FIRST";
+
+function toggleTimelineSort(parcelId) {
+    profileTimelineSortOrder = profileTimelineSortOrder === "NEWEST_FIRST" ? "OLDEST_FIRST" : "NEWEST_FIRST";
+    const btn = document.getElementById("btn-sort-timeline");
+    if (btn) {
+        btn.textContent = profileTimelineSortOrder === "NEWEST_FIRST" ? "⬇ Newest First" : "⬆ Oldest First";
+    }
+    loadParcelTimelineInProfile(parcelId);
+}
+
+async function loadParcelTimelineInProfile(parcelId) {
+    const container = document.getElementById("profile-timeline-container");
+    if (!container) return;
+
+    try {
+        const deptFilter = document.getElementById("timeline-dept-filter")?.value || "ALL";
+        const dateFilter = document.getElementById("timeline-date-filter")?.value || "ALL_TIME";
+        const searchText = document.getElementById("timeline-search-input")?.value || "";
+
+        const res = await window.getParcelTimeline(parcelId, {
+            department: deptFilter,
+            dateRange: dateFilter,
+            search: searchText,
+            sortOrder: profileTimelineSortOrder
+        });
+
+        if (!res.success || !res.data || !res.data.events || res.data.events.length === 0) {
+            container.innerHTML = `<div style="padding:1.5rem; text-align:center; color:#64748b; font-size:0.9rem;">No timeline events found matching criteria for parcel ${parcelId}.</div>`;
+            return;
+        }
+
+        const events = res.data.events;
+        window.currentProfileTimelineEvents = events;
+
+        let html = `<div style="display:flex; flex-direction:column; gap:0.75rem;">`;
+
+        events.forEach(e => {
+            const dateStr = e.timestamp ? new Date(e.timestamp).toLocaleString() : 'Date unavailable';
+            const statusClass = e.status === 'VERIFIED' || e.status === 'COMPLETED' || e.status === 'RESOLVED' ? 'status-badge-verified' : (e.status === 'CONFLICT' || e.status === 'REJECTED' ? 'status-badge-review' : 'status-badge-pending');
+            const icon = e.icon || '📋';
+
+            let navButtonHTML = '';
+            if (e.navigation) {
+                if (e.navigation.type === 'conflict') {
+                    navButtonHTML = `<button class="btn-govt-warning" onclick="openConflictDetailModal('${e.navigation.id}')" style="padding:2px 8px; font-size:0.75rem;">[ View Conflict ]</button>`;
+                } else if (e.navigation.type === 'request') {
+                    navButtonHTML = `<button class="btn-govt-primary" onclick="openDepartmentRequestDetailModal('${e.navigation.id}')" style="padding:2px 8px; font-size:0.75rem;">[ View Request ]</button>`;
+                } else if (e.navigation.type === 'document') {
+                    navButtonHTML = `<button class="btn-govt-secondary" onclick="switchWorkspaceTab('documents')" style="padding:2px 8px; font-size:0.75rem;">[ View Document ]</button>`;
+                } else if (e.navigation.type === 'ownership') {
+                    navButtonHTML = `<button class="btn-govt-secondary" onclick="switchWorkspaceTab('ownership')" style="padding:2px 8px; font-size:0.75rem;">[ View RoR ]</button>`;
+                } else if (e.navigation.type === 'registration') {
+                    navButtonHTML = `<button class="btn-govt-secondary" onclick="switchWorkspaceTab('registration')" style="padding:2px 8px; font-size:0.75rem;">[ View Registration ]</button>`;
+                } else if (e.navigation.type === 'tax') {
+                    navButtonHTML = `<button class="btn-govt-secondary" onclick="switchWorkspaceTab('tax')" style="padding:2px 8px; font-size:0.75rem;">[ View Property Tax ]</button>`;
+                } else if (e.navigation.type === 'building') {
+                    navButtonHTML = `<button class="btn-govt-secondary" onclick="switchWorkspaceTab('building')" style="padding:2px 8px; font-size:0.75rem;">[ View Building ]</button>`;
+                }
+            }
+
+            html += `
+                <div style="background:#0f172a; border:1px solid var(--govt-border); border-left:4px solid ${e.severity === 'HIGH' ? '#ef4444' : (e.status === 'RESOLVED' || e.status === 'VERIFIED' ? '#10b981' : '#38bdf8')}; padding:0.85rem; border-radius:4px; font-size:0.85rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.4rem;">
+                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                            <span style="font-size:1.2rem;">${icon}</span>
+                            <div>
+                                <strong style="color:#f8fafc; font-size:0.95rem;">${e.title}</strong>
+                                <div style="font-size:0.75rem; color:#94a3b8;">Ref: <code>${e.referenceId || e.eventId}</code> | Department: <strong>${e.department}</strong> | Actor: ${e.actor}</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.25rem;">
+                            <span class="${statusClass}">${e.status}</span>
+                            <span style="font-size:0.75rem; color:#64748b;">${dateStr}</span>
+                        </div>
+                    </div>
+                    <div style="color:#cbd5e1; font-size:0.85rem; margin-top:0.3rem; padding-left:1.7rem;">
+                        ${e.description}
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:0.5rem; padding-left:1.7rem;">
+                        <button class="btn-govt-secondary" onclick="openTimelineEventDetailModal('${e.eventId}')" style="padding:2px 8px; font-size:0.75rem;">Event Details</button>
+                        ${navButtonHTML}
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+        container.innerHTML = html;
+    } catch (err) {
+        container.innerHTML = `<div style="color:#ef4444; font-size:0.9rem;">Failed to load parcel timeline: ${err.message}</div>`;
+    }
+}
+
+function filterProfileTimeline(parcelId) {
+    loadParcelTimelineInProfile(parcelId);
+}
+
+function openTimelineEventDetailModal(eventId) {
+    const event = (window.currentProfileTimelineEvents || []).find(e => e.eventId === eventId);
+    if (!event) return;
+
+    const modalHTML = `
+        <div id="modal-timeline-detail" class="modal-overlay" style="display:flex;">
+            <div class="modal-box" style="max-width:600px; width:90%;">
+                <div class="modal-header">
+                    <h3>🕒 TIMELINE EVENT DETAILS (${event.eventId})</h3>
+                    <button class="btn-close" onclick="closeModal('modal-timeline-detail')">✕</button>
+                </div>
+                <div class="modal-body" style="padding:1rem; font-size:0.85rem;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; background:#0f172a; padding:0.75rem; border:1px solid var(--govt-border); margin-bottom:1rem;">
+                        <div><strong>Event ID:</strong> ${event.eventId}</div>
+                        <div><strong>Event Type:</strong> <code>${event.eventType}</code></div>
+                        <div><strong>Parcel ID:</strong> ${event.parcelId}</div>
+                        <div><strong>Department:</strong> ${event.department}</div>
+                        <div><strong>Actor / User:</strong> ${event.actor}</div>
+                        <div><strong>Timestamp:</strong> ${event.timestamp ? new Date(event.timestamp).toLocaleString() : 'N/A'}</div>
+                        <div><strong>Source System:</strong> ${event.source}</div>
+                        <div><strong>Reference ID:</strong> <code>${event.referenceId || 'N/A'}</code></div>
+                        <div><strong>Status:</strong> <span class="status-tag status-pending">${event.status}</span></div>
+                        <div><strong>Severity:</strong> ${event.severity || 'LOW'}</div>
+                    </div>
+                    <div style="margin-bottom:1rem;">
+                        <strong style="color:#38bdf8;">Title:</strong>
+                        <div>${event.title}</div>
+                    </div>
+                    <div style="margin-bottom:1rem;">
+                        <strong style="color:#38bdf8;">Description / Summary:</strong>
+                        <div style="background:#0f172a; padding:0.75rem; border:1px solid var(--govt-border); margin-top:0.25rem;">${event.description}</div>
+                    </div>
+                    <div style="display:flex; justify-content:flex-end;">
+                        <button class="btn-govt-secondary" onclick="closeModal('modal-timeline-detail')">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const existing = document.getElementById("modal-timeline-detail");
+    if (existing) existing.remove();
+    document.body.insertAdjacentHTML("beforeend", modalHTML);
+}
+
 function renderAuditPane(profile) {
-    const auditLogs = Array.isArray(profile.audit) ? profile.audit : [];
+    const parcelId = profile.parcel ? profile.parcel.id : (profile.parcelId || "LND-001");
+
+    setTimeout(() => {
+        loadParcelAuditsInProfile(parcelId);
+    }, 100);
+
     return `
         <div class="govt-card-widget">
-            <div class="govt-card-header">🕒 AUDIT TRAIL LOGS</div>
-            ${auditLogs.length > 0 ? `
-                <table class="govt-table-compact">
-                    <thead>
-                        <tr>
-                            <th>Timestamp</th>
-                            <th>Officer / Actor</th>
-                            <th>Department / Role</th>
-                            <th>Action</th>
-                            <th>Result</th>
-                            <th>Details</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${auditLogs.map(a => `
-                            <tr>
-                                <td>${a.timestamp ? a.timestamp.substring(0, 19).replace('T', ' ') : '-'}</td>
-                                <td><strong>${a.actor || a.officerId || 'system'}</strong></td>
-                                <td>${a.details?.role || a.department || 'OFFICER'}</td>
-                                <td><code>${a.action}</code></td>
-                                <td><span class="status-badge-verified">${a.result || 'SUCCESS'}</span></td>
-                                <td>${typeof a.details === 'object' ? JSON.stringify(a.details) : (a.details || '-')}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            ` : '<div style="padding:12px; color:#64748b;">No audit trail events logged for this parcel yet.</div>'}
+            <div class="govt-card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>📋 COMPREHENSIVE PARCEL AUDIT TRAIL — ${parcelId}</span>
+                <button class="btn-govt-primary" onclick="openFullAuditCenterForParcel('${parcelId}')" style="padding:0.25rem 0.6rem; font-size:0.8rem;">[ View Full Audit Center ]</button>
+            </div>
+            <div id="profile-audits-container" style="padding:1rem;">
+                <div style="color:#64748b; font-size:0.9rem;">Loading parcel audit logs...</div>
+            </div>
         </div>
     `;
 }
+
+async function loadParcelAuditsInProfile(parcelId) {
+    const container = document.getElementById("profile-audits-container");
+    if (!container) return;
+
+    try {
+        const res = await window.getParcelAudits(parcelId);
+        if (!res.success || !res.data || res.data.length === 0) {
+            container.innerHTML = `<div style="padding:1rem; color:#64748b; font-size:0.9rem;">No audit logs recorded for parcel ${parcelId}.</div>`;
+            return;
+        }
+
+        const audits = res.data;
+
+        container.innerHTML = `
+            <table class="govt-table-compact">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Audit ID</th>
+                        <th>User / Actor</th>
+                        <th>Department</th>
+                        <th>Action</th>
+                        <th>Resource</th>
+                        <th>Result</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${audits.map(a => `
+                        <tr>
+                            <td>${a.createdAt ? new Date(a.createdAt).toLocaleString() : '-'}</td>
+                            <td><strong>${a.auditId}</strong></td>
+                            <td>${a.actor || 'SYSTEM'}</td>
+                            <td>${a.department || 'Governance'}</td>
+                            <td><code>${a.action}</code></td>
+                            <td>${a.resourceType || 'PARCEL'}: ${a.resourceId || a.parcelId}</td>
+                            <td><span class="${a.result === 'SUCCESS' ? 'status-badge-verified' : 'status-badge-review'}">${a.result || 'SUCCESS'}</span></td>
+                            <td><button class="btn-govt-secondary" onclick="openAuditDetailModal('${a.auditId}')" style="padding:2px 6px; font-size:0.75rem;">Details</button></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    } catch (err) {
+        container.innerHTML = `<div style="color:#ef4444; font-size:0.9rem;">Failed to load parcel audits: ${err.message}</div>`;
+    }
+}
+
+function openFullAuditCenterForParcel(parcelId) {
+    closeLandProfile();
+    if (typeof switchOfficerTab === "function") {
+        switchOfficerTab("audit-trail");
+        setTimeout(() => {
+            const input = document.getElementById("audit-search-input") || document.getElementById("audit-parcel-filter");
+            if (input) {
+                input.value = parcelId;
+                if (typeof triggerAuditFilter === "function") triggerAuditFilter();
+            }
+        }, 200);
+    }
+}
+
+window.openTimelineEventDetailModal = openTimelineEventDetailModal;
+window.loadParcelTimelineInProfile = loadParcelTimelineInProfile;
+window.filterProfileTimeline = filterProfileTimeline;
+window.toggleTimelineSort = toggleTimelineSort;
+window.loadParcelAuditsInProfile = loadParcelAuditsInProfile;
+window.openFullAuditCenterForParcel = openFullAuditCenterForParcel;
 
 function profileRow(label, value) {
     return `

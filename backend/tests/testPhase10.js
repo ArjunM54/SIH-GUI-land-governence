@@ -52,6 +52,11 @@ async function runTests() {
     console.log("RUNNING PHASE 10 AUTOMATED SECURITY TEST SUITE");
     console.log("==================================================\n");
 
+    try {
+        require("../server");
+        await new Promise(r => setTimeout(r, 1000));
+    } catch (e) {}
+
     let passed = 0;
     let failed = 0;
 

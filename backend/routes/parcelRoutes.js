@@ -127,6 +127,39 @@ router.get("/:id/integrated-profile", requireAuth, (req, res) => {
 });
 
 /**
+ * @route   GET /api/parcels/:id/timeline
+ * @desc    Get unified chronological timeline for parcel (Phase 12L)
+ */
+router.get("/:id/timeline", requireAuth, (req, res) => {
+    const parcelId = req.params.id;
+
+    if (!canAccessParcel(req.user, parcelId)) {
+        return res.status(403).json({
+            success: false,
+            error: "FORBIDDEN",
+            message: "You do not have permission to access this parcel's timeline."
+        });
+    }
+
+    const { getParcelTimeline } = require("../services/timelineService");
+    const timelineData = getParcelTimeline(parcelId, req.query);
+
+    auditService.logEvent({
+        actor: req.user.email || req.user.officerId || req.user.id || "system",
+        target: parcelId,
+        parcelId: parcelId,
+        action: "VIEW_PARCEL_TIMELINE",
+        result: "SUCCESS",
+        details: { role: req.user.role }
+    });
+
+    res.json({
+        success: true,
+        data: timelineData
+    });
+});
+
+/**
  * @route   GET /api/parcels/:id/gis
  * @desc    Get GIS parcel details for map display (Phase 12B)
  */

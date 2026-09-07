@@ -4,11 +4,32 @@
    ========================================================= */
 
 document.addEventListener("DOMContentLoaded", function () {
-    // If already logged in, redirect to dashboard
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has("logout") || urlParams.has("clear")) {
+        if (window.AuthManager) {
+            window.AuthManager.clearSession();
+        }
+        showAlert("Session cleared. Please log in with your credentials.", "success");
+        return;
+    }
+
+    // If already logged in, show notice or auto-redirect
     if (window.AuthManager && window.AuthManager.isLoggedIn()) {
-        window.AuthManager.redirectToDashboard();
+        const user = window.AuthManager.getUser();
+        showAlert(`You are already logged in as ${user ? (user.name || user.email || user.officerId) : 'an active user'}. Redirecting to dashboard... (<a href="login.html?logout=true" style="color:#38bdf8; text-decoration:underline;">Click here to Log Out & Switch Account</a>)`, "success");
+        setTimeout(() => {
+            window.AuthManager.redirectToDashboard();
+        }, 1200);
     }
 });
+
+function clearSession() {
+    if (window.AuthManager) {
+        window.AuthManager.clearSession();
+        showAlert("Logged out successfully. You can now log in with another account.", "success");
+    }
+}
+window.clearSession = clearSession;
 
 function switchAuthTab(tab) {
     const loginForm = document.getElementById("login-form");
@@ -35,7 +56,7 @@ function switchAuthTab(tab) {
 function showAlert(message, type = "error") {
     const alertBox = document.getElementById("alert-box");
     if (!alertBox) return;
-    alertBox.textContent = message;
+    alertBox.innerHTML = message;
     alertBox.className = `alert-message alert-${type}`;
     alertBox.style.display = "block";
 }

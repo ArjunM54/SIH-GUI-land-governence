@@ -249,7 +249,8 @@ router.post("/", (req, res) => {
             requiredWork,
             priority,
             reason,
-            expectedResponse
+            expectedResponse,
+            conflictId: req.body.conflictId || null
         });
 
         // Audit Trail Event
@@ -265,7 +266,8 @@ router.post("/", (req, res) => {
                 requestType,
                 requiredWork,
                 priority,
-                reason
+                reason,
+                conflictId: req.body.conflictId || null
             }
         });
 
@@ -276,6 +278,62 @@ router.post("/", (req, res) => {
         });
     } catch (e) {
         console.error("[Department Request Create Error]:", e);
+        res.status(500).json({ success: false, error: "SERVER_ERROR", message: e.message });
+    }
+});
+
+/**
+ * PUT /api/department-requests/:requestId/assign
+ * Assign or reassign officer to request
+ */
+router.put("/:requestId/assign", (req, res) => {
+    try {
+        const { requestId } = req.params;
+        const { assignedOfficerId, assignedOfficerName } = req.body;
+
+        const request = getRequestById(requestId);
+        if (!request) {
+            return res.status(404).json({ success: false, error: "NOT_FOUND", message: "Request not found." });
+        }
+
+        if (!isAuthorizedTargetOfficer(req.user, request)) {
+            return res.status(403).json({
+                success: false,
+                error: "FORBIDDEN",
+                message: "You are not authorized to assign this request."
+            });
+        }
+
+        const now = new Date().toISOString();
+        const officerId = req.user.officerId || req.user.uid;
+        const targetOfficer = assignedOfficerId || officerId;
+
+        request.to.officerId = targetOfficer;
+        if (request.status === "PENDING") {
+            request.status = "ASSIGNED";
+        }
+
+        request.timeline.push({
+            timestamp: now,
+            event: "Request assigned",
+            actor: `${req.user.name || 'Officer'} (${officerId})`,
+            notes: `Assigned to officer ${targetOfficer}.`
+        });
+
+        auditService.logEvent({
+            actor: officerId,
+            target: request.parcelId,
+            action: "DEPARTMENT_REQUEST_ASSIGNED",
+            result: "SUCCESS",
+            details: { requestId: request.requestId, assignedTo: targetOfficer }
+        });
+
+        res.json({
+            success: true,
+            message: "Request assigned successfully.",
+            data: request
+        });
+    } catch (e) {
         res.status(500).json({ success: false, error: "SERVER_ERROR", message: e.message });
     }
 });

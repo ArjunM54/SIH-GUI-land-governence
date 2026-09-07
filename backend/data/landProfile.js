@@ -375,7 +375,9 @@ function getIntegratedLandProfile(parcelId) {
         });
     }
 
-    timeline.sort((a, b) => String(b.date || b.year).localeCompare(String(a.date || a.year)));
+    const { getParcelTimeline } = require("../services/timelineService");
+    const unifiedTimeline = getParcelTimeline(parcelId, {}, raw);
+    const parcelAudits = auditService.getAuditsByParcel(parcelId);
 
     return {
         ...raw,
@@ -384,8 +386,8 @@ function getIntegratedLandProfile(parcelId) {
         tax: raw.propertyTax || null,
         documents: docs,
         conflicts: allConflicts,
-        timeline: timeline,
-        audit: logs,
+        timeline: (unifiedTimeline && unifiedTimeline.events) ? unifiedTimeline.events : timeline,
+        audit: parcelAudits.length > 0 ? parcelAudits : logs,
         governance: {
             overallStatus: overallGovernanceStatus,
             departmentStatuses: {

@@ -848,30 +848,144 @@ async function renderDepartmentRequests(requests = []) {
     }
 }
 
-async function loadAndRenderDepartmentRequestsTab(container) {
-    container.innerHTML = `<div style="padding: 1.5rem; color: #94a3b8;">Loading department requests...</div>`;
-    try {
-        const res = await window.getDepartmentRequests({ myRequests: true });
-        const reqs = res.data || [];
+let currentDeptReqFilter = "ALL";
+let currentDeptReqDeptFilter = "";
+let currentDeptReqSearch = "";
 
-        const myDept = normalizeDept(currentOfficer.department);
-        const incoming = reqs.filter(r => normalizeDept(r.to.department) === myDept);
-        const outgoing = reqs.filter(r => normalizeDept(r.from.department) === myDept || r.from.officerId === (currentOfficer.officerId || currentOfficer.uid));
+async function loadAndRenderDepartmentRequestsTab(container, initialParcelFilter = null) {
+    if (initialParcelFilter) currentDeptReqSearch = initialParcelFilter;
+    container.innerHTML = `<div style="padding: 1.5rem; color: #94a3b8;"><span class="spinner-small"></span> Loading unified department request center...</div>`;
+    try {
+        const res = await window.getDepartmentRequests();
+        const allRequests = res.data || [];
+
+        // Summary Counters
+        const total = allRequests.length;
+        const pending = allRequests.filter(r => r.status === "PENDING" || r.status === "ASSIGNED").length;
+        const inProgress = allRequests.filter(r => r.status === "IN_PROGRESS" || r.status === "ACCEPTED" || r.status === "MORE_INFORMATION_REQUIRED").length;
+        const completed = allRequests.filter(r => r.status === "COMPLETED").length;
+        const rejected = allRequests.filter(r => r.status === "REJECTED" || r.status === "CANCELLED").length;
+        const overdue = allRequests.filter(r => r.isOverdue).length;
+        const escalated = allRequests.filter(r => r.status === "ESCALATED").length;
+
+        // Apply local filters
+        let filtered = [...allRequests];
+        const userOfficerId = currentOfficer.officerId || currentOfficer.uid;
+        const userDept = normalizeDept(currentOfficer.department);
+
+        if (currentDeptReqFilter === "MY_REQUESTS") {
+            filtered = filtered.filter(r => r.from.officerId === userOfficerId || normalizeDept(r.from.department) === userDept);
+        } else if (currentDeptReqFilter === "ASSIGNED_TO_ME") {
+            filtered = filtered.filter(r => r.to.officerId === userOfficerId || normalizeDept(r.to.department) === userDept);
+        } else if (currentDeptReqFilter === "PENDING") {
+            filtered = filtered.filter(r => ["PENDING", "ASSIGNED"].includes(r.status));
+        } else if (currentDeptReqFilter === "IN_PROGRESS") {
+            filtered = filtered.filter(r => ["IN_PROGRESS", "ACCEPTED", "MORE_INFORMATION_REQUIRED"].includes(r.status));
+        } else if (currentDeptReqFilter === "COMPLETED") {
+            filtered = filtered.filter(r => r.status === "COMPLETED");
+        } else if (currentDeptReqFilter === "REJECTED") {
+            filtered = filtered.filter(r => ["REJECTED", "CANCELLED"].includes(r.status));
+        } else if (currentDeptReqFilter === "OVERDUE") {
+            filtered = filtered.filter(r => r.isOverdue);
+        } else if (currentDeptReqFilter === "HIGH_PRIORITY") {
+            filtered = filtered.filter(r => r.priority === "HIGH" || r.priority === "URGENT");
+        } else if (currentDeptReqFilter === "CONFLICT_RELATED") {
+            filtered = filtered.filter(r => r.conflictId || (r.requiredWork || "").includes("CONFLICT"));
+        }
+
+        if (currentDeptReqDeptFilter) {
+            const dNorm = normalizeDept(currentDeptReqDeptFilter);
+            filtered = filtered.filter(r => normalizeDept(r.from.department) === dNorm || normalizeDept(r.to.department) === dNorm);
+        }
+
+        if (currentDeptReqSearch) {
+            const q = currentDeptReqSearch.toLowerCase().trim();
+            filtered = filtered.filter(r =>
+                r.requestId.toLowerCase().includes(q) ||
+                r.parcelId.toLowerCase().includes(q) ||
+                (r.surveyNumber || "").toLowerCase().includes(q) ||
+                r.from.department.toLowerCase().includes(q) ||
+                r.to.department.toLowerCase().includes(q) ||
+                (r.from.officerName || "").toLowerCase().includes(q) ||
+                (r.to.officerId || "").toLowerCase().includes(q) ||
+                r.requestType.toLowerCase().includes(q) ||
+                r.requiredWork.toLowerCase().includes(q)
+            );
+        }
 
         container.innerHTML = `
-            <div style="margin-bottom: 1.5rem; display:flex; justify-content:space-between; align-items:center;">
-                <h3>📤 DEPARTMENT ACTION REQUESTS</h3>
+            <div style="margin-bottom: 1.25rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+                <div>
+                    <h2 style="margin:0; font-size:1.4rem; color:#f8fafc;">📤 UNIFIED DEPARTMENT REQUEST CENTER</h2>
+                    <div style="font-size:0.8rem; color:#94a3b8;">Centralized statutory & inter-departmental action request queue</div>
+                </div>
                 <button class="btn-govt-primary" onclick="openCreateDepartmentRequestModal()">+ Department Request</button>
             </div>
 
-            <div style="margin-bottom: 2rem;">
-                <h4 style="color:#38bdf8; margin-bottom:0.75rem;">📥 INCOMING REQUESTS (FOR MY DEPARTMENT)</h4>
-                ${renderRequestsTableHTML(incoming, "Incoming Requests", true)}
+            <!-- SUMMARY CARDS -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:0.75rem; margin-bottom:1.25rem;">
+                <div class="kpi-card" style="padding:0.75rem; background:#0f172a; border:1px solid var(--govt-border); cursor:pointer;" onclick="filterDeptReqs('ALL')">
+                    <div style="font-size:0.75rem; color:#94a3b8;">TOTAL REQUESTS</div>
+                    <div style="font-size:1.4rem; font-weight:700; color:#38bdf8;">${total}</div>
+                </div>
+                <div class="kpi-card" style="padding:0.75rem; background:#0f172a; border:1px solid var(--govt-border); cursor:pointer;" onclick="filterDeptReqs('PENDING')">
+                    <div style="font-size:0.75rem; color:#94a3b8;">PENDING</div>
+                    <div style="font-size:1.4rem; font-weight:700; color:#f59e0b;">${pending}</div>
+                </div>
+                <div class="kpi-card" style="padding:0.75rem; background:#0f172a; border:1px solid var(--govt-border); cursor:pointer;" onclick="filterDeptReqs('IN_PROGRESS')">
+                    <div style="font-size:0.75rem; color:#94a3b8;">IN PROGRESS</div>
+                    <div style="font-size:1.4rem; font-weight:700; color:#60a5fa;">${inProgress}</div>
+                </div>
+                <div class="kpi-card" style="padding:0.75rem; background:#0f172a; border:1px solid var(--govt-border); cursor:pointer;" onclick="filterDeptReqs('COMPLETED')">
+                    <div style="font-size:0.75rem; color:#94a3b8;">COMPLETED</div>
+                    <div style="font-size:1.4rem; font-weight:700; color:#10b981;">${completed}</div>
+                </div>
+                <div class="kpi-card" style="padding:0.75rem; background:#0f172a; border:1px solid var(--govt-border); cursor:pointer;" onclick="filterDeptReqs('REJECTED')">
+                    <div style="font-size:0.75rem; color:#94a3b8;">REJECTED</div>
+                    <div style="font-size:1.4rem; font-weight:700; color:#ef4444;">${rejected}</div>
+                </div>
+                <div class="kpi-card" style="padding:0.75rem; background:#0f172a; border:1px solid var(--govt-border); cursor:pointer;" onclick="filterDeptReqs('OVERDUE')">
+                    <div style="font-size:0.75rem; color:#94a3b8;">OVERDUE</div>
+                    <div style="font-size:1.4rem; font-weight:700; color:#f87171;">${overdue}</div>
+                </div>
+                <div class="kpi-card" style="padding:0.75rem; background:#0f172a; border:1px solid var(--govt-border); cursor:pointer;" onclick="filterDeptReqs('CONFLICT_RELATED')">
+                    <div style="font-size:0.75rem; color:#94a3b8;">CONFLICT RELATED</div>
+                    <div style="font-size:1.4rem; font-weight:700; color:#c084fc;">${allRequests.filter(r => r.conflictId || (r.requiredWork || '').includes('CONFLICT')).length}</div>
+                </div>
             </div>
 
-            <div>
-                <h4 style="color:#38bdf8; margin-bottom:0.75rem;">📤 MY OUTGOING REQUESTS (SENT TO OTHER DEPARTMENTS)</h4>
-                ${renderRequestsTableHTML(outgoing, "Outgoing Requests", false)}
+            <!-- CONTROLS & FILTER BAR -->
+            <div style="background:#0f172a; padding:0.75rem; border:1px solid var(--govt-border); margin-bottom:1rem; display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center; justify-content:space-between;">
+                <div style="display:flex; flex-wrap:wrap; gap:0.35rem;">
+                    <button class="btn-govt-secondary ${currentDeptReqFilter === 'ALL' ? 'active' : ''}" style="padding:3px 8px; font-size:0.75rem;" onclick="filterDeptReqs('ALL')">All</button>
+                    <button class="btn-govt-secondary ${currentDeptReqFilter === 'MY_REQUESTS' ? 'active' : ''}" style="padding:3px 8px; font-size:0.75rem;" onclick="filterDeptReqs('MY_REQUESTS')">My Requests</button>
+                    <button class="btn-govt-secondary ${currentDeptReqFilter === 'ASSIGNED_TO_ME' ? 'active' : ''}" style="padding:3px 8px; font-size:0.75rem;" onclick="filterDeptReqs('ASSIGNED_TO_ME')">Assigned to Me</button>
+                    <button class="btn-govt-secondary ${currentDeptReqFilter === 'PENDING' ? 'active' : ''}" style="padding:3px 8px; font-size:0.75rem;" onclick="filterDeptReqs('PENDING')">Pending</button>
+                    <button class="btn-govt-secondary ${currentDeptReqFilter === 'IN_PROGRESS' ? 'active' : ''}" style="padding:3px 8px; font-size:0.75rem;" onclick="filterDeptReqs('IN_PROGRESS')">In Progress</button>
+                    <button class="btn-govt-secondary ${currentDeptReqFilter === 'COMPLETED' ? 'active' : ''}" style="padding:3px 8px; font-size:0.75rem;" onclick="filterDeptReqs('COMPLETED')">Completed</button>
+                    <button class="btn-govt-secondary ${currentDeptReqFilter === 'OVERDUE' ? 'active' : ''}" style="padding:3px 8px; font-size:0.75rem;" onclick="filterDeptReqs('OVERDUE')">Overdue</button>
+                    <button class="btn-govt-secondary ${currentDeptReqFilter === 'HIGH_PRIORITY' ? 'active' : ''}" style="padding:3px 8px; font-size:0.75rem;" onclick="filterDeptReqs('HIGH_PRIORITY')">High Priority</button>
+                    <button class="btn-govt-secondary ${currentDeptReqFilter === 'CONFLICT_RELATED' ? 'active' : ''}" style="padding:3px 8px; font-size:0.75rem;" onclick="filterDeptReqs('CONFLICT_RELATED')">Conflict Related</button>
+                </div>
+
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                    <select class="form-input" style="padding:3px 8px; font-size:0.75rem; width:160px;" onchange="filterDeptReqDept(this.value)">
+                        <option value="">All Departments</option>
+                        <option value="Cadastral & Survey Department" ${currentDeptReqDeptFilter === 'Cadastral & Survey Department' ? 'selected' : ''}>Cadastral & Survey</option>
+                        <option value="Land Records Department" ${currentDeptReqDeptFilter === 'Land Records Department' ? 'selected' : ''}>RoR / Land Records</option>
+                        <option value="Registration Department" ${currentDeptReqDeptFilter === 'Registration Department' ? 'selected' : ''}>Registration</option>
+                        <option value="Land Use & Planning Department" ${currentDeptReqDeptFilter === 'Land Use & Planning Department' ? 'selected' : ''}>Land Use & Planning</option>
+                        <option value="Property Tax & Municipal Department" ${currentDeptReqDeptFilter === 'Property Tax & Municipal Department' ? 'selected' : ''}>Property Tax & Municipal</option>
+                    </select>
+
+                    <input type="text" class="form-input" style="padding:3px 8px; font-size:0.75rem; width:150px;" placeholder="Search ID/Parcel..." value="${currentDeptReqSearch}" onkeyup="searchDeptReqs(this.value)">
+                </div>
+            </div>
+
+            <!-- REQUESTS TABLE -->
+            <div style="margin-bottom: 2rem;">
+                <h4 style="color:#38bdf8; margin-bottom:0.75rem; font-size:0.9rem;">ALL DEPARTMENT REQUESTS (${filtered.length})</h4>
+                ${renderRequestsTableHTML(filtered)}
             </div>
         `;
     } catch (e) {
@@ -879,9 +993,27 @@ async function loadAndRenderDepartmentRequestsTab(container) {
     }
 }
 
-function renderRequestsTableHTML(requests = [], title = "", isIncoming = true) {
+function filterDeptReqs(filter) {
+    currentDeptReqFilter = filter;
+    const container = document.getElementById("generic-records-container");
+    if (container) loadAndRenderDepartmentRequestsTab(container);
+}
+
+function filterDeptReqDept(dept) {
+    currentDeptReqDeptFilter = dept;
+    const container = document.getElementById("generic-records-container");
+    if (container) loadAndRenderDepartmentRequestsTab(container);
+}
+
+function searchDeptReqs(val) {
+    currentDeptReqSearch = val;
+    const container = document.getElementById("generic-records-container");
+    if (container) loadAndRenderDepartmentRequestsTab(container);
+}
+
+function renderRequestsTableHTML(requests = []) {
     if (!requests || requests.length === 0) {
-        return `<div style="padding: 1rem; background: #0f172a; border: 1px solid var(--govt-border); color: #94a3b8;">No ${title.toLowerCase()} found.</div>`;
+        return `<div style="padding: 1.5rem; background: #0f172a; border: 1px solid var(--govt-border); color: #94a3b8; text-align:center;">No department requests found matching selected filters.</div>`;
     }
 
     return `
@@ -889,47 +1021,96 @@ function renderRequestsTableHTML(requests = [], title = "", isIncoming = true) {
             <thead>
                 <tr>
                     <th>Request ID</th>
-                    <th>${isIncoming ? 'From Dept' : 'To Dept'}</th>
                     <th>Parcel ID</th>
+                    <th>From Dept</th>
+                    <th>To Dept</th>
                     <th>Request Type</th>
-                    <th>Required Work</th>
+                    <th>Work Required</th>
                     <th>Priority</th>
                     <th>Status</th>
                     <th>Created</th>
-                    <th>Action</th>
+                    <th>Due Date</th>
+                    <th>Assigned Officer</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 ${requests.map(r => {
-                    const isUrgent = r.priority === "URGENT";
-                    const priorityClass = isUrgent ? "priority-high" : (r.priority === "HIGH" ? "priority-high" : "priority-medium");
-                    const statusClass = r.status === "COMPLETED" ? "status-verified" : (r.status === "PENDING" ? "status-pending" : "status-review");
-                    const isOverdue = r.isOverdue;
+        const isUrgent = r.priority === "URGENT";
+        const priorityClass = isUrgent ? "priority-high" : (r.priority === "HIGH" ? "priority-high" : "priority-medium");
+        const statusClass = r.status === "COMPLETED" ? "status-verified" : (r.status === "PENDING" ? "status-pending" : "status-review");
+        const isOverdue = r.isOverdue;
+        const assignedOfficer = r.to?.officerId || r.acceptedBy || "Unassigned";
 
-                    return `
+        return `
                         <tr style="${isUrgent ? 'background: rgba(239, 68, 68, 0.08);' : ''}">
-                            <td><strong>${r.requestId}</strong></td>
-                            <td>${isIncoming ? r.from.department : r.to.department}</td>
+                            <td>
+                                <strong>${r.requestId}</strong>
+                                ${r.conflictId ? `<br><span style="font-size:0.65rem; color:#c084fc; font-weight:700;">${r.conflictId}</span>` : ''}
+                            </td>
                             <td><strong>${r.parcelId}</strong></td>
+                            <td>${r.from.department}</td>
+                            <td>${r.to.department}</td>
                             <td>${r.requestType}</td>
                             <td><code>${r.requiredWork}</code></td>
                             <td><span class="${priorityClass}">${r.priority}</span></td>
                             <td>
                                 <span class="status-tag ${statusClass}">${r.status}</span>
-                                ${isOverdue ? '<span class="status-tag" style="background:#7f1d1d; color:#fca5a5; font-weight:700;">OVERDUE</span>' : ''}
+                                ${isOverdue ? '<br><span class="status-tag" style="background:#7f1d1d; color:#fca5a5; font-weight:700; font-size:0.65rem; margin-top:2px;">OVERDUE</span>' : ''}
                             </td>
                             <td>${r.createdAt ? r.createdAt.substring(0, 10) : 'N/A'}</td>
+                            <td>${r.dueAt ? r.dueAt.substring(0, 10) : 'N/A'}</td>
+                            <td><span style="font-size:0.75rem; color:#cbd5e1;">${assignedOfficer}</span></td>
                             <td style="display:flex; gap:0.25rem; flex-wrap:wrap;">
-                                <button class="btn-govt-secondary" style="padding:2px 6px; font-size:0.75rem;" onclick="openDepartmentRequestDetailModal('${r.requestId}')">View Request</button>
-                                ${isIncoming && r.status === 'PENDING' ? `<button class="btn-govt-primary" style="padding:2px 6px; font-size:0.75rem;" onclick="handleAcceptRequest('${r.requestId}')">Accept</button>` : ''}
-                                ${isIncoming && (r.status === 'ACCEPTED' || r.status === 'IN_PROGRESS') ? `<button class="btn-govt-primary" style="padding:2px 6px; font-size:0.75rem;" onclick="openCompleteDepartmentRequestModal('${r.requestId}')">Complete</button>` : ''}
-                                ${isOverdue || r.status === 'IN_PROGRESS' ? `<button class="btn-govt-warning" style="padding:2px 6px; font-size:0.75rem;" onclick="handleEscalateRequest('${r.requestId}')">Escalate</button>` : ''}
+                                <button class="btn-govt-secondary" style="padding:2px 6px; font-size:0.75rem;" onclick="openDepartmentRequestDetailModal('${r.requestId}')">View Details</button>
+                                ${r.status === 'PENDING' ? `<button class="btn-govt-primary" style="padding:2px 6px; font-size:0.75rem;" onclick="handleAcceptRequest('${r.requestId}')">Accept</button>` : ''}
+                                ${(r.status === 'ACCEPTED' || r.status === 'IN_PROGRESS' || r.status === 'MORE_INFORMATION_REQUIRED') ? `<button class="btn-govt-primary" style="padding:2px 6px; font-size:0.75rem;" onclick="openCompleteDepartmentRequestModal('${r.requestId}')">Complete</button>` : ''}
                             </td>
                         </tr>
                     `;
-                }).join('')}
+    }).join('')}
             </tbody>
         </table>
+    `;
+}
+
+function renderRequestLifecycleHTML(status) {
+    const steps = [
+        { id: "CREATED", label: "Request Created" },
+        { id: "RECEIVED", label: "Received by Dept" },
+        { id: "ASSIGNED", label: "Assigned" },
+        { id: "IN_PROGRESS", label: "In Progress" },
+        { id: "COMPLETED", label: "Completed" }
+    ];
+
+    let currentIdx = 0;
+    const stat = (status || "").toUpperCase();
+    if (stat === "PENDING") currentIdx = 1;
+    else if (stat === "ASSIGNED") currentIdx = 2;
+    else if (stat === "ACCEPTED" || stat === "IN_PROGRESS" || stat === "MORE_INFORMATION_REQUIRED" || stat === "ESCALATED") currentIdx = 3;
+    else if (stat === "COMPLETED") currentIdx = 4;
+    else if (stat === "REJECTED" || stat === "CANCELLED") {
+        return `<div style="padding:0.5rem 1rem; background:rgba(239, 68, 68, 0.15); border:1px solid #ef4444; color:#fca5a5; font-weight:700; border-radius:4px; text-align:center; margin:1rem 0;">STATUS: ${stat}</div>`;
+    }
+
+    return `
+        <div style="display:flex; justify-content:space-between; align-items:center; position:relative; margin: 1rem 0; padding: 0 0.5rem;">
+            <div style="position:absolute; top:12px; left:0; right:0; height:3px; background:#334155; z-index:1;"></div>
+            ${steps.map((step, idx) => {
+        const isPassed = idx <= currentIdx;
+        const isCurrent = idx === currentIdx;
+        const circleBg = isPassed ? "#10b981" : "#334155";
+        const textColor = isPassed ? "#f8fafc" : "#64748b";
+        return `
+                    <div style="z-index:2; display:flex; flex-direction:column; align-items:center; text-align:center;">
+                        <div style="width:24px; height:24px; border-radius:50%; background:${circleBg}; color:#0f172a; font-weight:700; font-size:12px; display:flex; align-items:center; justify-content:center; margin-bottom:4px; border: 2px solid ${isCurrent ? '#38bdf8' : 'transparent'};">
+                            ${isPassed ? '✓' : (idx + 1)}
+                        </div>
+                        <div style="font-size:0.7rem; color:${textColor}; font-weight:${isCurrent ? '700' : '400'}; max-width:85px;">${step.label}</div>
+                    </div>
+                `;
+    }).join('')}
+        </div>
     `;
 }
 
@@ -951,22 +1132,37 @@ async function openDepartmentRequestDetailModal(requestId) {
 
         const content = document.getElementById("reqdetail-content");
         content.innerHTML = `
+            ${renderRequestLifecycleHTML(r.status)}
+
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; background:#0f172a; padding:1rem; border:1px solid var(--govt-border); font-size:0.85rem; margin-bottom:1rem;">
-                <div><strong>Parcel ID:</strong> ${r.parcelId}</div>
+                <div><strong>Parcel ID:</strong> <a href="#" onclick="openCompleteLandProfile('${r.parcelId}'); return false;" style="color:#38bdf8; text-decoration:underline;">${r.parcelId}</a></div>
                 <div><strong>Survey Number:</strong> ${r.surveyNumber || 'N/A'}</div>
                 <div><strong>From Department:</strong> ${r.from.department}</div>
                 <div><strong>Requested By:</strong> ${r.from.officerName} (${r.from.officerId})</div>
                 <div><strong>To Department:</strong> ${r.to.department}</div>
+                <div><strong>Assigned Officer:</strong> ${r.to.officerId || r.acceptedBy || 'Unassigned'}</div>
                 <div><strong>Request Type:</strong> ${r.requestType}</div>
                 <div><strong>Required Work:</strong> <code>${r.requiredWork}</code></div>
                 <div><strong>Priority:</strong> <span class="priority-${(r.priority || 'NORMAL').toLowerCase()}">${r.priority}</span></div>
                 <div><strong>Status:</strong> <span class="status-tag status-pending">${r.status}</span> ${isOverdue ? '<span style="background:#7f1d1d; color:#fca5a5; padding:2px 6px; border-radius:3px; font-weight:700;">OVERDUE</span>' : ''}</div>
                 <div><strong>Created At:</strong> ${r.createdAt ? new Date(r.createdAt).toLocaleString() : 'N/A'}</div>
-                <div><strong>Due SLA:</strong> ${r.dueAt ? new Date(r.dueAt).toLocaleString() : 'N/A'}</div>
+                <div><strong>Due SLA:</strong> ${r.dueAt ? new Date(r.dueAt).toLocaleString() : 'N/A'} (Prototype SLA)</div>
             </div>
 
+            ${r.conflictId ? `
+                <div style="margin-bottom:1rem; padding:0.75rem; background:rgba(192, 132, 252, 0.1); border:1px solid #c084fc;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <strong style="color:#c084fc;">⚠ CONFLICT RELATED REQUEST</strong>
+                            <div style="font-size:0.8rem; color:#e9d5ff;">Linked Conflict ID: <strong>${r.conflictId}</strong></div>
+                        </div>
+                        <button class="btn-govt-secondary" onclick="openConflictDetailModal('${r.conflictId}')" style="padding:2px 8px; font-size:0.75rem;">View Conflict</button>
+                    </div>
+                </div>
+            ` : ''}
+
             <div style="margin-bottom:1rem;">
-                <label style="font-weight:700; color:#38bdf8; font-size:0.85rem;">Reason for Request:</label>
+                <label style="font-weight:700; color:#38bdf8; font-size:0.85rem;">Reason for Request / Description:</label>
                 <div style="background:#0f172a; padding:0.75rem; border:1px solid var(--govt-border); font-size:0.85rem; margin-top:0.25rem;">
                     ${r.reason || 'No specific reason provided.'}
                 </div>
@@ -991,7 +1187,7 @@ async function openDepartmentRequestDetailModal(requestId) {
             ` : ''}
 
             <div>
-                <h4 style="color:#38bdf8; margin-bottom:0.5rem; font-size:0.9rem;">📜 AUDIT & TIMELINE</h4>
+                <h4 style="color:#38bdf8; margin-bottom:0.5rem; font-size:0.9rem;">📜 REQUEST TIMELINE</h4>
                 <ul class="timeline-list">
                     ${(r.timeline || []).map(t => `
                         <li class="timeline-item">
@@ -1008,12 +1204,17 @@ async function openDepartmentRequestDetailModal(requestId) {
         const actionGroup = document.getElementById("reqdetail-action-buttons");
         actionGroup.innerHTML = "";
 
+        // Open Land Profile link button
+        actionGroup.innerHTML += `<button class="btn-govt-primary" onclick="openCompleteLandProfile('${r.parcelId}')" style="background:#0284c7;">Open Land Profile</button>`;
+
         if (isTargetDept) {
+            actionGroup.innerHTML += `<button class="btn-govt-secondary" onclick="openAssignDepartmentRequestModal('${r.requestId}')">Assign Officer</button>`;
+
             if (r.status === "PENDING") {
                 actionGroup.innerHTML += `<button class="btn-govt-primary" onclick="handleAcceptRequest('${r.requestId}')">Accept Request</button>`;
                 actionGroup.innerHTML += `<button class="btn-govt-danger" onclick="handleRejectRequest('${r.requestId}')">Reject Request</button>`;
                 actionGroup.innerHTML += `<button class="btn-govt-warning" onclick="handleRequestMoreInfo('${r.requestId}')">Request More Information</button>`;
-            } else if (r.status === "ACCEPTED") {
+            } else if (r.status === "ACCEPTED" || r.status === "ASSIGNED") {
                 actionGroup.innerHTML += `<button class="btn-govt-primary" onclick="handleStartRequest('${r.requestId}')">Begin Work</button>`;
                 actionGroup.innerHTML += `<button class="btn-govt-warning" onclick="handleRequestMoreInfo('${r.requestId}')">Request More Information</button>`;
                 actionGroup.innerHTML += `<button class="btn-govt-danger" onclick="handleRejectRequest('${r.requestId}')">Reject</button>`;
@@ -1027,12 +1228,534 @@ async function openDepartmentRequestDetailModal(requestId) {
         if (isRequesterDept && !["COMPLETED", "REJECTED", "CANCELLED"].includes(r.status)) {
             actionGroup.innerHTML += `<button class="btn-govt-secondary" onclick="handleCancelRequest('${r.requestId}')">Cancel Request</button>`;
         }
-
         actionGroup.innerHTML += `<button class="btn-govt-secondary" onclick="closeModal('modal-request-detail')">Close</button>`;
 
         document.getElementById("modal-request-detail").style.display = "flex";
     } catch (e) {
         alert("Failed to load request details: " + e.message);
+    }
+}
+
+/* =========================================================
+   ASSIGN & CLARIFICATION REQUEST MODAL HANDLERS
+   ========================================================= */
+
+function openAssignDepartmentRequestModal(requestId) {
+    document.getElementById("assign-req-id").value = requestId;
+    document.getElementById("assign-req-id-label").value = requestId;
+    document.getElementById("assign-officer-id").value = "";
+    closeModal("modal-request-detail");
+    document.getElementById("modal-assign-request").style.display = "flex";
+}
+
+async function handleAssignDepartmentRequestSubmit(event) {
+    event.preventDefault();
+    const requestId = document.getElementById("assign-req-id").value;
+    const officerId = document.getElementById("assign-officer-id").value;
+
+    try {
+        const res = await window.assignDepartmentRequest(requestId, officerId);
+        if (res.success) {
+            alert(`Request ${requestId} assigned to officer ${officerId}.`);
+            closeModal("modal-assign-request");
+            loadOfficerDashboard();
+            if (document.getElementById("generic-records-container")) {
+                loadAndRenderDepartmentRequestsTab(document.getElementById("generic-records-container"));
+            }
+        } else {
+            alert(res.message || "Failed to assign request.");
+        }
+    } catch (e) {
+        alert(e.message || "Failed to assign request.");
+    }
+}
+
+function openMoreInfoDepartmentRequestModal(requestId) {
+    document.getElementById("moreinfo-req-id").value = requestId;
+    document.getElementById("moreinfo-req-notes").value = "";
+    closeModal("modal-request-detail");
+    document.getElementById("modal-more-info-request").style.display = "flex";
+}
+
+async function handleMoreInfoDepartmentRequestSubmit(event) {
+    event.preventDefault();
+    const requestId = document.getElementById("moreinfo-req-id").value;
+    const notes = document.getElementById("moreinfo-req-notes").value;
+
+    try {
+        const res = await window.requestMoreInfoDepartment(requestId, notes);
+        if (res.success) {
+            alert("Clarification request sent to requesting department.");
+            closeModal("modal-more-info-request");
+            loadOfficerDashboard();
+            if (document.getElementById("generic-records-container")) {
+                loadAndRenderDepartmentRequestsTab(document.getElementById("generic-records-container"));
+            }
+        } else {
+            alert(res.message || "Failed to send request.");
+        }
+    } catch (e) {
+        alert(e.message || "Failed to send request.");
+    }
+}
+
+/* =========================================================
+   PHASE 12K — LAND DATA CONFLICT CENTER UI & HANDLERS
+   ========================================================= */
+
+let currentConflictFilter = "ALL";
+let currentConflictDeptFilter = "";
+let currentConflictSearch = "";
+
+async function loadAndRenderConflictsTab(container, initialParcelFilter = null) {
+    if (initialParcelFilter) currentConflictSearch = initialParcelFilter;
+    container.innerHTML = `<div style="padding: 1.5rem; color: #94a3b8;"><span class="spinner-small"></span> Loading land data conflict center...</div>`;
+    try {
+        const res = await window.getConflicts();
+        const allConflicts = res.data || [];
+
+        // Counters
+        const total = allConflicts.length;
+        const critical = allConflicts.filter(c => c.severity === "CRITICAL").length;
+        const high = allConflicts.filter(c => c.severity === "HIGH").length;
+        const medium = allConflicts.filter(c => c.severity === "MEDIUM").length;
+        const low = allConflicts.filter(c => c.severity === "LOW").length;
+        const open = allConflicts.filter(c => c.status === "OPEN" || c.status === "REOPENED").length;
+        const underReview = allConflicts.filter(c => c.status === "UNDER_REVIEW" || c.status === "REQUEST_SENT" || c.status === "WAITING_FOR_DEPARTMENT").length;
+        const resolved = allConflicts.filter(c => c.status === "RESOLVED" || c.status === "DISMISSED").length;
+
+        // Apply local filtering
+        let filtered = [...allConflicts];
+        if (currentConflictFilter === "CRITICAL") filtered = filtered.filter(c => c.severity === "CRITICAL");
+        else if (currentConflictFilter === "HIGH") filtered = filtered.filter(c => c.severity === "HIGH");
+        else if (currentConflictFilter === "MEDIUM") filtered = filtered.filter(c => c.severity === "MEDIUM");
+        else if (currentConflictFilter === "LOW") filtered = filtered.filter(c => c.severity === "LOW");
+        else if (currentConflictFilter === "OPEN") filtered = filtered.filter(c => c.status === "OPEN" || c.status === "REOPENED");
+        else if (currentConflictFilter === "UNDER_REVIEW") filtered = filtered.filter(c => ["UNDER_REVIEW", "REQUEST_SENT", "WAITING_FOR_DEPARTMENT"].includes(c.status));
+        else if (currentConflictFilter === "RESOLVED") filtered = filtered.filter(c => ["RESOLVED", "DISMISSED"].includes(c.status));
+
+        if (currentConflictDeptFilter) {
+            const dNorm = currentConflictDeptFilter.toLowerCase();
+            filtered = filtered.filter(c => (c.affectedDepartments || []).some(ad => ad.toLowerCase().includes(dNorm)));
+        }
+
+        if (currentConflictSearch) {
+            const q = currentConflictSearch.toLowerCase().trim();
+            filtered = filtered.filter(c =>
+                c.id.toLowerCase().includes(q) ||
+                c.parcelId.toLowerCase().includes(q) ||
+                (c.surveyNumber || "").toLowerCase().includes(q) ||
+                c.type.toLowerCase().includes(q) ||
+                c.title.toLowerCase().includes(q) ||
+                (c.description || "").toLowerCase().includes(q)
+            );
+        }
+
+        container.innerHTML = `
+            <div style="margin-bottom: 1.25rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+                <div>
+                    <h2 style="margin:0; font-size:1.4rem; color:#f8fafc;">⚠ LAND DATA CONFLICT CENTER</h2>
+                    <div style="font-size:0.8rem; color:#94a3b8;">Automated cross-department land record consistency & resolution engine</div>
+                </div>
+            </div>
+
+            <!-- SUMMARY KPI CARDS -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:0.75rem; margin-bottom:1.25rem;">
+                <div class="kpi-card" style="padding:0.75rem; background:#0f172a; border:1px solid var(--govt-border); cursor:pointer;" onclick="filterConflicts('ALL')">
+                    <div style="font-size:0.7rem; color:#94a3b8;">TOTAL CONFLICTS</div>
+                    <div style="font-size:1.3rem; font-weight:700; color:#38bdf8;">${total}</div>
+                </div>
+                <div class="kpi-card" style="padding:0.75rem; background:#0f172a; border:1px solid var(--govt-border); cursor:pointer;" onclick="filterConflicts('CRITICAL')">
+                    <div style="font-size:0.7rem; color:#94a3b8;">CRITICAL</div>
+                    <div style="font-size:1.3rem; font-weight:700; color:#ef4444;">${critical}</div>
+                </div>
+                <div class="kpi-card" style="padding:0.75rem; background:#0f172a; border:1px solid var(--govt-border); cursor:pointer;" onclick="filterConflicts('HIGH')">
+                    <div style="font-size:0.7rem; color:#94a3b8;">HIGH</div>
+                    <div style="font-size:1.3rem; font-weight:700; color:#f97316;">${high}</div>
+                </div>
+                <div class="kpi-card" style="padding:0.75rem; background:#0f172a; border:1px solid var(--govt-border); cursor:pointer;" onclick="filterConflicts('MEDIUM')">
+                    <div style="font-size:0.7rem; color:#94a3b8;">MEDIUM</div>
+                    <div style="font-size:1.3rem; font-weight:700; color:#f59e0b;">${medium}</div>
+                </div>
+                <div class="kpi-card" style="padding:0.75rem; background:#0f172a; border:1px solid var(--govt-border); cursor:pointer;" onclick="filterConflicts('OPEN')">
+                    <div style="font-size:0.7rem; color:#94a3b8;">OPEN</div>
+                    <div style="font-size:1.3rem; font-weight:700; color:#38bdf8;">${open}</div>
+                </div>
+                <div class="kpi-card" style="padding:0.75rem; background:#0f172a; border:1px solid var(--govt-border); cursor:pointer;" onclick="filterConflicts('UNDER_REVIEW')">
+                    <div style="font-size:0.7rem; color:#94a3b8;">UNDER REVIEW</div>
+                    <div style="font-size:1.3rem; font-weight:700; color:#c084fc;">${underReview}</div>
+                </div>
+                <div class="kpi-card" style="padding:0.75rem; background:#0f172a; border:1px solid var(--govt-border); cursor:pointer;" onclick="filterConflicts('RESOLVED')">
+                    <div style="font-size:0.7rem; color:#94a3b8;">RESOLVED</div>
+                    <div style="font-size:1.3rem; font-weight:700; color:#10b981;">${resolved}</div>
+                </div>
+            </div>
+
+            <!-- CONTROLS & FILTER BAR -->
+            <div style="background:#0f172a; padding:0.75rem; border:1px solid var(--govt-border); margin-bottom:1rem; display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center; justify-content:space-between;">
+                <div style="display:flex; flex-wrap:wrap; gap:0.35rem;">
+                    <button class="btn-govt-secondary ${currentConflictFilter === 'ALL' ? 'active' : ''}" style="padding:3px 8px; font-size:0.75rem;" onclick="filterConflicts('ALL')">All</button>
+                    <button class="btn-govt-secondary ${currentConflictFilter === 'CRITICAL' ? 'active' : ''}" style="padding:3px 8px; font-size:0.75rem;" onclick="filterConflicts('CRITICAL')">Critical</button>
+                    <button class="btn-govt-secondary ${currentConflictFilter === 'HIGH' ? 'active' : ''}" style="padding:3px 8px; font-size:0.75rem;" onclick="filterConflicts('HIGH')">High</button>
+                    <button class="btn-govt-secondary ${currentConflictFilter === 'MEDIUM' ? 'active' : ''}" style="padding:3px 8px; font-size:0.75rem;" onclick="filterConflicts('MEDIUM')">Medium</button>
+                    <button class="btn-govt-secondary ${currentConflictFilter === 'OPEN' ? 'active' : ''}" style="padding:3px 8px; font-size:0.75rem;" onclick="filterConflicts('OPEN')">Open</button>
+                    <button class="btn-govt-secondary ${currentConflictFilter === 'UNDER_REVIEW' ? 'active' : ''}" style="padding:3px 8px; font-size:0.75rem;" onclick="filterConflicts('UNDER_REVIEW')">Under Review</button>
+                    <button class="btn-govt-secondary ${currentConflictFilter === 'RESOLVED' ? 'active' : ''}" style="padding:3px 8px; font-size:0.75rem;" onclick="filterConflicts('RESOLVED')">Resolved</button>
+                </div>
+
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                    <select class="form-input" style="padding:3px 8px; font-size:0.75rem; width:160px;" onchange="filterConflictDept(this.value)">
+                        <option value="">All Departments</option>
+                        <option value="Cadastral" ${currentConflictDeptFilter === 'Cadastral' ? 'selected' : ''}>Cadastral & Survey</option>
+                        <option value="Records" ${currentConflictDeptFilter === 'Records' ? 'selected' : ''}>RoR / Land Records</option>
+                        <option value="Registration" ${currentConflictDeptFilter === 'Registration' ? 'selected' : ''}>Registration</option>
+                        <option value="Use" ${currentConflictDeptFilter === 'Use' ? 'selected' : ''}>Land Use & Planning</option>
+                        <option value="Tax" ${currentConflictDeptFilter === 'Tax' ? 'selected' : ''}>Property Tax & Municipal</option>
+                        <option value="Restrictions" ${currentConflictDeptFilter === 'Restrictions' ? 'selected' : ''}>Restrictions</option>
+                    </select>
+
+                    <input type="text" class="form-input" style="padding:3px 8px; font-size:0.75rem; width:150px;" placeholder="Search ID/Parcel..." value="${currentConflictSearch}" onkeyup="searchConflicts(this.value)">
+                </div>
+            </div>
+
+            <!-- CONFLICTS TABLE -->
+            <div style="margin-bottom: 2rem;">
+                <h4 style="color:#38bdf8; margin-bottom:0.75rem; font-size:0.9rem;">DETECTED GOVERNANCE CONFLICTS (${filtered.length})</h4>
+                ${renderConflictsTableHTML(filtered)}
+            </div>
+        `;
+    } catch (e) {
+        container.innerHTML = `<div style="padding: 1rem; color: #ef4444;">Failed to load conflicts: ${e.message}</div>`;
+    }
+}
+
+function filterConflicts(filter) {
+    currentConflictFilter = filter;
+    const container = document.getElementById("generic-records-container");
+    if (container) loadAndRenderConflictsTab(container);
+}
+
+function filterConflictDept(dept) {
+    currentConflictDeptFilter = dept;
+    const container = document.getElementById("generic-records-container");
+    if (container) loadAndRenderConflictsTab(container);
+}
+
+function searchConflicts(val) {
+    currentConflictSearch = val;
+    const container = document.getElementById("generic-records-container");
+    if (container) loadAndRenderConflictsTab(container);
+}
+
+function renderConflictsTableHTML(conflicts = []) {
+    if (!conflicts || conflicts.length === 0) {
+        return `<div style="padding: 1.5rem; background: #0f172a; border: 1px solid var(--govt-border); color: #94a3b8; text-align:center;">No land data conflicts found matching selected filters.</div>`;
+    }
+
+    return `
+        <table class="table-govt">
+            <thead>
+                <tr>
+                    <th>Conflict ID</th>
+                    <th>Parcel ID</th>
+                    <th>Conflict Type</th>
+                    <th>Category</th>
+                    <th>Severity</th>
+                    <th>Status</th>
+                    <th>Detected At</th>
+                    <th>Affected Depts</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${conflicts.map(c => {
+        const isCritical = c.severity === "CRITICAL" || c.severity === "HIGH";
+        const sevClass = c.severity === "CRITICAL" ? "priority-high" : (c.severity === "HIGH" ? "priority-high" : "priority-medium");
+        const statClass = c.status === "RESOLVED" ? "status-verified" : (c.status === "DISMISSED" ? "status-verified" : "status-review");
+
+        return `
+                        <tr style="${isCritical ? 'background: rgba(239, 68, 68, 0.05);' : ''}">
+                            <td><strong>${c.id}</strong></td>
+                            <td><a href="#" onclick="openCompleteLandProfile('${c.parcelId}'); return false;" style="color:#38bdf8; text-decoration:underline;">${c.parcelId}</a></td>
+                            <td><strong>${c.type}</strong></td>
+                            <td><code>${c.category}</code></td>
+                            <td><span class="${sevClass}">${c.severity}</span></td>
+                            <td><span class="status-tag ${statClass}">${c.status}</span></td>
+                            <td>${c.detectedAt ? c.detectedAt.substring(0, 10) : 'N/A'}</td>
+                            <td><span style="font-size:0.75rem; color:#94a3b8;">${(c.affectedDepartments || []).join(', ')}</span></td>
+                            <td style="display:flex; gap:0.25rem; flex-wrap:wrap;">
+                                <button class="btn-govt-secondary" style="padding:2px 6px; font-size:0.75rem;" onclick="openConflictDetailModal('${c.id}')">View Conflict</button>
+                                ${c.status !== 'RESOLVED' && c.status !== 'DISMISSED' ? `<button class="btn-govt-primary" style="padding:2px 6px; font-size:0.75rem;" onclick="handleRequestVerificationFromConflict('${c.id}')">Request Verification</button>` : ''}
+                            </td>
+                        </tr>
+                    `;
+    }).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+async function openConflictDetailModal(conflictId) {
+    try {
+        const res = await window.getConflictById(conflictId);
+        if (!res.success || !res.data) {
+            alert("Conflict record not found.");
+            return;
+        }
+
+        const c = res.data;
+        document.getElementById("conflictdetail-title").textContent = `⚠ CONFLICT ${c.id} DETAILS — ${c.type}`;
+
+        const content = document.getElementById("conflictdetail-content");
+        content.innerHTML = `
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; background:#0f172a; padding:1rem; border:1px solid var(--govt-border); font-size:0.85rem; margin-bottom:1rem;">
+                <div><strong>Conflict ID:</strong> ${c.id}</div>
+                <div><strong>Parcel ID:</strong> <a href="#" onclick="openCompleteLandProfile('${c.parcelId}'); return false;" style="color:#38bdf8; text-decoration:underline;">${c.parcelId}</a></div>
+                <div><strong>Survey Number:</strong> ${c.surveyNumber || 'SUR-101'}</div>
+                <div><strong>Conflict Type:</strong> ${c.type}</div>
+                <div><strong>Category:</strong> <code>${c.category}</code></div>
+                <div><strong>Severity:</strong> <span class="${c.severity === 'CRITICAL' || c.severity === 'HIGH' ? 'priority-high' : 'priority-medium'}">${c.severity}</span> (Prototype Prioritization)</div>
+                <div><strong>Status:</strong> <span class="status-tag ${c.status === 'RESOLVED' ? 'status-verified' : 'status-review'}">${c.status}</span></div>
+                <div><strong>Assigned Officer:</strong> ${c.assignedOfficer || 'Unassigned'}</div>
+                <div><strong>Detected At:</strong> ${c.detectedAt ? new Date(c.detectedAt).toLocaleString() : 'N/A'}</div>
+                <div><strong>Detected By:</strong> ${c.detectedBy || 'AUTOMATED_CONSISTENCY_CHECK'}</div>
+            </div>
+
+            <div style="margin-bottom:1rem;">
+                <label style="font-weight:700; color:#38bdf8; font-size:0.85rem;">Conflict Description:</label>
+                <div style="background:#0f172a; padding:0.75rem; border:1px solid var(--govt-border); font-size:0.85rem; margin-top:0.25rem; color:#f8fafc;">
+                    ${c.description || 'No description available.'}
+                </div>
+            </div>
+
+            <div style="margin-bottom:1rem;">
+                <label style="font-weight:700; color:#38bdf8; font-size:0.85rem;">📊 SIDE-BY-SIDE SOURCE COMPARISON:</label>
+                ${renderSourceComparisonHTML(c)}
+            </div>
+
+            ${c.evidence && c.evidence.length > 0 ? `
+                <div style="margin-bottom:1rem;">
+                    <label style="font-weight:700; color:#38bdf8; font-size:0.85rem;">📁 EVIDENCE SOURCES & RECORDS:</label>
+                    <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.35rem;">
+                        ${c.evidence.map(ev => `
+                            <div style="background:#0f172a; border:1px solid var(--govt-border); padding:0.5rem; font-size:0.8rem; display:flex; align-items:center; justify-content:space-between; width:100%;">
+                                <div>
+                                    <strong>${ev.source}</strong> ${ev.refId ? `(Ref: <code>${ev.refId}</code>)` : ''}
+                                </div>
+                                <button class="btn-govt-secondary" style="padding:2px 6px; font-size:0.75rem;" onclick="openCompleteLandProfile('${c.parcelId}'); setTimeout(() => window.switchLandProfileTab && window.switchLandProfileTab('${ev.tab || 'overview'}'), 300);">[ View Source ]</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+
+            ${c.recommendation ? `
+                <div style="margin-bottom:1rem; padding:0.75rem; background:rgba(56, 189, 248, 0.1); border:1px solid #38bdf8; font-size:0.85rem;">
+                    <strong style="color:#38bdf8;">💡 System Recommendation:</strong> ${c.recommendation}
+                </div>
+            ` : ''}
+
+            ${c.resolutionRemark ? `
+                <div style="margin-bottom:1rem; padding:0.75rem; background:rgba(16, 185, 129, 0.1); border:1px solid #10b981; font-size:0.85rem;">
+                    <strong style="color:#10b981;">✓ Resolution Remark:</strong> ${c.resolutionRemark}
+                    ${c.resolvedBy ? `<div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Resolved by ${c.resolvedBy} at ${new Date(c.resolvedAt).toLocaleString()}</div>` : ''}
+                </div>
+            ` : ''}
+
+            <div>
+                <h4 style="color:#38bdf8; margin-bottom:0.5rem; font-size:0.9rem;">📜 CONFLICT TIMELINE</h4>
+                <ul class="timeline-list">
+                    ${(c.timeline || []).map(t => `
+                        <li class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-date">${t.timestamp ? new Date(t.timestamp).toLocaleTimeString() : ''} — ${t.actor}</div>
+                            <div class="timeline-title">${t.event}</div>
+                            <div class="timeline-desc">${t.notes || ''}</div>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+        `;
+
+        const actionGroup = document.getElementById("conflictdetail-action-buttons");
+        actionGroup.innerHTML = "";
+
+        actionGroup.innerHTML += `<button class="btn-govt-primary" onclick="openCompleteLandProfile('${c.parcelId}')" style="background:#0284c7;">Open Land Profile</button>`;
+
+        if (c.status !== "RESOLVED" && c.status !== "DISMISSED") {
+            actionGroup.innerHTML += `<button class="btn-govt-primary" onclick="handleRequestVerificationFromConflict('${c.id}')">Request Department Verification</button>`;
+            actionGroup.innerHTML += `<button class="btn-govt-primary" onclick="openResolveConflictModal('${c.id}')">Mark Resolved</button>`;
+            actionGroup.innerHTML += `<button class="btn-govt-warning" onclick="openDismissConflictModal('${c.id}')">Dismiss Conflict</button>`;
+        } else {
+            actionGroup.innerHTML += `<button class="btn-govt-warning" onclick="openReopenConflictModal('${c.id}')">Reopen Conflict</button>`;
+        }
+
+        actionGroup.innerHTML += `<button class="btn-govt-secondary" onclick="closeModal('modal-conflict-detail')">Close</button>`;
+
+        document.getElementById("modal-conflict-detail").style.display = "flex";
+    } catch (e) {
+        alert("Failed to load conflict details: " + e.message);
+    }
+}
+
+function renderSourceComparisonHTML(conflict) {
+    if (!conflict.sources || conflict.sources.length === 0) {
+        return `<div style="font-size:0.85rem; color:#94a3b8; padding:0.5rem; background:#0f172a; border:1px solid var(--govt-border);">No side-by-side comparison data available.</div>`;
+    }
+
+    return `
+        <table class="table-govt" style="margin-top:0.5rem; font-size:0.85rem;">
+            <thead>
+                <tr>
+                    <th>Department / Source</th>
+                    <th>Field / Metric</th>
+                    <th>Recorded Value</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${conflict.sources.map(s => `
+                    <tr>
+                        <td><strong>${s.department}</strong></td>
+                        <td><code>${s.field}</code></td>
+                        <td style="color:#f8fafc; font-weight:700;">${s.value}</td>
+                        <td><span class="status-tag ${s.status === 'VERIFIED' ? 'status-verified' : 'status-pending'}">${s.status}</span></td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function handleRequestVerificationFromConflict(conflictId) {
+    closeModal("modal-conflict-detail");
+    openCreateDepartmentRequestModal(null, conflictId);
+}
+
+function openResolveConflictModal(conflictId) {
+    document.getElementById("resolve-conflict-id").value = conflictId;
+    document.getElementById("resolve-conflict-id-label").value = conflictId;
+    document.getElementById("resolve-conflict-remark").value = "";
+    closeModal("modal-conflict-detail");
+    document.getElementById("modal-resolve-conflict").style.display = "flex";
+}
+
+async function handleResolveConflictSubmit(event) {
+    event.preventDefault();
+    const conflictId = document.getElementById("resolve-conflict-id").value;
+    const remark = document.getElementById("resolve-conflict-remark").value;
+
+    try {
+        const res = await window.resolveConflict(conflictId, remark);
+        if (res.success) {
+            alert(`Conflict ${conflictId} resolved successfully.`);
+            closeModal("modal-resolve-conflict");
+            loadOfficerDashboard();
+            if (document.getElementById("generic-records-container")) {
+                loadAndRenderConflictsTab(document.getElementById("generic-records-container"));
+            }
+        } else {
+            alert(res.message || "Failed to resolve conflict.");
+        }
+    } catch (e) {
+        alert(e.message || "Failed to resolve conflict.");
+    }
+}
+
+function openDismissConflictModal(conflictId) {
+    document.getElementById("dismiss-conflict-id").value = conflictId;
+    document.getElementById("dismiss-conflict-remark").value = "";
+    closeModal("modal-conflict-detail");
+    document.getElementById("modal-dismiss-conflict").style.display = "flex";
+}
+
+async function handleDismissConflictSubmit(event) {
+    event.preventDefault();
+    const conflictId = document.getElementById("dismiss-conflict-id").value;
+    const remark = document.getElementById("dismiss-conflict-remark").value;
+
+    try {
+        const res = await window.dismissConflict(conflictId, remark);
+        if (res.success) {
+            alert(`Conflict ${conflictId} dismissed.`);
+            closeModal("modal-dismiss-conflict");
+            loadOfficerDashboard();
+            if (document.getElementById("generic-records-container")) {
+                loadAndRenderConflictsTab(document.getElementById("generic-records-container"));
+            }
+        } else {
+            alert(res.message || "Failed to dismiss conflict.");
+        }
+    } catch (e) {
+        alert(e.message || "Failed to dismiss conflict.");
+    }
+}
+
+function openReopenConflictModal(conflictId) {
+    document.getElementById("reopen-conflict-id").value = conflictId;
+    document.getElementById("reopen-conflict-reason").value = "";
+    closeModal("modal-conflict-detail");
+    document.getElementById("modal-reopen-conflict").style.display = "flex";
+}
+
+async function handleReopenConflictSubmit(event) {
+    event.preventDefault();
+    const conflictId = document.getElementById("reopen-conflict-id").value;
+    const reason = document.getElementById("reopen-conflict-reason").value;
+
+    try {
+        const res = await window.reopenConflict(conflictId, reason);
+        if (res.success) {
+            alert(`Conflict ${conflictId} reopened.`);
+            closeModal("modal-reopen-conflict");
+            loadOfficerDashboard();
+            if (document.getElementById("generic-records-container")) {
+                loadAndRenderConflictsTab(document.getElementById("generic-records-container"));
+            }
+        } else {
+            alert(res.message || "Failed to reopen conflict.");
+        }
+    } catch (e) {
+        alert(e.message || "Failed to reopen conflict.");
+    }
+}
+
+async function handleRunConsistencyCheck(parcelId) {
+    try {
+        const res = await window.runConsistencyCheck(parcelId);
+        if (!res.success || !res.data) {
+            alert("Consistency check failed.");
+            return;
+        }
+
+        const d = res.data;
+        const content = document.getElementById("consistency-check-modal-content");
+        content.innerHTML = `
+            <div style="background:#0f172a; padding:1rem; border:1px solid var(--govt-border); font-size:0.85rem; margin-bottom:1rem;">
+                <div><strong>Parcel ID:</strong> ${d.parcelId}</div>
+                <div><strong>Layers Checked:</strong> ${d.recordsCheckedCount} (${(d.checkedLayers || []).join(', ')})</div>
+                <div><strong>Conflicts Found:</strong> <strong style="color:${d.conflictsFoundCount > 0 ? '#ef4444' : '#10b981'}; font-size:1.1rem;">${d.conflictsFoundCount}</strong> (${d.openConflictsCount} Open)</div>
+                <div><strong>Highest Severity:</strong> <span class="${d.highestSeverity === 'CRITICAL' || d.highestSeverity === 'HIGH' ? 'priority-high' : 'priority-medium'}">${d.highestSeverity}</span></div>
+            </div>
+
+            <div style="padding:0.75rem; background:rgba(56, 189, 248, 0.1); border:1px solid #38bdf8; font-size:0.85rem;">
+                <strong style="color:#38bdf8;">Assessment Summary:</strong> ${d.summary}
+            </div>
+        `;
+
+        document.getElementById("modal-consistency-check-summary").style.display = "flex";
+    } catch (e) {
+        alert("Failed to run consistency check: " + e.message);
+    }
+}
+
+function switchToConflictsCenter(parcelId = null) {
+    closeModal("modal-consistency-check-summary");
+    switchOfficerTab("conflicts");
+    if (parcelId) {
+        currentConflictSearch = parcelId;
+        const container = document.getElementById("generic-records-container");
+        if (container) loadAndRenderConflictsTab(container, parcelId);
     }
 }
 
@@ -1568,14 +2291,14 @@ function renderRoRMutationsWorkflow(r) {
                     </div>
                     <div style="display:flex; gap:0.4rem; flex-wrap:wrap; font-size:0.7rem;">
                         ${(m.stages || [
-                            { name: "Mutation Requested", status: "COMPLETED" },
-                            { name: "Document Verification", status: "COMPLETED" },
-                            { name: "Cadastral Verification", status: "COMPLETED" },
-                            { name: "Ownership Verification", status: "IN_PROGRESS" },
-                            { name: "Dispute Check", status: "PENDING" },
-                            { name: "Approval", status: "PENDING" },
-                            { name: "RoR Update", status: "PENDING" }
-                        ]).map(s => `
+                    { name: "Mutation Requested", status: "COMPLETED" },
+                    { name: "Document Verification", status: "COMPLETED" },
+                    { name: "Cadastral Verification", status: "COMPLETED" },
+                    { name: "Ownership Verification", status: "IN_PROGRESS" },
+                    { name: "Dispute Check", status: "PENDING" },
+                    { name: "Approval", status: "PENDING" },
+                    { name: "RoR Update", status: "PENDING" }
+                ]).map(s => `
                             <span style="padding:0.15rem 0.4rem; border-radius:3px; background:${s.status === 'COMPLETED' ? 'rgba(16,185,129,0.2)' : (s.status === 'IN_PROGRESS' ? 'rgba(56,189,248,0.2)' : '#1e293b')}; color:${s.status === 'COMPLETED' ? '#34d399' : (s.status === 'IN_PROGRESS' ? '#38bdf8' : '#94a3b8')};">
                                 ${s.status === 'COMPLETED' ? '✓' : (s.status === 'IN_PROGRESS' ? '●' : '○')} ${s.name}
                             </span>
@@ -1724,8 +2447,8 @@ function renderRegistrationChecklistCard(r) {
             <strong>8-POINT REGISTRATION CLEARANCE CHECKLIST</strong>
         </div>
         ${items.map(item => {
-            const isPass = (item.val || "").toUpperCase() === "VERIFIED" || (item.val || "").toUpperCase() === "CLEARED" || (item.val || "").toUpperCase() === "CLEAR";
-            return `
+        const isPass = (item.val || "").toUpperCase() === "VERIFIED" || (item.val || "").toUpperCase() === "CLEARED" || (item.val || "").toUpperCase() === "CLEAR";
+        return `
                 <div class="info-field" style="border-left: 3px solid ${isPass ? '#10b981' : '#f59e0b'}; padding-left: 0.5rem;">
                     <div class="info-label">${item.label}</div>
                     <div class="info-value">
@@ -1735,7 +2458,7 @@ function renderRegistrationChecklistCard(r) {
                     </div>
                 </div>
             `;
-        }).join('')}
+    }).join('')}
     `;
 }
 
@@ -1833,6 +2556,16 @@ function renderGenericTabContent(tabName) {
 
     if (tabName === "department-requests") {
         loadAndRenderDepartmentRequestsTab(container);
+        return;
+    }
+
+    if (tabName === "conflicts" || tabName === "ownership-disputes") {
+        loadAndRenderConflictsTab(container);
+        return;
+    }
+
+    if (tabName === "audit-trail" || tabName === "audit") {
+        loadAndRenderAuditTrailTab(container);
         return;
     }
 
@@ -3571,5 +4304,309 @@ window.openRejectConversionModal = openRejectConversionModal;
 window.handleRejectConversionSubmit = handleRejectConversionSubmit;
 window.openRequestLuInfoModal = openRequestLuInfoModal;
 window.handleRequestLuInfoSubmit = handleRequestLuInfoSubmit;
+/* =========================================================
+   COMPREHENSIVE SYSTEM AUDIT & ACTIVITY TRAIL (PHASE 12M)
+   ========================================================= */
+
+let currentAuditPage = 1;
+let currentAuditFilterState = {};
+
+async function loadAndRenderAuditTrailTab(container, page = 1) {
+    if (!container) return;
+    currentAuditPage = page;
+
+    container.innerHTML = `
+        <div style="color:#64748b; padding:1.5rem; text-align:center;">
+            <div class="loading-spinner"></div>
+            <p>Loading System Audit & Activity Trail...</p>
+        </div>
+    `;
+
+    try {
+        const metricsRes = await window.getAuditMetrics();
+        const metrics = metricsRes.metrics || {};
+
+        const queryParams = {
+            page: currentAuditPage,
+            limit: 15,
+            ...currentAuditFilterState
+        };
+
+        const auditsRes = await window.getAudits(queryParams);
+        const audits = auditsRes.data || [];
+        const totalRecords = auditsRes.totalRecords || audits.length;
+        const totalPages = auditsRes.totalPages || 1;
+
+        let html = `
+            <!-- SUMMARY METRICS CARDS -->
+            <div class="metrics-row" style="margin-bottom:1.5rem;">
+                <div class="metric-card">
+                    <div class="metric-title">TOTAL ACTIVITIES</div>
+                    <div class="metric-value">${metrics.totalActivities || totalRecords}</div>
+                    <div class="metric-sub">Append-Only Audit Log</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">TODAY'S ACTIONS</div>
+                    <div class="metric-value" style="color:#38bdf8;">${metrics.todayCount || 0}</div>
+                    <div class="metric-sub">Recorded Today</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">VERIFICATIONS</div>
+                    <div class="metric-value" style="color:#10b981;">${metrics.verificationActions || 0}</div>
+                    <div class="metric-sub">Cross-Dept Verified</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">CONFLICT ACTIONS</div>
+                    <div class="metric-value" style="color:#f59e0b;">${metrics.conflictActionsCount || 0}</div>
+                    <div class="metric-sub">Detected / Resolved</div>
+                </div>
+            </div>
+
+            <!-- FILTER & SEARCH BAR -->
+            <div style="background:#0f172a; padding:1rem; border:1px solid var(--govt-border); border-radius:4px; margin-bottom:1.5rem;">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:0.75rem; align-items:end;">
+                    <div>
+                        <label style="font-size:0.75rem; color:#94a3b8; font-weight:700;">Department:</label>
+                        <select id="audit-dept-filter" onchange="triggerAuditFilter()" style="width:100%; background:#1e293b; color:#e2e8f0; border:1px solid #334155; padding:0.4rem; border-radius:4px; font-size:0.8rem;">
+                            <option value="ALL">All Departments</option>
+                            <option value="Cadastral">Cadastral & Survey</option>
+                            <option value="Land Records">Land Records / RoR</option>
+                            <option value="Registration">Registration</option>
+                            <option value="Land Use">Land Use & Planning</option>
+                            <option value="Property Tax">Property Tax & Municipal</option>
+                            <option value="Governance System">Governance System</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="font-size:0.75rem; color:#94a3b8; font-weight:700;">Result:</label>
+                        <select id="audit-result-filter" onchange="triggerAuditFilter()" style="width:100%; background:#1e293b; color:#e2e8f0; border:1px solid #334155; padding:0.4rem; border-radius:4px; font-size:0.8rem;">
+                            <option value="ALL">All Results</option>
+                            <option value="SUCCESS">SUCCESS</option>
+                            <option value="FAILED">FAILED</option>
+                            <option value="DENIED">DENIED</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="font-size:0.75rem; color:#94a3b8; font-weight:700;">Parcel ID Filter:</label>
+                        <input type="text" id="audit-parcel-filter" onkeyup="triggerAuditFilter()" placeholder="e.g. LND-001" style="width:100%; background:#1e293b; color:#e2e8f0; border:1px solid #334155; padding:0.4rem; border-radius:4px; font-size:0.8rem;">
+                    </div>
+
+                    <div>
+                        <label style="font-size:0.75rem; color:#94a3b8; font-weight:700;">Search Query:</label>
+                        <input type="text" id="audit-search-input" onkeyup="triggerAuditFilter()" placeholder="Search ID, officer, action..." style="width:100%; background:#1e293b; color:#e2e8f0; border:1px solid #334155; padding:0.4rem; border-radius:4px; font-size:0.8rem;">
+                    </div>
+
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn-govt-primary" onclick="exportAuditTrail('csv')" style="padding:0.4rem 0.75rem; font-size:0.8rem; flex:1;">📥 Export CSV</button>
+                        <button class="btn-govt-secondary" onclick="exportAuditTrail('json')" style="padding:0.4rem 0.75rem; font-size:0.8rem; flex:1;">📥 Export JSON</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AUDIT TABLE -->
+            <div style="background:#0f172a; border:1px solid var(--govt-border); border-radius:4px; padding:1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <h3 style="font-size:1rem; color:#38bdf8; margin:0;">📜 SYSTEM AUDIT LOG (Page ${currentAuditPage} of ${totalPages} — Total Records: ${totalRecords})</h3>
+                </div>
+
+                ${audits.length > 0 ? `
+                    <table class="table-govt" style="width:100%; font-size:0.85rem;">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Audit ID</th>
+                                <th>User / Actor</th>
+                                <th>Department</th>
+                                <th>Role</th>
+                                <th>Action</th>
+                                <th>Resource / Target</th>
+                                <th>Result</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${audits.map(a => `
+                                <tr>
+                                    <td>${a.createdAt ? new Date(a.createdAt).toLocaleString() : '-'}</td>
+                                    <td><strong>${a.auditId}</strong></td>
+                                    <td>${a.actor || 'SYSTEM'}</td>
+                                    <td>${a.department || 'Governance'}</td>
+                                    <td><code>${a.role || 'officer'}</code></td>
+                                    <td><code>${a.action}</code></td>
+                                    <td>${a.resourceType || 'PARCEL'}: <strong>${a.parcelId || a.resourceId || 'SYSTEM'}</strong></td>
+                                    <td>
+                                        <span class="${a.result === 'SUCCESS' ? 'status-badge-verified' : (a.result === 'DENIED' ? 'status-badge-review' : 'status-badge-pending')}">${a.result || 'SUCCESS'}</span>
+                                    </td>
+                                    <td>
+                                        <button class="btn-govt-secondary" onclick="openAuditDetailModal('${a.auditId}')" style="padding:2px 6px; font-size:0.75rem;">View Details</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+
+                    <!-- PAGINATION BAR -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; padding-top:0.75rem; border-top:1px solid var(--govt-border);">
+                        <button class="btn-govt-secondary" onclick="loadAndRenderAuditTrailTab(document.getElementById('generic-records-container'), ${currentAuditPage - 1})" ${currentAuditPage <= 1 ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>← Previous Page</button>
+                        <span style="font-size:0.85rem; color:#94a3b8;">Showing page ${currentAuditPage} of ${totalPages}</span>
+                        <button class="btn-govt-secondary" onclick="loadAndRenderAuditTrailTab(document.getElementById('generic-records-container'), ${currentAuditPage + 1})" ${currentAuditPage >= totalPages ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>Next Page →</button>
+                    </div>
+                ` : '<div style="padding:2rem; text-align:center; color:#64748b;">No audit records found matching the filter criteria.</div>'}
+            </div>
+        `;
+
+        container.innerHTML = html;
+    } catch (err) {
+        container.innerHTML = `<div style="color:#ef4444; padding:1rem;">Failed to load system audit trail: ${err.message}</div>`;
+    }
+}
+
+function triggerAuditFilter() {
+    currentAuditFilterState = {
+        department: document.getElementById("audit-dept-filter")?.value || "ALL",
+        result: document.getElementById("audit-result-filter")?.value || "ALL",
+        parcelId: document.getElementById("audit-parcel-filter")?.value || "",
+        search: document.getElementById("audit-search-input")?.value || ""
+    };
+    loadAndRenderAuditTrailTab(document.getElementById("generic-records-container"), 1);
+}
+
+function exportAuditTrail(format = "csv") {
+    const params = {
+        department: document.getElementById("audit-dept-filter")?.value || "ALL",
+        result: document.getElementById("audit-result-filter")?.value || "ALL",
+        parcelId: document.getElementById("audit-parcel-filter")?.value || "",
+        search: document.getElementById("audit-search-input")?.value || "",
+        format
+    };
+
+    const exportUrl = window.getAuditExportUrl(format, params);
+    const token = window.AuthManager ? window.AuthManager.getToken() : "";
+
+    fetch(exportUrl, {
+        headers: {
+            ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        }
+    })
+        .then(res => res.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `landgov_audit_trail_${Date.now()}.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        })
+        .catch(err => alert("Export failed: " + err.message));
+}
+
+async function openAuditDetailModal(auditId) {
+    try {
+        const res = await window.getAuditById(auditId);
+        if (!res.success || !res.data) {
+            alert("Audit record not found.");
+            return;
+        }
+
+        const a = res.data;
+
+        let beforeAfterHTML = '';
+        if (a.before || a.after) {
+            beforeAfterHTML = `
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:1rem; background:#020617; padding:0.75rem; border:1px solid #334155;">
+                    <div>
+                        <strong style="color:#ef4444; font-size:0.8rem;">BEFORE STATE:</strong>
+                        <pre style="background:#0f172a; padding:0.5rem; font-size:0.75rem; color:#fca5a5; overflow-x:auto; margin-top:0.25rem;">${a.before ? JSON.stringify(a.before, null, 2) : 'N/A'}</pre>
+                    </div>
+                    <div>
+                        <strong style="color:#10b981; font-size:0.8rem;">AFTER STATE:</strong>
+                        <pre style="background:#0f172a; padding:0.5rem; font-size:0.75rem; color:#6ee7b7; overflow-x:auto; margin-top:0.25rem;">${a.after ? JSON.stringify(a.after, null, 2) : 'N/A'}</pre>
+                    </div>
+                </div>
+            `;
+        }
+
+        let navButtonsHTML = '';
+        if (a.parcelId && a.parcelId !== "SYSTEM") {
+            navButtonsHTML += `<button class="btn-govt-primary" onclick="closeModal('modal-audit-detail'); openCompleteLandProfile('${a.parcelId}')" style="font-size:0.8rem;">[ View Parcel Timeline ]</button>`;
+        }
+        if (a.referenceId && a.referenceId.startsWith("REQ-")) {
+            navButtonsHTML += `<button class="btn-govt-secondary" onclick="closeModal('modal-audit-detail'); openDepartmentRequestDetailModal('${a.referenceId}')" style="font-size:0.8rem;">[ View Request ]</button>`;
+        } else if (a.referenceId && a.referenceId.startsWith("CON-")) {
+            navButtonsHTML += `<button class="btn-govt-warning" onclick="closeModal('modal-audit-detail'); openConflictDetailModal('${a.referenceId}')" style="font-size:0.8rem;">[ View Conflict ]</button>`;
+        }
+
+        const modalHTML = `
+            <div id="modal-audit-detail" class="modal-overlay" style="display:flex;">
+                <div class="modal-box" style="max-width:650px; width:90%;">
+                    <div class="modal-header">
+                        <h3>📋 AUDIT EVENT DETAILS (${a.auditId})</h3>
+                        <button class="btn-close" onclick="closeModal('modal-audit-detail')">✕</button>
+                    </div>
+                    <div class="modal-body" style="padding:1rem; font-size:0.85rem;">
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; background:#0f172a; padding:0.75rem; border:1px solid var(--govt-border); margin-bottom:1rem;">
+                            <div><strong>Audit ID:</strong> ${a.auditId}</div>
+                            <div><strong>Action:</strong> <code>${a.action}</code></div>
+                            <div><strong>Actor / User:</strong> ${a.actor}</div>
+                            <div><strong>Role:</strong> ${a.role || 'officer'}</div>
+                            <div><strong>Department:</strong> ${a.department || 'Governance'}</div>
+                            <div><strong>Parcel ID:</strong> <strong>${a.parcelId || 'SYSTEM'}</strong></div>
+                            <div><strong>Resource Type:</strong> ${a.resourceType || 'PARCEL'}</div>
+                            <div><strong>Resource ID:</strong> <code>${a.resourceId || 'N/A'}</code></div>
+                            <div><strong>Result:</strong> <span class="${a.result === 'SUCCESS' ? 'status-badge-verified' : 'status-badge-review'}">${a.result}</span></div>
+                            <div><strong>Timestamp:</strong> ${a.createdAt ? new Date(a.createdAt).toLocaleString() : 'N/A'}</div>
+                        </div>
+
+                        ${a.reason ? `
+                            <div style="margin-bottom:0.75rem;">
+                                <strong style="color:#38bdf8;">Reason:</strong>
+                                <div style="background:#0f172a; padding:0.5rem; border:1px solid var(--govt-border); font-size:0.8rem; margin-top:0.25rem;">${a.reason}</div>
+                            </div>
+                        ` : ''}
+
+                        ${a.remarks ? `
+                            <div style="margin-bottom:0.75rem;">
+                                <strong style="color:#38bdf8;">Remarks / Result Details:</strong>
+                                <div style="background:#0f172a; padding:0.5rem; border:1px solid var(--govt-border); font-size:0.8rem; margin-top:0.25rem;">${a.remarks}</div>
+                            </div>
+                        ` : ''}
+
+                        ${a.details ? `
+                            <div style="margin-bottom:0.75rem;">
+                                <strong style="color:#38bdf8;">Action Details Payload:</strong>
+                                <pre style="background:#0f172a; padding:0.5rem; border:1px solid var(--govt-border); font-size:0.75rem; color:#e2e8f0; overflow-x:auto; margin-top:0.25rem;">${JSON.stringify(a.details, null, 2)}</pre>
+                            </div>
+                        ` : ''}
+
+                        ${beforeAfterHTML}
+
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; padding-top:0.75rem; border-top:1px solid var(--govt-border);">
+                            <div style="display:flex; gap:0.5rem;">
+                                ${navButtonsHTML}
+                            </div>
+                            <button class="btn-govt-secondary" onclick="closeModal('modal-audit-detail')">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const existing = document.getElementById("modal-audit-detail");
+        if (existing) existing.remove();
+        document.body.insertAdjacentHTML("beforeend", modalHTML);
+    } catch (err) {
+        alert("Failed to load audit detail: " + err.message);
+    }
+}
+
+window.loadAndRenderAuditTrailTab = loadAndRenderAuditTrailTab;
+window.triggerAuditFilter = triggerAuditFilter;
+window.exportAuditTrail = exportAuditTrail;
+window.openAuditDetailModal = openAuditDetailModal;
+
 window.handleLogout = handleLogout;
+
 
