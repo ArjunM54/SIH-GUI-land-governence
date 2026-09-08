@@ -511,12 +511,13 @@ async function handleDocumentVerifyAction(
     targetAppOrParcel,
     decision
 ) {
-
     const remarks = prompt(
-        `Enter officer verification notes/remarks for ${decision} action:`,
         decision === "VERIFIED"
-            ? "Document inspected and verified by officer."
-            : "Document rejected due to discrepancies."
+            ? "Enter verification remarks:"
+            : "Enter rejection reason:",
+        decision === "VERIFIED"
+            ? "Document verified successfully."
+            : ""
     );
 
     if (remarks === null) {
@@ -524,61 +525,60 @@ async function handleDocumentVerifyAction(
     }
 
     try {
+        // STEP 1: VERIFY / REJECT THE DOCUMENT
+        const documentResult = await window.API.verifyOfficerDocument(
+            docId,
+            decision,
+            remarks
+        );
 
-        /*
-         * IMPORTANT:
-         *
-         * This button verifies ONLY the PDF/document.
-         *
-         * It must NOT approve the complete
-         * department application.
-         */
-
-        const res =
-            await window.API.verifyOfficerDocument(
-                docId,
-                decision,
-                remarks
-            );
-
-        if (
-            res &&
-            res.success
-        ) {
-
-            alert(
-                decision === "VERIFIED"
-                    ? "✓ Document verified successfully."
-                    : "✕ Document rejected successfully."
-            );
-
-            // Refresh:
-            // 1. PDF queue
-            // 2. Pending citizen applications
-            await loadOfficerDashboard();
-
-        } else {
-
-            alert(
-                `Operation failed: ${res?.message ||
-                "Unable to update document."
-                }`
+        if (!documentResult || !documentResult.success) {
+            throw new Error(
+                documentResult?.message || "Document verification failed."
             );
         }
 
-    } catch (err) {
+        // STEP 2: UPDATE APPLICATION STAGE FOR OFFICER DEPARTMENT
+        if (targetAppOrParcel) {
+            const officerType = currentOfficer?.officerType || "cadastral_officer";
+            const deptMap = {
+                cadastral_officer: "cadastral",
+                land_records_officer: "ror",
+                registration_officer: "registration",
+                land_use_officer: "landUse",
+                property_tax_officer: "propertyTax"
+            };
+            const deptKey = deptMap[officerType] || "cadastral";
+            const appStatus = decision === "VERIFIED" ? "APPROVED" : "REJECTED";
 
-        console.error(
-            "Document verification error:",
-            err
-        );
+            try {
+                await window.API.updateVerificationStage(
+                    targetAppOrParcel,
+                    deptKey,
+                    appStatus,
+                    remarks
+                );
+            } catch (appErr) {
+                console.warn("Could not sync application stage:", appErr);
+            }
+        }
 
         alert(
-            err.message ||
-            "Server error while verifying document."
+            decision === "VERIFIED"
+                ? "✓ Document verified and application status updated."
+                : "✕ Document rejected and application status updated."
+        );
+
+        await loadOfficerDashboard();
+
+    } catch (err) {
+        console.error("Document verification error:", err);
+        alert(
+            err.message || "Server error while verifying document."
         );
     }
 }
+
 
 /* --- 4. RENDER METRICS --- */
 function renderMetrics(stats = {}) {

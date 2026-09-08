@@ -776,17 +776,19 @@ async function getParcelDepartmentRequests(parcelId) {
     return await apiRequest(`/api/department-requests/parcels/${parcelId}/department-requests`);
 }
 
-/* Department Officer Document Review & Stage Verification APIs */
 async function getOfficerDepartmentDocuments() {
     return await apiRequest("/api/officer/documents");
 }
 
 async function verifyOfficerDocument(documentId, decision, remarks) {
-    return await apiRequest(`/api/officer/documents/${documentId}/verify`, {
+    return await apiRequest(`/api/documents/${encodeURIComponent(documentId)}/verify`, {
         method: "POST",
-        body: JSON.stringify({ decision, remarks })
+        body: JSON.stringify({ status: decision, remarks })
     });
 }
+
+
+
 
 async function updateVerificationStage(
     applicationId,

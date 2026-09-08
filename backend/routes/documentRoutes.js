@@ -234,9 +234,14 @@ router.post("/:documentId/verify", requireAuth, (req, res) => {
             return res.status(400).json({ success: false, message: "Status must be 'VERIFIED' or 'REJECTED'." });
         }
 
-        const updatedDoc = verifyDocumentRecord(documentId, req.user, status, remarks);
-        if (!updatedDoc) {
-            return res.status(404).json({ success: false, message: `Document '${documentId}' not found.` });
+        const result = verifyDocumentRecord(
+            req.user,
+            documentId,
+            status,
+            remarks
+        );
+        if (!result || !result.success) {
+            return res.status(404).json({ success: false, message: result?.message || `Document '${documentId}' not found.` });
         }
 
         auditService.logEvent({
@@ -249,8 +254,8 @@ router.post("/:documentId/verify", requireAuth, (req, res) => {
 
         return res.json({
             success: true,
-            message: `Document ${status.toLowerCase()} successfully by ${req.user.name || req.user.role}.`,
-            document: updatedDoc
+            message: result.message || `Document ${status.toLowerCase()} successfully by ${req.user.name || req.user.role}.`,
+            document: result.document || result
         });
     } catch (error) {
         console.error("[Document API] Error verifying document:", error);
