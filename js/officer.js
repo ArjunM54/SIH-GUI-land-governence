@@ -24,208 +24,25 @@ document.addEventListener("DOMContentLoaded", async function () {
 /* --- 1. SIDEBAR GENERATION ACCORDING TO OFFICER ROLE --- */
 function setupOfficerSidebar() {
     const navContainer = document.getElementById("sidebar-nav-container");
+
     if (!navContainer) return;
 
-    const officerType = currentOfficer.officerType || "cadastral_officer";
+    // Show ONLY Dashboard for every officer
+    navContainer.innerHTML = `
+        <div class="nav-section-title">DASHBOARD</div>
 
-    if (officerType === "cadastral_officer" || currentOfficer.role === "admin") {
-        navContainer.innerHTML = `
-            <div class="nav-section-title">DASHBOARD</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link active" id="nav-overview" onclick="switchOfficerTab('overview')"><span>🏛</span> Dashboard Overview</a></li>
-            </ul>
-            <div class="nav-section-title">MY WORK</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-pending-verification" onclick="switchOfficerTab('pending-verification')"><span>⏳</span> Pending Verification</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-conflicts" onclick="switchOfficerTab('conflicts')"><span>⚠</span> Boundary Conflicts</a></li>
-            </ul>
-            <div class="nav-section-title">CADASTRAL</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-survey-records" onclick="switchOfficerTab('survey-records')"><span>📐</span> Survey Records</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.html#map-section"><span>🗺</span> Cadastral Map (GIS)</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-boundary-verification" onclick="switchOfficerTab('boundary-verification')"><span>📍</span> Boundary Verification</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-survey-history" onclick="switchOfficerTab('survey-history')"><span>📜</span> Survey History</a></li>
-            </ul>
-            <div class="nav-section-title">WORKFLOW</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-cases" onclick="switchOfficerTab('cases')"><span>📁</span> Cases</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-department-requests" onclick="switchOfficerTab('department-requests')"><span>📤</span> Department Requests</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-notifications" onclick="switchOfficerTab('notifications')"><span>🔔</span> Notifications</a></li>
-            </ul>
-            <div class="nav-section-title">RECORDS</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-documents" onclick="switchOfficerTab('documents')"><span>📄</span> Documents</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-audit-trail" onclick="switchOfficerTab('audit-trail')"><span>🕒</span> Audit Trail</a></li>
-            </ul>
-        `;
-    } else if (officerType === "land_records_officer") {
-        navContainer.innerHTML = `
-            <div class="nav-section-title">DASHBOARD</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link active" id="nav-overview" onclick="switchOfficerTab('overview')"><span>🏛</span> Dashboard Overview</a></li>
-            </ul>
-            <div class="nav-section-title">MY WORK</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-pending-mutations" onclick="switchOfficerTab('pending-mutations')"><span>⏳</span> Pending Mutations</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-ownership-disputes" onclick="switchOfficerTab('ownership-disputes')"><span>⚠</span> Ownership Disputes</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-pending-verification" onclick="switchOfficerTab('pending-verification')"><span>🔍</span> Pending Verification</a></li>
-            </ul>
-            <div class="nav-section-title">LAND RECORDS</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-ror-records" onclick="switchOfficerTab('ror-records')"><span>📜</span> Record of Rights</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-ownership-records" onclick="switchOfficerTab('ownership-records')"><span>👤</span> Ownership Records</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-mutation-requests" onclick="switchOfficerTab('mutation-requests')"><span>🔄</span> Mutation Requests</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-mutation-history" onclick="switchOfficerTab('mutation-history')"><span>📚</span> Mutation History</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-record-corrections" onclick="switchOfficerTab('record-corrections')"><span>✏</span> Record Corrections</a></li>
-            </ul>
-            <div class="nav-section-title">VERIFICATION</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-ownership-verification" onclick="switchOfficerTab('ownership-verification')"><span>✓</span> Ownership Verification</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-document-verification" onclick="switchOfficerTab('document-verification')"><span>📄</span> Document Verification</a></li>
-            </ul>
-            <div class="nav-section-title">WORKFLOW</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-cases" onclick="switchOfficerTab('cases')"><span>📁</span> Cases</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-department-requests" onclick="switchOfficerTab('department-requests')"><span>📤</span> Department Requests</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-notifications" onclick="switchOfficerTab('notifications')"><span>🔔</span> Notifications</a></li>
-            </ul>
-            <div class="nav-section-title">RECORDS</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-documents" onclick="switchOfficerTab('documents')"><span>📄</span> Documents</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-audit-trail" onclick="switchOfficerTab('audit-trail')"><span>🕒</span> Audit Trail</a></li>
-            </ul>
-        `;
-    } else if (officerType === "registration_officer") {
-        navContainer.innerHTML = `
-            <div class="nav-section-title">DASHBOARD</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link active" id="nav-overview" onclick="switchOfficerTab('overview')"><span>🏛</span> Dashboard</a></li>
-            </ul>
-            <div class="nav-section-title">MY WORK</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-pending-registrations" onclick="switchOfficerTab('pending-registrations')"><span>⏳</span> Pending Registrations</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-transfer-requests" onclick="switchOfficerTab('transfer-requests')"><span>🔄</span> Transfer Requests</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-registration-issues" onclick="switchOfficerTab('registration-issues')"><span>⚠</span> Registration Issues</a></li>
-            </ul>
-            <div class="nav-section-title">REGISTRATION</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-registration-records" onclick="switchOfficerTab('registration-records')"><span>📝</span> Registration Records</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-deed-verification" onclick="switchOfficerTab('deed-verification')"><span>📄</span> Deed Verification</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-stamp-duty" onclick="switchOfficerTab('stamp-duty')"><span>💰</span> Stamp Duty</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-encumbrance-check" onclick="switchOfficerTab('encumbrance-check')"><span>🔍</span> Encumbrance Check</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-registration-history" onclick="switchOfficerTab('registration-history')"><span>📚</span> Registration History</a></li>
-            </ul>
-            <div class="nav-section-title">VERIFICATION</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-ownership-check" onclick="switchOfficerTab('ownership-check')"><span>👤</span> Ownership Check</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-cadastral-check" onclick="switchOfficerTab('cadastral-check')"><span>📐</span> Cadastral Check</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-tax-clearance" onclick="switchOfficerTab('tax-clearance')"><span>🧾</span> Tax Clearance</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-restrictions" onclick="switchOfficerTab('restrictions')"><span>🚧</span> Restrictions</a></li>
-            </ul>
-            <div class="nav-section-title">WORKFLOW</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-cases" onclick="switchOfficerTab('cases')"><span>📁</span> Cases</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-department-requests" onclick="switchOfficerTab('department-requests')"><span>📤</span> Department Requests</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-notifications" onclick="switchOfficerTab('notifications')"><span>🔔</span> Notifications</a></li>
-            </ul>
-            <div class="nav-section-title">RECORDS</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-documents" onclick="switchOfficerTab('documents')"><span>📄</span> Documents</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-audit-trail" onclick="switchOfficerTab('audit-trail')"><span>🕒</span> Audit Trail</a></li>
-            </ul>
-        `;
-    } else if (officerType === "land_use_officer") {
-        navContainer.innerHTML = `
-            <div class="nav-section-title">DASHBOARD</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link active" id="nav-overview" onclick="switchOfficerTab('overview')"><span>🏛</span> Dashboard</a></li>
-            </ul>
-            <div class="nav-section-title">MY WORK</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-conversion-requests" onclick="switchOfficerTab('conversion-requests')"><span>⏳</span> Conversion Requests</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-planning-conflicts" onclick="switchOfficerTab('planning-conflicts')"><span>⚠</span> Planning Conflicts</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-pending-verification" onclick="switchOfficerTab('pending-verification')"><span>🔍</span> Pending Verification</a></li>
-            </ul>
-            <div class="nav-section-title">LAND USE</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-land-use-records" onclick="switchOfficerTab('land-use-records')"><span>🗺</span> Land Use Records</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-master-plan" onclick="switchOfficerTab('master-plan')"><span>🏙</span> Master Plan</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-conversion-requests-all" onclick="switchOfficerTab('conversion-requests-all')"><span>🔄</span> Conversion Requests</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-zoning" onclick="switchOfficerTab('zoning')"><span>🚧</span> Zoning</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-restrictions" onclick="switchOfficerTab('restrictions')"><span>⚠</span> Restrictions</a></li>
-            </ul>
-            <div class="nav-section-title">PLANNING</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-building-permissions" onclick="switchOfficerTab('building-permissions')"><span>🏗</span> Building Permissions</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-road-access" onclick="switchOfficerTab('road-access')"><span>🛣</span> Road Access</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-environmental-checks" onclick="switchOfficerTab('environmental-checks')"><span>🌱</span> Environmental Checks</a></li>
-            </ul>
-            <div class="nav-section-title">WORKFLOW</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-cases" onclick="switchOfficerTab('cases')"><span>📁</span> Cases</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-department-requests" onclick="switchOfficerTab('department-requests')"><span>📤</span> Department Requests</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-notifications" onclick="switchOfficerTab('notifications')"><span>🔔</span> Notifications</a></li>
-            </ul>
-            <div class="nav-section-title">RECORDS</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-documents" onclick="switchOfficerTab('documents')"><span>📄</span> Documents</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-audit-trail" onclick="switchOfficerTab('audit-trail')"><span>🕒</span> Audit Trail</a></li>
-            </ul>
-        `;
-    } else if (officerType === "property_tax_officer") {
-        navContainer.innerHTML = `
-            <div class="nav-section-title">DASHBOARD</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link active" id="nav-overview" onclick="switchOfficerTab('overview')"><span>🏛</span> Dashboard</a></li>
-            </ul>
-            <div class="nav-section-title">MY WORK</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-pending-tax" onclick="switchOfficerTab('pending-tax')"><span>⏳</span> Pending Tax Verification</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-outstanding-tax" onclick="switchOfficerTab('outstanding-tax')"><span>⚠</span> Outstanding Tax</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-tax-clearance" onclick="switchOfficerTab('tax-clearance')"><span>🧾</span> Tax Clearance Requests</a></li>
-            </ul>
-            <div class="nav-section-title">PROPERTY TAX</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-tax-records" onclick="switchOfficerTab('tax-records')"><span>📜</span> Tax Records</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-assessments" onclick="switchOfficerTab('assessments')"><span>📊</span> Property Assessments</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-tax-payments" onclick="switchOfficerTab('tax-payments')"><span>💰</span> Tax Payments</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-tax-history" onclick="switchOfficerTab('tax-history')"><span>📚</span> Tax History</a></li>
-            </ul>
-            <div class="nav-section-title">MUNICIPAL</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-municipal-details" onclick="switchOfficerTab('municipal-details')"><span>🏢</span> Property Details</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-building-permissions" onclick="switchOfficerTab('building-permissions')"><span>🏗</span> Building Permissions</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-utilities" onclick="switchOfficerTab('utilities')"><span>🚰</span> Utilities</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-municipal-records" onclick="switchOfficerTab('municipal-records')"><span>📁</span> Municipal Records</a></li>
-            </ul>
-            <div class="nav-section-title">VERIFICATION</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-ownership-check" onclick="switchOfficerTab('ownership-check')"><span>👤</span> Ownership Check</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-registration-check" onclick="switchOfficerTab('registration-check')"><span>📝</span> Registration Check</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-land-use-check" onclick="switchOfficerTab('land-use-check')"><span>🗺</span> Land Use Check</a></li>
-            </ul>
-            <div class="nav-section-title">WORKFLOW</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-cases" onclick="switchOfficerTab('cases')"><span>📁</span> Cases</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-department-requests" onclick="switchOfficerTab('department-requests')"><span>📤</span> Department Requests</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-notifications" onclick="switchOfficerTab('notifications')"><span>🔔</span> Notifications</a></li>
-            </ul>
-            <div class="nav-section-title">RECORDS</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link" id="nav-documents" onclick="switchOfficerTab('documents')"><span>📄</span> Documents</a></li>
-                <li class="nav-item"><a class="nav-link" id="nav-audit-trail" onclick="switchOfficerTab('audit-trail')"><span>🕒</span> Audit Trail</a></li>
-            </ul>
-        `;
-    } else {
-        const info = (window.OFFICER_TYPES_INFO && window.OFFICER_TYPES_INFO[officerType]) || { title: "Department Officer", department: "Department", badgeClass: "badge-cadastral" };
-        navContainer.innerHTML = `
-            <div class="nav-section-title">DASHBOARD</div>
-            <ul class="nav-menu">
-                <li class="nav-item"><a class="nav-link active" id="nav-overview" onclick="switchOfficerTab('overview')"><span>📊</span> ${info.title} Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.html#map-section"><span>🗺</span> GIS Land Map</a></li>
-            </ul>
-        `;
-    }
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <a
+                    class="nav-link active"
+                    id="nav-overview"
+                    onclick="switchOfficerTab('overview')"
+                >
+                    <span>🏛</span> Dashboard
+                </a>
+            </li>
+        </ul>
+    `;
 }
 
 /* --- 2. HEADER SETUP --- */
@@ -390,9 +207,11 @@ function renderOfficerDocumentQueue(docs = []) {
                 </tr>
             </thead>
             <tbody>
-                ${docs.map(doc => {
-        const statusClass = doc.verificationStatus === "VERIFIED" ? "tag-approved" : (doc.verificationStatus === "REJECTED" ? "tag-rejected" : "tag-pending");
-        return `
+                  ${docs
+            .filter(doc => doc.documentType !== "OTHER")
+            .map(doc => {
+                const statusClass = doc.verificationStatus === "VERIFIED" ? "tag-approved" : (doc.verificationStatus === "REJECTED" ? "tag-rejected" : "tag-pending");
+                return `
                         <tr>
                             <td><strong>${doc.documentId}</strong></td>
                             <td>
@@ -415,7 +234,7 @@ function renderOfficerDocumentQueue(docs = []) {
                             </td>
                         </tr>
                     `;
-    }).join('')}
+            }).join('')}
             </tbody>
         </table>
     `;

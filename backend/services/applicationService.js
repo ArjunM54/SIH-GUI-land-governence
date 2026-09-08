@@ -12,51 +12,8 @@ const auditService = require("./auditService");
 const rorData = require("../data/ror");
 const parcelsData = require("../data/parcels");
 
-// In-memory applications store
-const applications = [
-    {
-        applicationId: "LAND-2026-000142",
-        type: "Owner Change",
-        parcelId: "LND-001",
-        surveyNumber: "SUR-101",
-        currentOwner: "Ramesh Sharma",
-        newOwner: "Arjun Kumar",
-        relationship: "Sale Transfer",
-        reason: "Land purchase & ownership transfer",
-        citizenEmail: "arjun@gmail.com",
-        status: "UNDER_VERIFICATION",
-        submittedDate: "2026-09-07T10:00:00.000Z",
-        lastUpdated: "2026-09-07T10:00:00.000Z",
-        verifications: {
-            cadastral: { department: "Cadastral & Survey Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null },
-            ror: { department: "Land Records / RoR Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null },
-            registration: { department: "Registration Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null },
-            landUse: { department: "Land Use & Planning Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null },
-            propertyTax: { department: "Property Tax & Municipal Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null }
-        }
-    },
-    {
-        applicationId: "LAND-2026-000143",
-        type: "Land Use Conversion",
-        parcelId: "LND-002",
-        surveyNumber: "SUR-102",
-        currentOwner: "Industrial Infra Ltd",
-        newOwner: "Industrial Infra Ltd",
-        relationship: "Owner",
-        reason: "Zoning & Development Permission",
-        citizenEmail: "arjun@gmail.com",
-        status: "UNDER_VERIFICATION",
-        submittedDate: "2026-09-07T11:00:00.000Z",
-        lastUpdated: "2026-09-07T11:00:00.000Z",
-        verifications: {
-            cadastral: { department: "Cadastral & Survey Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null },
-            ror: { department: "Land Records / RoR Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null },
-            registration: { department: "Registration Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null },
-            landUse: { department: "Land Use & Planning Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null },
-            propertyTax: { department: "Property Tax & Municipal Department", status: "PENDING", officerId: null, officerName: null, date: null, remarks: null }
-        }
-    }
-];
+const applications = [];
+
 
 // In-memory notifications store
 const notifications = [];
@@ -70,9 +27,10 @@ const departmentRequests = [];
 /**
  * Generates unique Application Number (e.g., LAND-2026-000142)
  */
+
 function generateAppId(type = "Owner Change") {
     const year = new Date().getFullYear();
-    const seq = String(applications.length + 142).padStart(6, "0");
+    const seq = String(applications.length + 1).padStart(6, "0");
     return `LAND-${year}-${seq}`;
 }
 
