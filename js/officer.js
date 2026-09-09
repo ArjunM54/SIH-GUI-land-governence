@@ -9,6 +9,8 @@ let activeWorkspaceParcel = null;
 let activeRoRParcel = null;
 let activeRegParcel = null;
 let activeMutation = null;
+let activeLandUseApplicationId = null;
+let activePropertyTaxApplicationId = null;
 let workspaceMap = null;
 let workspacePolygonLayer = null;
 
@@ -494,12 +496,21 @@ function renderWorkQueue(workQueue = []) {
                         <td>${item.area || 'N/A'}</td>
                         <td>${item.task}</td>
                         <td><span class="priority-${(item.priority || 'medium').toLowerCase()}">${item.priority || 'MEDIUM'}</span></td>
-                        <td><span class="status-tag ${(item.status || '').toLowerCase().includes('verified') || (item.status || '').toLowerCase() === 'approved' ? 'status-verified' : 'status-pending'}">${item.status}</span></td>
-                        <button
-    class="btn-govt-primary"
-    onclick="openCitizenApplication('${item.applicationId}')">
-    View Application
-</button>
+                        <td>
+    <span class="status-tag ${(item.status || '').toLowerCase().includes('verified') || (item.status || '').toLowerCase() === 'approved' ? 'status-verified' : 'status-pending'}">
+        ${item.status}
+    </span>
+</td>
+<td>
+    <button
+        class="btn-govt-primary"
+        onclick="openParcelWorkspace('${item.parcelId}')">
+        Review
+    </button>
+</td>
+
+</tr>
+
                     `;
     }).join('')}
             </tbody>
@@ -760,211 +771,7 @@ function renderRegistrationAssignedParcels(parcels = []) {
     `;
 }
 
-/* --- 8. RENDER LAND USE WORK QUEUE & ASSIGNED PARCELS --- */
-function renderLandUseWorkQueue(workQueue = []) {
-    const container = document.getElementById("work-queue-table-container");
-    const headerTitle = document.getElementById("work-queue-card-title");
-    const casesTitle = document.getElementById("cases-card-title");
 
-    if (headerTitle) headerTitle.textContent = "📋 PENDING LAND USE & ZONING WORK & CITIZEN APPLICATIONS";
-    if (casesTitle) casesTitle.textContent = "📁 ACTIVE LAND USE & PLANNING CASES";
-    const countBadge = document.getElementById("work-queue-count");
-    if (countBadge) countBadge.textContent = `${workQueue.length} items`;
-
-    if (!container) return;
-
-    if (!workQueue || workQueue.length === 0) {
-        container.innerHTML = `<div style="padding: 1rem; color: #94a3b8; text-align: center;">No pending land use or planning work.</div>`;
-        return;
-    }
-
-    container.innerHTML = `
-        <table class="table-govt">
-            <thead>
-                <tr>
-                    <th>Application / Req ID</th>
-                    <th>Parcel</th>
-                    <th>Survey No</th>
-                    <th>Current Use</th>
-                    <th>Requested Use / Zone</th>
-                    <th>Task / Stage</th>
-                    <th>Priority</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${workQueue.map(item => {
-        const isCitizenApp = !!item.applicationId;
-        const idDisplay = isCitizenApp
-            ? `<span class="badge-app" style="background:#2563eb; color:#fff; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:0.85rem; display:inline-block;">📄 ${item.applicationId}</span><br><small style="color:#94a3b8;">Parcel: ${item.parcelId}</small>`
-            : `<strong>${item.requestId || item.conversionId || item.parcelId}</strong>`;
-        return `
-                    <tr>
-                        <td>${idDisplay}</td>
-                        <td>${item.parcelId}</td>
-                        <td>${item.surveyNo || 'SUR-101'}</td>
-                        <td>${item.currentUse || 'Agricultural'}</td>
-                        <td>${item.requestedUse || item.zone || 'Residential'}</td>
-                        <td>${item.task || item.currentStage || 'Zoning Check'}</td>
-                        <td><span class="priority-${(item.priority || 'medium').toLowerCase()}">${item.priority || 'HIGH'}</span></td>
-                        <td><span class="status-tag ${(item.status || '').toLowerCase() === 'approved' ? 'status-verified' : 'status-pending'}">${item.status}</span></td>
-                        <td><button class="btn-govt-primary" onclick="openRoRParcelWorkspace('${item.parcelId}')">Review</button></td>
-                    </tr>
-                    `;
-    }).join('')}
-            </tbody>
-        </table>
-    `;
-}
-
-function renderLandUseAssignedParcels(parcels = []) {
-    const container = document.getElementById("assigned-parcels-table-container");
-    const countBadge = document.getElementById("assigned-parcels-count");
-    if (countBadge) countBadge.textContent = `${parcels.length} parcels`;
-
-    if (!container) return;
-
-    if (!parcels || parcels.length === 0) {
-        container.innerHTML = `<div style="padding: 1rem; color: #94a3b8; text-align: center;">No assigned parcels found for this Land Use officer.</div>`;
-        return;
-    }
-
-    container.innerHTML = `
-        <table class="table-govt">
-            <thead>
-                <tr>
-                    <th>Parcel ID</th>
-                    <th>Survey Number</th>
-                    <th>Owner</th>
-                    <th>Area</th>
-                    <th>District</th>
-                    <th>Current Land Use</th>
-                    <th>Master Plan Zone</th>
-                    <th>Restriction Status</th>
-                    <th>Planning Status</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${parcels.map(p => `
-                    <tr>
-                        <td><strong>${p.parcelId}</strong></td>
-                        <td>${p.surveyNumber || 'N/A'}</td>
-                        <td>${p.owner || 'N/A'}</td>
-                        <td>${p.area || 'N/A'}</td>
-                        <td>${p.district || 'Coimbatore'}</td>
-                        <td>${p.currentLandUse || 'Agricultural'}</td>
-                        <td>${p.masterPlanZone || 'Mixed Zone'}</td>
-                        <td><span class="status-tag ${(p.restrictionStatus || '').toLowerCase() === 'none' || (p.restrictionStatus || '').toLowerCase() === 'clear' ? 'status-verified' : 'status-pending'}">${p.restrictionStatus || 'Clear'}</span></td>
-                        <td><span class="status-tag ${(p.planningStatus || '').toLowerCase() === 'approved' ? 'status-verified' : 'status-pending'}">${p.planningStatus || 'Pending'}</span></td>
-                        <td><button class="btn-govt-secondary" onclick="openRoRParcelWorkspace('${p.parcelId}')">View</button></td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-}
-
-/* --- 9. RENDER PROPERTY TAX WORK QUEUE & ASSIGNED PARCELS --- */
-function renderPropertyTaxWorkQueue(workQueue = []) {
-    const container = document.getElementById("work-queue-table-container");
-    const headerTitle = document.getElementById("work-queue-card-title");
-    const casesTitle = document.getElementById("cases-card-title");
-
-    if (headerTitle) headerTitle.textContent = "📋 PENDING PROPERTY TAX WORK & CITIZEN APPLICATIONS";
-    if (casesTitle) casesTitle.textContent = "📁 ACTIVE MUNICIPAL & TAX CASES";
-    const countBadge = document.getElementById("work-queue-count");
-    if (countBadge) countBadge.textContent = `${workQueue.length} items`;
-
-    if (!container) return;
-
-    if (!workQueue || workQueue.length === 0) {
-        container.innerHTML = `<div style="padding: 1rem; color: #94a3b8; text-align: center;">No pending property tax or clearance work.</div>`;
-        return;
-    }
-
-    container.innerHTML = `
-        <table class="table-govt">
-            <thead>
-                <tr>
-                    <th>Application / Req ID</th>
-                    <th>Parcel</th>
-                    <th>Survey No</th>
-                    <th>Property Type</th>
-                    <th>Tax Demand</th>
-                    <th>Outstanding Dues</th>
-                    <th>Task / Stage</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${workQueue.map(item => {
-        const isCitizenApp = !!item.applicationId;
-        const idDisplay = isCitizenApp
-            ? `<span class="badge-app" style="background:#2563eb; color:#fff; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:0.85rem; display:inline-block;">📄 ${item.applicationId}</span><br><small style="color:#94a3b8;">Parcel: ${item.parcelId}</small>`
-            : `<strong>${item.requestId || item.assessmentId || item.parcelId}</strong>`;
-        return `
-                    <tr>
-                        <td>${idDisplay}</td>
-                        <td>${item.parcelId}</td>
-                        <td>${item.surveyNo || 'SUR-101'}</td>
-                        <td>${item.propertyType || 'Residential'}</td>
-                        <td>₹${(item.taxDemand || 0).toLocaleString()}</td>
-                        <td>₹${(item.outstandingAmount || 0).toLocaleString()}</td>
-                        <td>${item.task || item.currentStage || 'Tax Clearance'}</td>
-                        <td><span class="status-tag ${(item.status || '').toLowerCase() === 'approved' || (item.status || '').toLowerCase() === 'cleared' ? 'status-verified' : 'status-pending'}">${item.status}</span></td>
-                        <td><button class="btn-govt-primary" onclick="openRoRParcelWorkspace('${item.parcelId}')">Review</button></td>
-                    </tr>
-                    `;
-    }).join('')}
-            </tbody>
-        </table>
-    `;
-}
-
-function renderPropertyTaxAssignedParcels(parcels = []) {
-    const container = document.getElementById("assigned-parcels-table-container");
-    const countBadge = document.getElementById("assigned-parcels-count");
-    if (countBadge) countBadge.textContent = `${parcels.length} parcels`;
-
-    if (!container) return;
-
-    if (!parcels || parcels.length === 0) {
-        container.innerHTML = `<div style="padding: 1rem; color: #94a3b8; text-align: center;">No assigned parcels found for this Property Tax officer.</div>`;
-        return;
-    }
-
-    container.innerHTML = `
-        <table class="table-govt">
-            <thead>
-                <tr>
-                    <th>Parcel ID</th>
-                    <th>Survey Number</th>
-                    <th>Owner</th>
-                    <th>District</th>
-                    <th>Property Type</th>
-                    <th>Tax Clearance Status</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${parcels.map(p => `
-                    <tr>
-                        <td><strong>${p.parcelId}</strong></td>
-                        <td>${p.surveyNumber || 'N/A'}</td>
-                        <td>${p.owner || 'N/A'}</td>
-                        <td>${p.district || 'Coimbatore'}</td>
-                        <td>${p.currentLandUse || 'Residential'}</td>
-                        <td><span class="status-tag ${(p.taxStatus || '').toLowerCase() === 'cleared' ? 'status-verified' : 'status-pending'}">${p.taxStatus || 'Pending'}</span></td>
-                        <td><button class="btn-govt-secondary" onclick="openRoRParcelWorkspace('${p.parcelId}')">View</button></td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-}
 
 /* --- INTER-DEPARTMENTAL PARCEL VERIFICATION REQUEST SUITE (PHASE 11F) --- */
 
@@ -2830,26 +2637,15 @@ function renderLandUseWorkQueue(workQueue = []) {
                         <td><span class="priority-${(w.priority || 'high').toLowerCase()}">${w.priority}</span></td>
                         <td><span class="status-tag ${(w.status || '').toLowerCase() === 'approved' ? 'status-verified' : 'status-review'}">${w.status}</span></td>
                         <td>
-<td>
-    ${w.applicationId
-                ? `
-                <button
-                    class="btn-govt-primary"
-                    onclick="openCitizenApplication('${w.applicationId}')">
-                    📄 View Application
-                </button>
-            `
-                : `
-                <button
-                    class="btn-govt-primary"
-                    onclick="openLandUseParcelWorkspace('${w.parcelId}')">
-                    Review
-                </button>
-            `
-            }
-</td>                        </td>
+                            <button
+                                class="btn-govt-primary"
+                                onclick="openLandUseParcelWorkspace('${w.parcelId}', '${w.applicationId || ''}')">
+                                Review
+                            </button>
+                        </td>
                     </tr>
                     `;
+
     }).join('')}
             </tbody>
         </table>
@@ -2900,7 +2696,7 @@ function renderLandUseAssignedParcels(parcels = []) {
                         <td><span class="status-tag status-pending">${p.currentLandUse}</span></td>
                         <td>${p.masterPlanZone}</td>
                         <td><span class="status-tag ${(p.restrictionStatus || '').toLowerCase() === 'clear' ? 'status-verified' : 'status-pending'}">${p.restrictionStatus}</span></td>
-                        <td><span class="status-tag ${(p.planningStatus || '').toLowerCase() === 'approved' ? 'status-verified' : 'status-review'}">${p.planningStatus}</span></td>
+                        <td><span class="status-tag ${(p.planningStatus || '').toLowerCase() === 'approved' ? 'status-verified' : 'status-pending'}">${p.planningStatus}</span></td>
                         <td><button class="btn-govt-secondary" onclick="openLandUseParcelWorkspace('${p.parcelId}')">View</button></td>
                     </tr>
                 `).join('')}
@@ -2910,7 +2706,7 @@ function renderLandUseAssignedParcels(parcels = []) {
 }
 
 /* --- 15. LAND USE PARCEL WORKSPACE OPENER --- */
-async function openLandUseParcelWorkspace(parcelId) {
+async function openLandUseParcelWorkspace(parcelId, applicationId = null) {
     try {
         const res = await window.getLandUseParcelDetail(parcelId);
         if (!res.success) {
@@ -2920,6 +2716,7 @@ async function openLandUseParcelWorkspace(parcelId) {
 
         const item = res.data;
         activeParcelId = parcelId;
+        activeLandUseApplicationId = applicationId || item.applicationId || null;
         const checklist = item.checklist || {};
         const isApprovable = checklist.cadastral === "VERIFIED" && checklist.ror === "VERIFIED" && checklist.zoning !== "INCOMPATIBLE" && checklist.environmental === "CLEAR" && checklist.roadAccess === "AVAILABLE" && checklist.restrictions === "CLEAR";
 
@@ -2928,7 +2725,9 @@ async function openLandUseParcelWorkspace(parcelId) {
         workspaceView.style.display = "block";
 
         const titleSpan = document.getElementById("workspace-parcel-title");
-        if (titleSpan) titleSpan.textContent = `LAND USE & PLANNING WORKSPACE — PARCEL ${item.parcelId}`;
+        if (titleSpan) {
+            titleSpan.innerHTML = `LAND USE & PLANNING WORKSPACE — PARCEL ${item.parcelId} ${activeLandUseApplicationId ? `<span class="badge-app" style="background:#2563eb; color:#fff; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:0.8rem; margin-left:8px;">📄 ${activeLandUseApplicationId}</span>` : ''}`;
+        }
 
         // Top Action Panel
         const actionsPanel = document.querySelector(".cadastral-actions-panel");
@@ -2939,11 +2738,16 @@ async function openLandUseParcelWorkspace(parcelId) {
                 <button class="btn-govt-secondary" onclick="openReviewBuildingPermissionModal('${item.buildingPermission ? item.buildingPermission.applicationNumber || 'BP-2026-001' : 'BP-2026-001'}')">🏗 Review Building Permission</button>
                 <button class="btn-govt-warning" onclick="openPlanningConflictModal('${item.parcelId}')">⚠ Report Planning Conflict</button>
                 ${isApprovable ? `
-                    <button class="btn-govt-primary" style="background:#16a34a; border-color:#16a34a;" onclick="openApproveConversionModal('${item.requestId || 'LU-2026-003'}')">✓ APPROVE CONVERSION</button>
-                ` : `
+<button
+    class="btn-govt-primary"
+    style="background:#16a34a; border-color:#16a34a;"
+    onclick="openApproveConversionModal('${item.requestId || 'LU-2026-003'}', '${activeLandUseApplicationId || ''}')">
+    ✓ APPROVE CONVERSION
+</button>
+                    ` : `
                     <button class="btn-govt-secondary" style="opacity:0.6; cursor:not-allowed;" title="All statutory checklist items must pass before approval" onclick="alert('Conversion cannot be approved: Pending statutory checks in checklist.')">🔒 APPROVE CONVERSION (Prerequisites Pending)</button>
                 `}
-                <button class="btn-govt-danger" onclick="openRejectConversionModal('${item.requestId || 'LU-2026-003'}')">✕ REJECT CONVERSION</button>
+                <button class="btn-govt-danger" onclick="openRejectConversionModal('${item.requestId || 'LU-2026-003'}', '${activeLandUseApplicationId || ''}')">✕ REJECT CONVERSION</button>
                 <button class="btn-govt-secondary" onclick="openRequestLuInfoModal('${item.requestId || 'LU-2026-003'}')">📤 Request Information</button>
             `;
         }
@@ -3254,8 +3058,14 @@ async function handleReviewBuildingPermissionSubmit(e) {
     }
 }
 
-async function openApproveConversionModal(requestId) {
+async function openApproveConversionModal(requestId, applicationId = null) {
+    if (applicationId) activeLandUseApplicationId = applicationId;
     document.getElementById("approve-lu-req-id").value = requestId;
+
+    const appIdField = document.getElementById("approve-lu-application-id");
+    if (appIdField) {
+        appIdField.value = applicationId || activeLandUseApplicationId || "";
+    }
     document.getElementById("approve-lu-req-label").value = requestId;
 
     try {
@@ -3281,21 +3091,49 @@ async function openApproveConversionModal(requestId) {
 
 async function handleApproveConversionSubmit(e) {
     e.preventDefault();
+
     const requestId = document.getElementById("approve-lu-req-id").value;
     const remarks = document.getElementById("approve-lu-remarks").value;
 
     try {
-        const res = await window.approveLandUseConversionReq(requestId, remarks);
+        const res = await window.approveLandUseConversionReq(
+            requestId,
+            remarks
+        );
+
+        if (!res || !res.success) {
+            throw new Error(
+                res?.message || "Failed to approve land use conversion."
+            );
+        }
+
+        const appId = document.getElementById("approve-lu-application-id")?.value || activeLandUseApplicationId;
+        if (appId) {
+            try {
+                await window.API.updateVerificationStage(appId, "landUse", "APPROVED", remarks || "Land use conversion approved by Land Use Officer");
+            } catch (stageErr) {
+                console.warn("Could not sync application stage:", stageErr);
+            }
+        }
+
         alert(res.message || "Land use conversion approved!");
+
         closeModal("modal-approve-conversion");
+
         await loadOfficerDashboard();
-        document.getElementById("officer-workspace-detail").style.display = "none";
+
+        const workspace = document.getElementById("view-parcel-workspace");
+        if (workspace) workspace.style.display = "none";
+        const overview = document.getElementById("view-overview");
+        if (overview) overview.style.display = "block";
+
     } catch (err) {
         alert(err.message || "Failed to approve land use conversion.");
     }
 }
 
-function openRejectConversionModal(requestId) {
+function openRejectConversionModal(requestId, applicationId = null) {
+    if (applicationId) activeLandUseApplicationId = applicationId;
     document.getElementById("reject-lu-req-id").value = requestId;
     document.getElementById("modal-reject-conversion").style.display = "flex";
 }
@@ -3308,10 +3146,22 @@ async function handleRejectConversionSubmit(e) {
 
     try {
         const res = await window.rejectLandUseConversionReq(requestId, reason, remarks);
+
+        if (activeLandUseApplicationId) {
+            try {
+                await window.API.updateVerificationStage(activeLandUseApplicationId, "landUse", "REJECTED", remarks || reason);
+            } catch (stageErr) {
+                console.warn("Could not sync application stage:", stageErr);
+            }
+        }
+
         alert(res.message || "Conversion request rejected.");
         closeModal("modal-reject-conversion");
         await loadOfficerDashboard();
-        document.getElementById("officer-workspace-detail").style.display = "none";
+        const workspace = document.getElementById("view-parcel-workspace");
+        if (workspace) workspace.style.display = "none";
+        const overview = document.getElementById("view-overview");
+        if (overview) overview.style.display = "block";
     } catch (err) {
         alert(err.message || "Failed to reject conversion.");
     }
@@ -3446,25 +3296,12 @@ function renderPropertyTaxWorkQueue(workQueue = []) {
                         <td><span class="priority-${(w.priority || 'high').toLowerCase()}">${w.priority}</span></td>
                         <td><span class="status-tag ${(w.status || '').toLowerCase() === 'cleared' || (w.status || '').toLowerCase() === 'approved' ? 'status-verified' : 'status-pending'}">${w.status}</span></td>
                         <td>
+                            <button
+                                class="btn-govt-primary"
+                                onclick="openPropertyTaxParcelWorkspace('${w.parcelId}', '${w.applicationId || ''}')">
+                                Review
+                            </button>
                         </td>
-                        <td>
-    ${w.applicationId
-                ? `
-                <button
-                    class="btn-govt-primary"
-                    onclick="openCitizenApplication('${w.applicationId}')">
-                    📄 View Application
-                </button>
-            `
-                : `
-                <button
-                    class="btn-govt-primary"
-                    onclick="openPropertyTaxParcelWorkspace('${w.parcelId}')">
-                    Review
-                </button>
-            `
-            }
-</td>
                     </tr>
                     `;
     }).join('')}
@@ -3529,7 +3366,7 @@ function renderPropertyTaxAssignedParcels(parcels = []) {
 }
 
 /* --- 16. PROPERTY TAX WORKSPACE DETAILED VIEW --- */
-async function openPropertyTaxParcelWorkspace(parcelId) {
+async function openPropertyTaxParcelWorkspace(parcelId, applicationId = null) {
     try {
         const res = await window.getPropertyTaxParcelDetail(parcelId);
         if (!res.success) {
@@ -3539,13 +3376,16 @@ async function openPropertyTaxParcelWorkspace(parcelId) {
 
         const data = res.data;
         activeParcelId = parcelId;
+        activePropertyTaxApplicationId = applicationId || data.applicationId || null;
 
         document.getElementById("view-overview").style.display = "none";
         const workspaceView = document.getElementById("view-parcel-workspace");
         workspaceView.style.display = "block";
 
         const titleSpan = document.getElementById("workspace-parcel-title");
-        if (titleSpan) titleSpan.textContent = `PROPERTY TAX & MUNICIPAL WORKSPACE — PARCEL ${parcelId}`;
+        if (titleSpan) {
+            titleSpan.innerHTML = `PROPERTY TAX & MUNICIPAL WORKSPACE — PARCEL ${parcelId} ${activePropertyTaxApplicationId ? `<span class="badge-app" style="background:#2563eb; color:#fff; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:0.8rem; margin-left:8px;">📄 ${activePropertyTaxApplicationId}</span>` : ''}`;
+        }
 
         // Top Action Panel
         const actionsPanel = document.querySelector(".cadastral-actions-panel");
@@ -3554,8 +3394,8 @@ async function openPropertyTaxParcelWorkspace(parcelId) {
             actionsPanel.innerHTML = `
                 <button class="btn-govt-secondary" onclick="openVerifyAssessmentModal('${data.assessmentId}')">✓ Verify Assessment</button>
                 <button class="btn-govt-secondary" onclick="openVerifyTaxPaymentModal('${data.paymentReference || data.parcelId}')">💰 Verify Tax Payment</button>
-                <button class="btn-govt-primary" onclick="openApproveTaxClearanceModal('${data.requestId || data.parcelId}')" ${isOutstanding ? 'title="Blocked: Dues Outstanding"' : ''}>🧾 APPROVE TAX CLEARANCE</button>
-                <button class="btn-govt-danger" onclick="openRejectTaxClearanceModal('${data.requestId || data.parcelId}')">✕ REJECT CLEARANCE</button>
+                <button class="btn-govt-primary" onclick="openApproveTaxClearanceModal('${data.requestId || data.parcelId}', '${activePropertyTaxApplicationId || ''}')" ${isOutstanding ? 'title="Blocked: Dues Outstanding"' : ''}>🧾 APPROVE TAX CLEARANCE</button>
+                <button class="btn-govt-danger" onclick="openRejectTaxClearanceModal('${data.requestId || data.parcelId}', '${activePropertyTaxApplicationId || ''}')">✕ REJECT CLEARANCE</button>
                 <button class="btn-govt-warning" onclick="openRequestTaxInfoModal('${data.requestId || data.parcelId}')">📤 Request Information</button>
             `;
         }
@@ -3790,7 +3630,8 @@ async function handleVerifyTaxPaymentSubmit(e) {
     }
 }
 
-function openApproveTaxClearanceModal(requestId) {
+function openApproveTaxClearanceModal(requestId, applicationId = null) {
+    if (applicationId) activePropertyTaxApplicationId = applicationId;
     document.getElementById("approve-tax-req-id").value = requestId || activeParcelId;
     document.getElementById("approve-tax-req-label").value = requestId || `CLR-2026-${activeParcelId}`;
     document.getElementById("approve-tax-remarks").value = "";
@@ -3813,9 +3654,17 @@ async function handleApproveTaxClearanceSubmit(e) {
     try {
         const res = await window.approveTaxClearanceReq(requestId, remarks);
         if (res.success) {
+            if (activePropertyTaxApplicationId) {
+                try {
+                    await window.API.updateVerificationStage(activePropertyTaxApplicationId, "propertyTax", "APPROVED", remarks || "Property tax clearance issued by Property Tax Officer");
+                } catch (stageErr) {
+                    console.warn("Could not sync application stage:", stageErr);
+                }
+            }
+
             alert(res.message || "Property tax clearance issued successfully!");
             closeModal("modal-approve-tax-clearance");
-            openPropertyTaxParcelWorkspace(activeParcelId);
+            openPropertyTaxParcelWorkspace(activeParcelId, activePropertyTaxApplicationId);
         } else {
             alert(res.message || "Failed to approve clearance.");
         }
@@ -3824,7 +3673,8 @@ async function handleApproveTaxClearanceSubmit(e) {
     }
 }
 
-function openRejectTaxClearanceModal(requestId) {
+function openRejectTaxClearanceModal(requestId, applicationId = null) {
+    if (applicationId) activePropertyTaxApplicationId = applicationId;
     document.getElementById("reject-tax-req-id").value = requestId || activeParcelId;
     document.getElementById("reject-tax-remarks").value = "";
     document.getElementById("modal-reject-tax-clearance").style.display = "flex";
@@ -3839,9 +3689,17 @@ async function handleRejectTaxClearanceSubmit(e) {
     try {
         const res = await window.rejectTaxClearanceReq(requestId, rejectionReason, remarks);
         if (res.success) {
+            if (activePropertyTaxApplicationId) {
+                try {
+                    await window.API.updateVerificationStage(activePropertyTaxApplicationId, "propertyTax", "REJECTED", remarks || rejectionReason);
+                } catch (stageErr) {
+                    console.warn("Could not sync application stage:", stageErr);
+                }
+            }
+
             alert(res.message || "Tax clearance request rejected.");
             closeModal("modal-reject-tax-clearance");
-            openPropertyTaxParcelWorkspace(activeParcelId);
+            openPropertyTaxParcelWorkspace(activeParcelId, activePropertyTaxApplicationId);
         } else {
             alert(res.message || "Failed to reject clearance.");
         }
