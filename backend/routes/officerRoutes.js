@@ -1441,10 +1441,10 @@ router.get("/land-use/overview", requirePermission("landuse.view"), (req, res) =
     const pendingReviewsCount = authorizedRecords.filter(r => (r.environmentalStatus || "").toUpperCase() === "PENDING" || (r.roadAccessStatus || "").toUpperCase() === "PENDING").length;
     const zoningConflictsCount = authorizedRecords.filter(r => (r.zoningStatus || "").toUpperCase() === "INCOMPATIBLE").length;
     const restrictionAlertsCount = authorizedRecords.filter(r => (r.restrictionStatus || "").toUpperCase() === "RESTRICTED").length;
-    
+
     const authorizedBuildingPermissions = buildingPermissionData.filter(bp => canAccessParcel(req.user, bp.parcelId));
     const buildingReviewsCount = authorizedBuildingPermissions.filter(bp => (bp.buildingPermissionStatus || "").toLowerCase().includes("review") || (bp.buildingPermissionStatus || "").toLowerCase().includes("pending")).length;
-    
+
     const approvedConversionsCount = authorizedRecords.filter(r => (r.status || "").toUpperCase() === "APPROVED").length;
     const rejectedConversionsCount = authorizedRecords.filter(r => (r.status || "").toUpperCase() === "REJECTED").length;
 
@@ -1804,6 +1804,23 @@ router.post("/land-use/conversions/:requestId/approve", requirePermission("landu
     landRecord.approvedBy = req.user.officerId || req.user.name;
     landRecord.approvedAt = timestamp;
     landRecord.approvalRemarks = remarks || "Land use conversion approved following complete planning checklist verification.";
+    // Sync this approval with the citizen application
+    const applicationId = req.body.applicationId;
+
+    if (applicationId) {
+        const verificationSync = updateVerificationStage(
+            req.user,
+            applicationId,
+            "landUse",
+            "APPROVED",
+            remarks || "Land Use & Planning verification approved."
+        );
+
+        console.log(
+            "[Land Use] Citizen application sync:",
+            verificationSync
+        );
+    }
 
     if (landRecord.checklist) {
         Object.keys(landRecord.checklist).forEach(k => {
@@ -1923,10 +1940,10 @@ router.get("/property-tax/overview", requirePermission("tax.view"), (req, res) =
     const outstandingTaxCasesCount = authorizedRecords.filter(r => (r.outstandingAmount || 0) > 0).length;
     const taxClearanceRequestsCount = authorizedRecords.filter(r => (r.status || "").toUpperCase() === "PENDING").length;
     const pendingAssessmentsCount = pendingTaxVerificationCount;
-    
+
     const authorizedBuildingPermissions = buildingPermissionData.filter(bp => canAccessParcel(req.user, bp.parcelId));
     const buildingReviewsCount = authorizedBuildingPermissions.filter(bp => (bp.buildingPermissionStatus || "").toLowerCase().includes("review") || (bp.buildingPermissionStatus || "").toLowerCase().includes("pending")).length;
-    
+
     const clearedParcelsCount = authorizedRecords.filter(r => (r.taxClearanceStatus || "").toUpperCase() === "CLEARED").length;
     const overdueTaxCasesCount = authorizedRecords.filter(r => (r.penalty || 0) > 0 || (r.outstandingAmount || 0) > 0).length;
 

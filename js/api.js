@@ -598,11 +598,21 @@ async function reviewBuildingPermission(applicationId, status, remarks) {
     });
 }
 
-async function approveLandUseConversionReq(requestId, remarks) {
-    return await apiRequest(`/api/officer/land-use/conversions/${requestId}/approve`, {
-        method: "POST",
-        body: JSON.stringify({ remarks })
-    });
+async function approveLandUseConversionReq(
+    requestId,
+    remarks,
+    applicationId = null
+) {
+    return await apiRequest(
+        `/api/officer/land-use/conversions/${requestId}/approve`,
+        {
+            method: "POST",
+            body: JSON.stringify({
+                remarks,
+                applicationId
+            })
+        }
+    );
 }
 
 async function rejectLandUseConversionReq(requestId, rejectionReason, remarks) {

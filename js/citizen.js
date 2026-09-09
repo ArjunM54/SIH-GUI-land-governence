@@ -1146,7 +1146,130 @@ function getStatusTagClass(status) {
     if (s.includes("REVIEW")) return "tag-review";
     return "tag-pending";
 }
+async function searchULPIN() {
 
+    const input = document.getElementById("ulpin-search-input");
+    const container = document.getElementById("ulpin-result-container");
+
+    const ulpin = input.value.trim();
+
+    if (!ulpin) {
+        alert("Please enter a ULPIN.");
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="govt-card">
+            Searching land...
+        </div>
+    `;
+
+    try {
+
+        const result = await window.searchLandByULPIN(ulpin);
+
+        if (!result.success) {
+            container.innerHTML = `
+                <div class="govt-card">
+                    <h3>❌ Land Not Found</h3>
+                    <p>${result.message}</p>
+                </div>
+            `;
+            return;
+        }
+
+        displayULPINLand(result.data);
+
+    } catch (error) {
+
+        container.innerHTML = `
+            <div class="govt-card">
+                <h3>❌ Search Failed</h3>
+                <p>${error.message}</p>
+            </div>
+        `;
+    }
+}
+function displayULPINLand(land) {
+
+    const container =
+        document.getElementById("ulpin-result-container");
+
+    container.innerHTML = `
+
+        <div class="govt-card">
+
+            <h2>🏡 Land Found</h2>
+
+            <div class="land-basic-grid">
+
+                <div>
+                    <strong>ULPIN</strong>
+                    <p>${land.ulpin}</p>
+                </div>
+
+                <div>
+                    <strong>Parcel ID</strong>
+                    <p>${land.parcelId}</p>
+                </div>
+
+                <div>
+                    <strong>Survey Number</strong>
+                    <p>${land.surveyNumber}</p>
+                </div>
+
+                <div>
+                    <strong>Owner</strong>
+                    <p>${land.owner}</p>
+                </div>
+
+                <div>
+                    <strong>Extent</strong>
+                    <p>${land.extent}</p>
+                </div>
+
+                <div>
+                    <strong>Land Use</strong>
+                    <p>${land.landUse}</p>
+                </div>
+
+                <div>
+                    <strong>Village</strong>
+                    <p>${land.village}</p>
+                </div>
+
+                <div>
+                    <strong>District</strong>
+                    <p>${land.district}</p>
+                </div>
+
+            </div>
+
+            <hr>
+
+            <h3>Department Verification</h3>
+
+            <div class="verification-grid">
+
+                <div>✓ Cadastral & Survey</div>
+                <div>✓ Land Records / RoR</div>
+                <div>✓ Registration & Legal</div>
+                <div>✓ Land Use & Planning</div>
+                <div>✓ Property Tax & Municipal</div>
+
+            </div>
+
+            <hr>
+
+            <h3>🛰 Satellite Verification</h3>
+
+            <p>
+                ${land.cadastral.satelliteChange}
+            </p>
+
+        </div>
+    `;
+}
 // Window Exports
 window.switchTab = switchTab;
 window.toggleSubmenu = toggleSubmenu;
