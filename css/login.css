@@ -214,3 +214,78 @@ body.auth-body {
     border-color: var(--accent-blue);
     color: #fff;
 }
+
+/* Mobile Responsiveness for Login/Auth */
+@media (max-width: 600px) {
+    .auth-header {
+        padding: 1rem;
+    }
+
+    .auth-container {
+        padding: 1.25rem 0.75rem;
+    }
+
+    .auth-card {
+        padding: 1.5rem 1rem;
+        border-radius: 12px;
+    }
+
+    .auth-title {
+        font-size: 1.35rem;
+    }
+
+    .quick-fill-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 0.4rem;
+    }
+
+    .quick-btn {
+        font-size: 0.75rem;
+        padding: 0.4rem;
+    }
+}
+
+/* --- VERY SMALL PHONE (380px) --- */
+@media (max-width: 380px) {
+    .auth-container {
+        padding: 1rem 0.5rem;
+    }
+
+    .auth-card {
+        padding: 1.25rem 0.75rem;
+        border-radius: 10px;
+    }
+
+    .auth-title {
+        font-size: 1.2rem;
+    }
+
+    .auth-tabs {
+        gap: 0;
+    }
+
+    .auth-tab {
+        padding: 0.6rem 0.5rem;
+        font-size: 0.82rem;
+    }
+
+    .form-group input,
+    .form-group select {
+        padding: 0.55rem 0.65rem;
+        font-size: 0.85rem;
+    }
+
+    .auth-submit-btn {
+        padding: 0.65rem;
+        font-size: 0.9rem;
+    }
+
+    .quick-fill-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .quick-btn {
+        font-size: 0.7rem;
+        padding: 0.35rem;
+    }
+}

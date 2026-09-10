@@ -340,6 +340,7 @@ function getIntegratedLandProfile(parcelId) {
     // LIVE CITIZEN APPLICATION TIMELINE
     // =====================================================
 
+    const applicationService = require("../services/applicationService");
     const parcelApplications =
         applicationService.applications.filter(
             app =>

@@ -60,6 +60,12 @@ const PERMISSIONS = {
     BUILDING_VERIFY: "building.verify",
     BUILDING_APPROVE: "building.approve",
 
+    // Land Change Verification
+    LANDCHANGE_VIEW: "landchange.view",
+    LANDCHANGE_UPLOAD: "landchange.upload",
+    LANDCHANGE_ANALYZE: "landchange.analyze",
+    LANDCHANGE_VERIFY: "landchange.verify",
+
     // Admin
     ADMIN_ALL: "admin.all"
 };

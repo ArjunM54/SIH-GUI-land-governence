@@ -1970,15 +1970,42 @@
    ========================================================= */
 
 #land-profile-panel.integrated-workspace {
+    display: flex !important;
+    flex-direction: column !important;
     width: 92vw !important;
     max-width: 1320px !important;
     height: 92vh !important;
     top: 4vh !important;
     right: 4vw !important;
-    border-radius: 4px !important;
-    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.4) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.45) !important;
     border: 1px solid #0b1d3a !important;
     background: #f4f6f9 !important;
+    overflow: hidden !important;
+    z-index: 10000 !important;
+}
+
+.integrated-workspace-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(4px);
+    z-index: 9998;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+.integrated-workspace-backdrop.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+body.profile-modal-open {
+    overflow: hidden !important;
 }
 
 .integrated-header {
@@ -2138,6 +2165,54 @@
     white-space: nowrap;
     padding: 0 8px;
     gap: 2px;
+    position: relative;
+    scroll-behavior: smooth;
+}
+
+.workspace-tab-highlight {
+    background: linear-gradient(180deg, #e0f2fe 0%, #eff6ff 100%);
+    color: #0369a1;
+    border: 1px solid #7dd3fc;
+    border-bottom: 3px solid #0284c7;
+    border-radius: 4px 4px 0 0;
+    margin: 2px 4px;
+}
+
+.workspace-tab-highlight:hover {
+    background: #e0f2fe;
+    color: #0c4a6e;
+}
+
+.workspace-tab-highlight.active {
+    background: #0284c7;
+    color: #ffffff;
+    border-bottom: 3px solid #075985;
+}
+
+.workspace-nav-scroll-hint {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 40px;
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.9) 60%, #ffffff 100%);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 4px;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.workspace-nav-scroll-hint span {
+    font-size: 14px;
+    color: #0b1d3a;
+    animation: hintNudge 1.2s ease-in-out infinite;
+}
+
+@keyframes hintNudge {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(4px); }
 }
 
 .workspace-tab-btn {
@@ -2165,10 +2240,14 @@
 }
 
 .integrated-workspace-body {
-    padding: 16px;
-    height: calc(100% - 150px);
-    overflow-y: auto;
-    background: #f4f6f9;
+    flex: 1 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 16px !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    background: #f4f6f9 !important;
 }
 
 .tab-pane-content {
@@ -2314,6 +2393,87 @@
     font-size: 11px;
     font-weight: 600;
     color: #64748b;
+}
+
+/* Mobile & Tablet Responsiveness for Land Profile Drawer & Modals */
+@media (max-width: 650px) {
+    #land-profile-panel,
+    #land-profile-panel.integrated-workspace {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        left: auto !important;
+        right: -100vw !important;
+        border-radius: 0 !important;
+        z-index: 9999 !important;
+    }
+
+    #land-profile-panel.active,
+    #land-profile-panel.integrated-workspace.active {
+        right: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+    }
+
+    .land-profile-header {
+        padding: 14px 16px;
+    }
+
+    .land-profile-title {
+        font-size: 17px;
+    }
+
+    .land-profile-subtitle {
+        font-size: 12px;
+    }
+
+    .land-profile-close {
+        width: 38px;
+        height: 38px;
+        font-size: 22px;
+        flex-shrink: 0;
+    }
+
+    .workspace-nav-tabs,
+    .lp-nav-tabs,
+    .nav-tabs {
+        display: flex !important;
+        overflow-x: auto !important;
+        white-space: nowrap !important;
+        width: 100% !important;
+        -webkit-overflow-scrolling: touch;
+        gap: 6px !important;
+        padding-bottom: 6px !important;
+    }
+
+    .workspace-tab-btn,
+    .lp-tab-btn,
+    .tab-btn {
+        flex-shrink: 0 !important;
+        padding: 8px 12px !important;
+        font-size: 12px !important;
+    }
+
+    .audit-modal-panel,
+    .upload-modal-panel,
+    .extraction-modal-card {
+        width: 95vw !important;
+        max-width: 95vw !important;
+        max-height: 90vh !important;
+        padding: 14px !important;
+        border-radius: 12px !important;
+    }
+
+    .metrics-grid,
+    .quick-stats-grid,
+    .dept-cards-grid,
+    .owner-info-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
 }
 
 @media print {

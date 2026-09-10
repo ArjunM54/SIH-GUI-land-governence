@@ -13,7 +13,9 @@
    ========================================================= */
 
 const API_BASE_URL =
-    "http://localhost:5000";
+    (typeof window !== "undefined" && window.location && window.location.protocol && window.location.protocol.startsWith("http"))
+        ? window.location.origin
+        : "http://localhost:5000";
 
 
 /* =========================================================
@@ -278,6 +280,44 @@ async function verifyOfficerDocument(documentId, status, remarks) {
 
 
 
+
+/* =========================================================
+   IMAGERY & CHANGE DETECTION APIs
+   ========================================================= */
+
+async function getImageryForParcel(parcelId) {
+    return await apiRequest(`/api/imagery/${encodeURIComponent(parcelId)}`);
+}
+
+async function getImageryTimeline(parcelId) {
+    return await apiRequest(`/api/imagery/${encodeURIComponent(parcelId)}/timeline`);
+}
+
+async function compareImagery(parcelId, beforeDate, afterDate) {
+    return await apiRequest(`/api/imagery/${encodeURIComponent(parcelId)}/compare?before=${encodeURIComponent(beforeDate)}&after=${encodeURIComponent(afterDate)}`);
+}
+
+async function getImageryChanges(parcelId) {
+    return await apiRequest(`/api/imagery/${encodeURIComponent(parcelId)}/changes`);
+}
+
+async function getDroneImagery(parcelId) {
+    return await apiRequest(`/api/imagery/${encodeURIComponent(parcelId)}/drone`);
+}
+
+async function submitVerificationRequest(parcelId, changeId, toDepartment, reason, priority) {
+    return await apiRequest(`/api/imagery/${encodeURIComponent(parcelId)}/verification-request`, {
+        method: "POST",
+        body: JSON.stringify({ changeId, toDepartment, reason, priority })
+    });
+}
+
+window.getImageryForParcel = getImageryForParcel;
+window.getImageryTimeline = getImageryTimeline;
+window.compareImagery = compareImagery;
+window.getImageryChanges = getImageryChanges;
+window.getDroneImagery = getDroneImagery;
+window.submitVerificationRequest = submitVerificationRequest;
 
 /* =========================================================
    7. CHECK BACKEND HEALTH
@@ -862,6 +902,48 @@ async function updateVerificationStage(
     );
 }
 
+/* =========================================================
+   LAND CHANGE VERIFICATION APIS
+   ========================================================= */
+
+async function getLandChangeByParcel(parcelId) {
+    return await apiRequest(`/api/land-change/${encodeURIComponent(parcelId)}`);
+}
+
+async function uploadLandChangeImages(formData) {
+    const token = window.AuthManager ? window.AuthManager.getToken() : "";
+    const response = await fetch(`${API_BASE_URL}/api/land-change/upload`, {
+        method: "POST",
+        headers: {
+            ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        },
+        body: formData
+    });
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to upload land imagery.");
+    }
+    return await response.json();
+}
+
+async function analyzeLandChange(payload) {
+    return await apiRequest("/api/land-change/analyze", {
+        method: "POST",
+        body: JSON.stringify(payload)
+    });
+}
+
+async function submitLandChangeVerification(parcelId, payload) {
+    return await apiRequest(`/api/land-change/${encodeURIComponent(parcelId)}/verify`, {
+        method: "POST",
+        body: JSON.stringify(payload)
+    });
+}
+
+async function getLandChangeHistory(parcelId) {
+    return await apiRequest(`/api/land-change/${encodeURIComponent(parcelId)}/history`);
+}
+
 // Expose to API object & window
 window.API = window.API || {};
 window.API.getOfficerDepartmentDocuments = getOfficerDepartmentDocuments;
@@ -869,6 +951,11 @@ window.API.verifyOfficerDocument = verifyOfficerDocument;
 window.API.updateVerificationStage = updateVerificationStage;
 window.API.getApplicationTimeline = getApplicationTimeline;
 window.API.getApplicationByNumber = getApplicationByNumber;
+window.API.getLandChangeByParcel = getLandChangeByParcel;
+window.API.uploadLandChangeImages = uploadLandChangeImages;
+window.API.analyzeLandChange = analyzeLandChange;
+window.API.submitLandChangeVerification = submitLandChangeVerification;
+window.API.getLandChangeHistory = getLandChangeHistory;
 
 window.getApplicationTimeline = getApplicationTimeline;
 window.getApplicationByNumber = getApplicationByNumber;
@@ -888,7 +975,13 @@ window.getOfficerDepartmentDocuments = getOfficerDepartmentDocuments;
 window.verifyOfficerDocument = verifyOfficerDocument;
 window.updateVerificationStage = updateVerificationStage;
 
-console.log("LandGov API client initialized with Auth, Officer & Department Request methods.");
+window.getLandChangeByParcel = getLandChangeByParcel;
+window.uploadLandChangeImages = uploadLandChangeImages;
+window.analyzeLandChange = analyzeLandChange;
+window.submitLandChangeVerification = submitLandChangeVerification;
+window.getLandChangeHistory = getLandChangeHistory;
+
+console.log("LandGov API client initialized with Auth, Officer, Department Request & Land Change methods.");
 
 
 

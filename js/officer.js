@@ -4091,8 +4091,17 @@ window.pdfZoomOut = pdfZoomOut;
 window.pdfZoomReset = pdfZoomReset;
 window.pdfFitWidth = pdfFitWidth;
 window.togglePdfFullscreen = togglePdfFullscreen;
+function toggleOfficerSidebar() {
+    const sidebar = document.getElementById("officer-sidebar");
+    if (sidebar) {
+        sidebar.classList.toggle("collapsed");
+    }
+}
+
+window.toggleOfficerSidebar = toggleOfficerSidebar;
 window.handleOfficerGlobalSearch = handleOfficerGlobalSearch;
 window.loadOfficerDepartmentDocuments = loadOfficerDepartmentDocuments;
 window.handleDocumentVerifyAction = handleDocumentVerifyAction;
+
 
 

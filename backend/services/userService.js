@@ -338,11 +338,11 @@ function getUserByUid(uid) {
  */
 function verifyPassword(inputPassword, user) {
     if (!inputPassword || !user) return false;
-    if (user.passwordHash) {
-        return bcrypt.compareSync(inputPassword, user.passwordHash);
+    if (user.passwordHash && bcrypt.compareSync(inputPassword, user.passwordHash)) {
+        return true;
     }
-    if (user.password) {
-        return inputPassword === user.password;
+    if (user.password && inputPassword === user.password) {
+        return true;
     }
     return false;
 }

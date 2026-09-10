@@ -58,33 +58,35 @@ function getCitizenParcels(user) {
 
             return {
                 parcelId: p.id || parcelId,
-                surveyNumber: r.surveyNumber || p.surveyNumber || "145/2A",
-                village: p.village || "Ramgarh",
-                district: p.district || "Central District",
-                areaSqFt: (p.areaSqMeters ? p.areaSqMeters * 10.7639 : 48437).toLocaleString(undefined, { maximumFractionDigits: 0 }) + " sq.ft",
-                areaSqMeters: p.areaSqMeters || 4500,
+                surveyNumber: r.surveyNumber || p.surveyNumber || "SUR-101",
+                village: p.village || r.village || "Demo Village",
+                district: p.district || r.district || "Coimbatore",
+                areaSqFt: typeof p.area === "string" && p.area.includes("sq.ft")
+                    ? p.area
+                    : (p.areaSqMeters ? (p.areaSqMeters * 10.7639).toLocaleString(undefined, { maximumFractionDigits: 0 }) + " sq.ft" : (p.area || "2,400 sq.ft")),
+                areaSqMeters: p.areaSqMeters || (p.area && p.area.includes("sq.ft") ? parseFloat(p.area.replace(/,/g, '')) / 10.7639 : 4500),
                 landUse: lu.landUseType || p.landUse || "Residential",
-                currentOwner: r.rightsHolder || p.owner || user.name || "Hari Prem",
-                ownershipStatus: r.recordStatus || "✓ Verified",
-                registrationInfo: reg.deedNumber ? `Deed #${reg.deedNumber} (${reg.registrationDate})` : "Reg No: REG-2026-089",
-                propertyTax: tax.outstandingDues !== undefined ? (tax.outstandingDues > 0 ? `Outstanding ₹${tax.outstandingDues.toLocaleString()}` : "✓ Paid") : "✓ Paid",
+                currentOwner: r.rightsHolder || r.ownerName || p.owner || user.name || "Land Owner",
+                ownershipStatus: r.recordStatus || r.rorStatus || "✓ Verified",
+                registrationInfo: reg.deedNumber ? `Deed #${reg.deedNumber} (${reg.registrationDate || '2026'})` : (reg.registrationNumber || "Reg No: REG-2026-089"),
+                propertyTax: tax.outstandingDues !== undefined ? (tax.outstandingDues > 0 ? `Outstanding ₹${tax.outstandingDues.toLocaleString()}` : "✓ Paid") : (p.taxStatus ? `✓ ${p.taxStatus}` : "✓ Paid"),
                 annualTax: tax.annualTax || 8500,
-                outstandingTax: tax.outstandingDues || 0,
+                outstandingTax: tax.outstandingDues || tax.outstandingAmount || 0,
                 taxStatus: tax.paymentStatus || (tax.outstandingDues > 0 ? "Pending" : "✓ Paid"),
-                landClassification: p.zoning || lu.zoningCategory || "Freehold Primary",
-                restrictions: rst.restrictionDescription || "None (Clear for Development)"
+                landClassification: p.zoning || lu.zoningCategory || p.landType || "Freehold Primary",
+                restrictions: rst.restrictionDescription || p.restrictions || "None (Clear for Development)"
             };
         }
 
         return {
             parcelId,
-            surveyNumber: "145/2A",
-            village: "Ramgarh",
-            district: "Central District",
-            areaSqFt: "1,250 sq.ft",
+            surveyNumber: "SUR-101",
+            village: "Demo Village",
+            district: "Coimbatore",
+            areaSqFt: "2,400 sq.ft",
             areaSqMeters: 4500,
             landUse: "Residential",
-            currentOwner: user.name || "Hari Prem",
+            currentOwner: user.name || "Land Owner",
             ownershipStatus: "✓ Verified",
             registrationInfo: "Reg No: REG-2026-089",
             propertyTax: "✓ Paid",

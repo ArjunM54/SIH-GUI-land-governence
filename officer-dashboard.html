@@ -16,7 +16,17 @@
 
 <body class="officer-body">
 
+    <!-- MOBILE HEADER TOGGLE FOR OFFICER -->
+    <div class="officer-mobile-header">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span>📐</span>
+            <span style="font-weight: 700; color: #38bdf8;">LandGov Officer</span>
+        </div>
+        <button class="btn-govt-secondary" onclick="toggleOfficerSidebar()" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">☰ Menu</button>
+    </div>
+
     <div class="officer-layout">
+
         <!-- SIDEBAR -->
         <aside class="officer-sidebar" id="officer-sidebar">
             <div class="sidebar-brand">
@@ -116,7 +126,7 @@
                 </div>
 
                 <!-- SECONDARY SECTIONS: REQUESTS & CASES -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+                <div class="grid-2col">
                     <div class="govt-card">
                         <div class="govt-card-header">
                             <h3 id="dept-requests-card-title">📤 DEPARTMENT REQUESTS</h3>
@@ -1318,7 +1328,7 @@
                 <button class="close-modal-btn" onclick="closeModal('modal-department-request')">×</button>
             </div>
             <form onsubmit="handleCreateDepartmentRequestSubmit(event)">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                <div class="form-grid-2col">
                     <div class="form-group">
                         <label>Parcel ID</label>
                         <input type="text" id="deptreq-parcel-id" class="form-input" readonly required>
@@ -1329,7 +1339,7 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                <div class="form-grid-2col">
                     <div class="form-group">
                         <label>Requested From</label>
                         <input type="text" id="deptreq-from-officer" class="form-input" readonly>
@@ -1340,7 +1350,7 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                <div class="form-grid-2col">
                     <div class="form-group">
                         <label>Request To (Department) *</label>
                         <select id="deptreq-to-dept" class="form-input" onchange="handleTargetDeptChange(this.value)"
@@ -1367,7 +1377,7 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                <div class="form-grid-2col">
                     <div class="form-group">
                         <label>Required Work *</label>
                         <select id="deptreq-work" class="form-input" required>

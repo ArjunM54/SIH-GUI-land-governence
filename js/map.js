@@ -449,12 +449,24 @@ governanceLegend.addTo(map);
    10. BASE MAP & LAYER CONTROL
    ========================================================= */
 
+/* =========================================================
+   IMAGERY OVERLAY LAYERS
+   ========================================================= */
+
+const imageryChangeLayer = L.layerGroup();
+const imageryDetectionLayer = L.layerGroup();
+
+window.imageryChangeLayer = imageryChangeLayer;
+window.imageryDetectionLayer = imageryDetectionLayer;
+
 const baseMaps = {
     "OpenStreetMap": openStreetMapLayer
 };
 
 const overlayMaps = {
-    "Land Parcels": parcelLayer
+    "Land Parcels": parcelLayer,
+    "Imagery Changes": imageryChangeLayer,
+    "Change Detections": imageryDetectionLayer
 };
 
 const layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);

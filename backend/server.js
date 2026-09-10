@@ -21,10 +21,13 @@ const cors = require("cors");
    2. IMPORT ROUTES
    ========================================================= */
 
+const path = require("path");
+
 const parcelRoutes =
     require("./routes/parcelRoutes");
 
 const ulpinRoutes = require("./routes/ulpinRoutes");
+const landChangeRoutes = require("./routes/landChangeRoutes");
 
 const cadastralRoutes =
     require("./routes/cadastralRoutes");
@@ -71,6 +74,9 @@ const documentRoutes =
 const departmentRequestRoutes =
     require("./routes/departmentRequestRoutes");
 
+const imageryRoutes =
+    require("./routes/imageryRoutes");
+
 const applicationRoutes =
     require("./routes/applicationRoutes");
 
@@ -96,6 +102,8 @@ const app = express();
 app.use(cors());
 
 app.use(express.json());
+
+app.use(express.static(path.join(__dirname, "..")));
 
 app.use("/api/ulpin", ulpinRoutes);
 
@@ -243,6 +251,18 @@ app.use(
 );
 
 app.use(
+    "/api/imagery",
+    imageryRoutes
+);
+
+app.use(
+    "/api/land-change",
+    landChangeRoutes
+);
+
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+app.use(
     "/api/applications",
     applicationRoutes
 );
@@ -362,6 +382,10 @@ const server = app.listen(
 
         console.log(
             `Users JSON Direct: http://localhost:${PORT}/users.json`
+        );
+
+        console.log(
+            `Imagery API: http://localhost:${PORT}/api/imagery`
         );
 
         console.log("====================================");
