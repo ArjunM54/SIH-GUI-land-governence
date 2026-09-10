@@ -165,10 +165,7 @@ app.use(
     parcelRoutes
 );
 
-app.use(
-    "/api/ulpin",
-    ulpinRoutes
-);
+
 
 app.use(
     "/api/cadastral",

@@ -1172,15 +1172,17 @@ async function searchULPIN() {
             container.innerHTML = `
                 <div class="govt-card">
                     <h3>❌ Land Not Found</h3>
-                    <p>${result.message}</p>
+                    <p>${result.message || "No land found for this ULPIN."}</p>
                 </div>
             `;
             return;
         }
 
-        displayULPINLand(result.data);
+        displayULPINResult(result.data);
 
     } catch (error) {
+
+        console.error("ULPIN Search Error:", error);
 
         container.innerHTML = `
             <div class="govt-card">
@@ -1191,35 +1193,18 @@ async function searchULPIN() {
     }
 }
 
-async function searchLandByULPIN(ulpin) {
 
-    try {
-        const response = await fetch(
-            `http://localhost:5000/api/land/ulpin/${encodeURIComponent(ulpin)}`
-        );
-
-        const result = await response.json();
-
-        return result;
-
-    } catch (error) {
-
-        console.error("ULPIN API Error:", error);
-
-        throw new Error("Unable to connect to land database");
-    }
-}
 function displayULPINResult(land) {
 
     const container = document.getElementById("ulpin-result-container");
 
     container.innerHTML = `
         <div style="
-            margin-top:1rem;
-            padding:1rem;
-            background:#0f172a;
-            border:1px solid #334155;
-            border-radius:10px;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 10px;
         ">
 
             <h3 style="color:#38bdf8; margin-top:0;">
@@ -1228,7 +1213,7 @@ function displayULPINResult(land) {
 
             <div style="
                 display:grid;
-                grid-template-columns:repeat(2,1fr);
+                grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
                 gap:0.75rem;
             ">
 
@@ -1282,20 +1267,43 @@ function displayULPINResult(land) {
                     <div>${land.taxStatus}</div>
                 </div>
 
+                <div>
+                    <strong>Restrictions</strong>
+                    <div>${land.restrictions}</div>
+                </div>
+
+                <div>
+                    <strong>Building Permission</strong>
+                    <div>${land.buildingPermission}</div>
+                </div>
+
             </div>
 
-            <button
-                class="action-btn"
-                style="margin-top:1rem;"
-                onclick="showULPINOnMap(${JSON.stringify(land.coordinates)})">
+            <h3 style="
+                color:#38bdf8;
+                margin-top:1.5rem;
+                margin-bottom:0.75rem;
+            ">
+                📍 GIS Location
+            </h3>
 
-                🗺️ View Location on GIS Map
-
-            </button>
+            <div
+                id="ulpin-map"
+                style="
+                    width:100%;
+                    height:400px;
+                    border-radius:10px;
+                    overflow:hidden;
+                    border:1px solid #334155;
+                ">
+            </div>
 
         </div>
     `;
+
+    showULPINOnMap(land.coordinates);
 }
+
 function showULPINOnMap(coordinates) {
 
     if (!coordinates || coordinates.length === 0) {
@@ -1303,28 +1311,65 @@ function showULPINOnMap(coordinates) {
         return;
     }
 
-    const map = window.landMap || window.map;
+    const mapContainer = document.getElementById("ulpin-map");
 
-    if (!map) {
-        alert("GIS map is not initialized.");
+    if (!mapContainer) {
+        console.error("ULPIN map container not found.");
         return;
     }
 
-    const polygon = L.polygon(coordinates, {
-        color: "#38bdf8",
-        weight: 3,
-        fillOpacity: 0.35
-    }).addTo(map);
+    // Remove previous ULPIN map
+    if (window.ulpinMap) {
+        window.ulpinMap.remove();
+        window.ulpinMap = null;
+    }
 
-    map.fitBounds(polygon.getBounds());
+    // Create new Leaflet map
+    const map = L.map("ulpin-map");
 
+    window.ulpinMap = map;
+
+    // OpenStreetMap layer
+    L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+            maxZoom: 19,
+            attribution: "&copy; OpenStreetMap contributors"
+        }
+    ).addTo(map);
+
+    // Draw parcel
+    const polygon = L.polygon(
+        coordinates,
+        {
+            color: "#38bdf8",
+            weight: 3,
+            fillOpacity: 0.35
+        }
+    ).addTo(map);
+
+    // Zoom to parcel
+    map.fitBounds(
+        polygon.getBounds(),
+        {
+            padding: [30, 30]
+        }
+    );
+
+    // Popup
     polygon.bindPopup(`
         <strong>ULPIN Land Parcel</strong><br>
+        ULPIN: ${document.getElementById("ulpin-search-input").value}<br>
         Location found successfully.
     `).openPopup();
+
+    // Fix Leaflet rendering after dynamic creation
+    setTimeout(() => {
+        map.invalidateSize();
+    }, 200);
 }
 
-window.searchLandByULPIN = searchLandByULPIN;
+
 // Window Exports
 window.switchTab = switchTab;
 window.toggleSubmenu = toggleSubmenu;
