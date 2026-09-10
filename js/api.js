@@ -54,6 +54,23 @@ async function apiRequest(endpoint, options = {}) {
     }
 }
 
+/* =========================================================
+   ULPIN SEARCH
+   ========================================================= */
+
+async function searchLandByULPIN(ulpin) {
+
+    if (!ulpin) {
+        throw new Error("ULPIN is required.");
+    }
+
+    const result = await apiRequest(
+        `/api/ulpin/${encodeURIComponent(ulpin.trim())}`
+    );
+
+    return result;
+}
+
 
 
 /* =========================================================

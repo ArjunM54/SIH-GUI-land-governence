@@ -15,7 +15,7 @@ const express = require("express");
 
 const cors = require("cors");
 
-const ulpinRoutes = require("./routes/ulpinRoutes");
+
 
 /* =========================================================
    2. IMPORT ROUTES
@@ -23,6 +23,8 @@ const ulpinRoutes = require("./routes/ulpinRoutes");
 
 const parcelRoutes =
     require("./routes/parcelRoutes");
+
+const ulpinRoutes = require("./routes/ulpinRoutes");
 
 const cadastralRoutes =
     require("./routes/cadastralRoutes");
@@ -161,6 +163,11 @@ app.get(
 app.use(
     "/api/parcels",
     parcelRoutes
+);
+
+app.use(
+    "/api/ulpin",
+    ulpinRoutes
 );
 
 app.use(

@@ -1,11 +1,8 @@
 const express = require("express");
-
 const router = express.Router();
 
 const parcels = require("../data/parcels");
 
-
-// GET LAND BY ULPIN
 router.get("/:ulpin", (req, res) => {
 
     const ulpin = req.params.ulpin.trim().toUpperCase();
@@ -18,7 +15,7 @@ router.get("/:ulpin", (req, res) => {
     if (!parcel) {
         return res.status(404).json({
             success: false,
-            message: "No land parcel found for this ULPIN"
+            message: "ULPIN not found"
         });
     }
 
@@ -26,7 +23,6 @@ router.get("/:ulpin", (req, res) => {
         success: true,
         data: parcel
     });
-
 });
 
 module.exports = router;
