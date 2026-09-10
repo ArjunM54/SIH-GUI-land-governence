@@ -1190,86 +1190,141 @@ async function searchULPIN() {
         `;
     }
 }
-function displayULPINLand(land) {
 
-    const container =
-        document.getElementById("ulpin-result-container");
+async function searchLandByULPIN(ulpin) {
+
+    try {
+        const response = await fetch(
+            `http://localhost:5000/api/land/ulpin/${encodeURIComponent(ulpin)}`
+        );
+
+        const result = await response.json();
+
+        return result;
+
+    } catch (error) {
+
+        console.error("ULPIN API Error:", error);
+
+        throw new Error("Unable to connect to land database");
+    }
+}
+function displayULPINResult(land) {
+
+    const container = document.getElementById("ulpin-result-container");
 
     container.innerHTML = `
+        <div style="
+            margin-top:1rem;
+            padding:1rem;
+            background:#0f172a;
+            border:1px solid #334155;
+            border-radius:10px;
+        ">
 
-        <div class="govt-card">
+            <h3 style="color:#38bdf8; margin-top:0;">
+                🗺️ Land Details
+            </h3>
 
-            <h2>🏡 Land Found</h2>
-
-            <div class="land-basic-grid">
+            <div style="
+                display:grid;
+                grid-template-columns:repeat(2,1fr);
+                gap:0.75rem;
+            ">
 
                 <div>
                     <strong>ULPIN</strong>
-                    <p>${land.ulpin}</p>
+                    <div>${land.ulpin}</div>
                 </div>
 
                 <div>
                     <strong>Parcel ID</strong>
-                    <p>${land.parcelId}</p>
+                    <div>${land.id}</div>
                 </div>
 
                 <div>
                     <strong>Survey Number</strong>
-                    <p>${land.surveyNumber}</p>
+                    <div>${land.surveyNumber}</div>
                 </div>
 
                 <div>
                     <strong>Owner</strong>
-                    <p>${land.owner}</p>
+                    <div>${land.owner}</div>
                 </div>
 
                 <div>
-                    <strong>Extent</strong>
-                    <p>${land.extent}</p>
+                    <strong>Land Type</strong>
+                    <div>${land.landType}</div>
                 </div>
 
                 <div>
-                    <strong>Land Use</strong>
-                    <p>${land.landUse}</p>
-                </div>
-
-                <div>
-                    <strong>Village</strong>
-                    <p>${land.village}</p>
+                    <strong>Area</strong>
+                    <div>${land.area}</div>
                 </div>
 
                 <div>
                     <strong>District</strong>
-                    <p>${land.district}</p>
+                    <div>${land.district}</div>
+                </div>
+
+                <div>
+                    <strong>Village</strong>
+                    <div>${land.village}</div>
+                </div>
+
+                <div>
+                    <strong>Land Use</strong>
+                    <div>${land.landUse}</div>
+                </div>
+
+                <div>
+                    <strong>Tax Status</strong>
+                    <div>${land.taxStatus}</div>
                 </div>
 
             </div>
 
-            <hr>
+            <button
+                class="action-btn"
+                style="margin-top:1rem;"
+                onclick="showULPINOnMap(${JSON.stringify(land.coordinates)})">
 
-            <h3>Department Verification</h3>
+                🗺️ View Location on GIS Map
 
-            <div class="verification-grid">
-
-                <div>✓ Cadastral & Survey</div>
-                <div>✓ Land Records / RoR</div>
-                <div>✓ Registration & Legal</div>
-                <div>✓ Land Use & Planning</div>
-                <div>✓ Property Tax & Municipal</div>
-
-            </div>
-
-            <hr>
-
-            <h3>🛰 Satellite Verification</h3>
-
-            <p>
-                ${land.cadastral.satelliteChange}
-            </p>
+            </button>
 
         </div>
     `;
 }
+function showULPINOnMap(coordinates) {
+
+    if (!coordinates || coordinates.length === 0) {
+        alert("GIS coordinates are not available.");
+        return;
+    }
+
+    const map = window.landMap || window.map;
+
+    if (!map) {
+        alert("GIS map is not initialized.");
+        return;
+    }
+
+    const polygon = L.polygon(coordinates, {
+        color: "#38bdf8",
+        weight: 3,
+        fillOpacity: 0.35
+    }).addTo(map);
+
+    map.fitBounds(polygon.getBounds());
+
+    polygon.bindPopup(`
+        <strong>ULPIN Land Parcel</strong><br>
+        Location found successfully.
+    `).openPopup();
+}
+
+window.searchLandByULPIN = searchLandByULPIN;
 // Window Exports
 window.switchTab = switchTab;
 window.toggleSubmenu = toggleSubmenu;

@@ -15,6 +15,8 @@ const express = require("express");
 
 const cors = require("cors");
 
+const ulpinRoutes = require("./routes/ulpinRoutes");
+
 /* =========================================================
    2. IMPORT ROUTES
    ========================================================= */
@@ -92,6 +94,8 @@ const app = express();
 app.use(cors());
 
 app.use(express.json());
+
+app.use("/api/ulpin", ulpinRoutes);
 
 app.use(verifyAuth);
 

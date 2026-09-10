@@ -127,6 +127,30 @@
 
             <!-- 🏠 SECTION: DASHBOARD -->
             <section id="section-dashboard" class="tab-section">
+                <!-- ULPIN SEARCH -->
+                <div class="card-panel ulpin-search-card">
+
+                    <h2 style="color: #38bdf8;">🔍 Search Land by ULPIN</h2>
+
+                    <p style="color: #94a3b8;">
+                        Enter your Unique Land Parcel Identification Number
+                        to view land details and its GIS location.
+                    </p>
+
+                    <div class="ulpin-search-box">
+
+                        <input type="text" id="ulpin-search-input" class="form-input"
+                            placeholder="Enter ULPIN e.g. ULPIN-COIM-0001">
+
+                        <button type="button" class="action-btn" onclick="searchULPIN()">
+                            🔍 Search
+                        </button>
+
+                    </div>
+
+                    <div id="ulpin-result-container"></div>
+
+                </div>
                 <div class="dashboard-header-panel">
                     <h1>Welcome, <span id="welcome-name">Citizen</span></h1>
                     <p style="color: #94a3b8; margin: 0;">Access land services, submit applications, track 5-department

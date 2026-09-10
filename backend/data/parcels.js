@@ -19,6 +19,8 @@ const parcels = [
     {
         id: "LND-001",
 
+        ulpin: "ULPIN-COIM-0001",
+
         surveyNumber: "SUR-101",
 
         owner: "Demo Land Owner",
@@ -53,6 +55,9 @@ const parcels = [
     {
         id: "LND-002",
 
+        ulpin: "ULPIN-COIM-0002",
+
+
         surveyNumber: "SUR-102",
 
         owner: "Demo Property Owner",
@@ -86,6 +91,8 @@ const parcels = [
 
     {
         id: "LND-003",
+
+        ulpin: "ULPIN-COIM-0003",
 
         surveyNumber: "SUR-103",
 
